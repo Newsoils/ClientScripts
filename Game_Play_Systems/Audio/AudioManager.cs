@@ -1,0 +1,174 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using CLIP.Framework_Core.Event;
+using CLIP.Framework_Unity;
+using CLIP.Framework_Unity.Asset;
+using CLIP.Project_Mouse.Game_Play_System;
+using DG.Tweening;
+using Newtonsoft.Json;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+public class AudioManager : SingletonMono<AudioManager>
+{
+    public AudioSource MusicSource;
+    public AudioSource SoundEffectSource;
+    private Tween currentFadeTween;
+    private string currentMusic;
+    [Range(-80, 20)]
+    public float bgmSound = 0;
+
+    public List<WavInfo> audioInfos;
+
+    void Start()
+    {
+        string text = JsonData_Manager.Load_Single_JsonData("project_mouse_tb_music_info");
+        audioInfos = JsonConvert.DeserializeObject<List<WavInfo>>(text);
+        DontDestroyOnLoad(gameObject);
+    }
+    private void Update()
+    {
+        //MusicSource.outputAudioMixerGroup.audioMixer.SetFloat("BGM", bgmSound);
+        Keyboard keyboard = Keyboard.current;
+        if(keyboard.digit1Key.wasPressedThisFrame)
+        {
+            PlayAudioByRefKey("button");
+        }
+        if(keyboard.digit2Key.wasPressedThisFrame)
+        {
+            //PlayMusic(ResKeys.WAV_LEMMONNADE, 1, 1);
+        }
+        if(keyboard.digit3Key.wasPressedThisFrame)
+        {
+            StopMusic(1);
+        }
+        if(keyboard.digit4Key.wasPressedThisFrame)
+        {
+            //PlayMusic(ResKeys.WAV_MAHOUSHAOJIU_NANA);
+        }
+        if(keyboard.digit5Key.wasPressedThisFrame)
+        {
+            //PlaySoundEffect(ResKeys.WAV_MANBO);
+        }
+    }
+    public void PlayAudioByRefKey(string refKey, float fadeIn = 0, float fadeOut = 0)
+    {
+        WavInfo info = audioInfos.Find(x => x.refKeys.Contains(refKey));
+        if(info == null)
+        {
+            return;
+        }
+        if(GameAssets.TryConvertFileNameToResKey(info.wavFileName, "wav", out var resKey))
+        {
+            if (info.type == WavType.music)
+            {
+                PlayMusic(resKey, info.volume, fadeOut, fadeIn);
+            }
+            else
+            {
+                PlaySoundEffect(resKey, info.volume);
+            }
+        }
+    }
+    public void PlayAduioByResKey(string resKey, float fadeIn = 0, float fadeOut = 0)
+    {
+        WavInfo info = audioInfos.Find(x => x.resKey == resKey);
+        if (info == null)
+        {
+            PlayMusic(resKey, 1, fadeIn, fadeOut);
+            Log.Warn("music_info表中没有这个resKey");
+            return;
+        }
+        if (info.type == WavType.music)
+        {
+            PlayMusic(resKey, info.volume, fadeOut, fadeIn);
+        }
+        else
+        {
+            PlaySoundEffect(resKey, info.volume);
+        }
+    }
+    public void PlayMusic(string key,float volume = 1, float fadeOut = 0, float fadeIn = 0)
+    {
+        _ = PlayMusicAsync(key, volume, fadeOut, fadeIn);
+    }
+    public void PlaySoundEffect(string key, float volume = 1)
+    {
+        _ = PlaySoundEffectAsync(key, volume);
+    }
+    public async Task PlayMusicAsync(string key,float volume, float fadeOut = 0, float fadeIn = 0)
+    {
+        if (currentMusic == key) return;
+        // 停止当前正在进行的淡出淡入动画
+        currentFadeTween?.Kill();
+        // 获取新的音乐（这个需要你自己实现）
+        AudioClip newClip = await GameAssets.Instance.LoadAsycByKey<AudioClip>(key);
+
+        if (newClip == null)
+        {
+            Debug.LogError($"找不到对应key的音乐: {key}");
+            return;
+        }
+
+        Sequence sequence = DOTween.Sequence();
+
+        // 如果当前正在播放音乐，先淡出
+        if (MusicSource.isPlaying)
+        {
+            sequence.Append(DOTween.To(() => MusicSource.volume, x => MusicSource.volume = x, 0, fadeOut)
+                .SetEase(Ease.Linear));
+        }
+        sequence.Append(DOVirtual.DelayedCall(0, () =>
+        {
+            currentMusic = key;
+            MusicSource.clip = newClip;
+            MusicSource.Play();
+            MusicSource.volume = 0;
+        }));
+        // 淡入新音乐
+        sequence.Append(DOTween.To(() => MusicSource.volume, x => MusicSource.volume = x, volume, fadeIn)
+            .SetEase(Ease.Linear));
+
+        currentFadeTween = sequence;
+    }
+    public void StopMusic(float fadeOut = 0)
+    {
+        currentFadeTween?.Kill();
+
+        if (fadeOut <= 0)
+        {
+            MusicSource.Stop();
+            return;
+        }
+        Sequence sequence = DOTween.Sequence();
+        if (MusicSource.isPlaying)
+        {
+            sequence.Append(DOTween.To(() => MusicSource.volume, x => MusicSource.volume = x, 0, fadeOut))
+                .SetEase(Ease.Linear)
+                .OnComplete(() => MusicSource.Stop());
+        }
+    }
+    private async Task PlaySoundEffectAsync(string key, float volume)
+    {
+        var clip = await GameAssets.Instance.LoadAsycByKey<AudioClip>(key);
+        if (clip == null)
+            return;
+        SoundEffectSource.PlayOneShot(clip, volume);
+    }
+}
+public class WavInfo
+{
+    public int id;
+    public string wavName;
+    public string wavFileName;
+    public WavType type;
+    public float volume;
+    public List<string> refKeys;
+    public string resKey;
+}
+public enum WavType
+{
+    music,
+    soundEffect
+}
