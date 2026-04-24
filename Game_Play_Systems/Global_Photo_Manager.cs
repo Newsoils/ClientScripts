@@ -27,10 +27,13 @@ namespace CLIP.Project_Mouse.Game_Play_System
         Firend
     }
 
-
     public class Global_Photo_Manager : SingletonMono<Global_Photo_Manager>
     {
         public List<photo_info_saved> _local_image_list;
+        /// <summary>
+        /// 派遣中拍摄的照片路径列表
+        /// </summary>
+        public List<string> _dispatch_photo_path_list = new List<string>();
 
         public RenderTexture roomPhotoRT;
         public RenderTexture dispatchPhotoRT;
@@ -62,6 +65,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         [Header("开发：按 photo_name 快速拍派遣照")]
         [Tooltip("填写 Photo_Info.photo_name，运行游戏后在组件右键菜单选 Capture")]
         [SerializeField] private string _debugDispatchPhotoName;
+
 
         /// <summary>项目根目录旁的文件夹，便于在资源管理器中查看（与 Assets 同级）。</summary>
         public static string GetDebugDispatchPhotoOutputDirectory()
@@ -207,6 +211,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             var last = _local_image_list[^1];
             SaveToGallery(last._local_path, last._photo_name);
+            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "相片已保存到本地");
         }
 
         public void SaveToGallery(string path, string fileName)
@@ -220,7 +225,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             if (File.Exists(Last_Photo_Path))
             {
-                PM_RM.load_png_as_texture(Last_Photo_Path, (tex) =>
+                _=  PM_RM.load_png_as_texture(Last_Photo_Path, (tex) =>
                 {
                     if (rawImage != null)
                     {
@@ -283,7 +288,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void share_previous_saved_image_via_native()
         {
-            
             string image_path = Path.Combine(Application.persistentDataPath, Last_Photo_Name);
             Debug.Log("share_previous_saved_image_via_native()_image_path_=_" + image_path);
 #if UNITY_ANDROID || UNITY_IOS
@@ -343,31 +347,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
         }
 
-        //public string get_next_photo_name()
-        //{
-        //    var player_name = "";
-        //    if (Global_Game_Manager._instance != null)
-        //    {
-        //        player_name = Global_Game_Manager._instance._current_player_name;
-        //    }
-        //    string _name = "#Photo#_" + player_name + "_" + Guid.NewGuid() + ".png";
-        //    return _name;
-        //}
-
-        //public string upload_photo_to_server_and_return_photo_name(Texture2D _photo_texture)
-        //{
-        //    var _photo_name = get_next_photo_name();
-        //    upload_photo_to_server(_photo_name, _photo_texture);
-        //    return _photo_name;
-        //}
-        //public async void upload_photo_to_server(string _photo_name, Texture2D _photo_texture)
-        //{
-        //    byte[] _png_data = _photo_texture.EncodeToPNG();
-        //    _current_photo_data_str = GF_SP.SerializeObject(_png_data);
-        //    _current_upload_photo_name = _photo_name;
-        //    upload_photo_to_server();
-        //}
-
         #endregion
 
         #region 存取PhotoList数据信息
@@ -384,13 +363,13 @@ namespace CLIP.Project_Mouse.Game_Play_System
         // 序列化照片路径列表
         public void Save_Dispatch_PhotoList()
         {
-            Save_Load_Tools.Save<List<string>>("dispatch_photo_path_list.json", Dispatch_Manager._instance._dispatch_photo_path_list);
+            Save_Load_Tools.Save<List<string>>("dispatch_photo_path_list.json", _dispatch_photo_path_list);
         }
 
         // 反序列化照片路径列表
         public void Load_Dispatch_PhotoList()
         {
-            Dispatch_Manager._instance._dispatch_photo_path_list = Save_Load_Tools.Load<List<string>>("dispatch_photo_path_list.json") ?? new List<string>();
+           _dispatch_photo_path_list = Save_Load_Tools.Load<List<string>>("dispatch_photo_path_list.json") ?? new List<string>();
         }
         #endregion
 
@@ -432,7 +411,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             if (Dispatch_Manager._instance == null)
             {
-                Debug.LogWarning("BeginCaptureDispatchPhotoInternal: Dispatch_Manager._instance 为空。");
+                Debug.LogWarning("BeginCaptureDispatchPhotoInternal: Dispatch_Manager.Instance 为空。");
                 return;
             }
 
@@ -480,7 +459,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             GameObject rain_Image = GameObject.Find("Rain_Image");
             if (rain_Image != null)
             {
-                var weather = Global_Game_Manager._instance?._weather_state;
+                var weather = Global_Game_Manager.Instance?._weather_state;
                 if (weather != null && weather._current_weather == "Rain")
                     rain_Image.SetActive(true);
                 else
@@ -623,14 +602,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             string saveRoot = string.IsNullOrEmpty(saveDirectoryOverride) ? Application.persistentDataPath : saveDirectoryOverride;
             string photoPath = Path.Combine(saveRoot, fileName);
-            if (Dispatch_Manager._instance != null && Dispatch_Manager._instance._dispatch_photo_path_list != null)
-                Dispatch_Manager._instance._dispatch_photo_path_list.Add(photoPath);
 
             yield return null;
 
             BackToMainScene();
 
-            Save_Dispatch_PhotoList();
             Debug.Log($"Photo saved to: {photoPath}");
             lastDispatchPhotoPath = photoPath;
 
@@ -638,113 +614,198 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void BackToMainScene()
         {
-            SceneLoadHelper.Load_MainScene((s) => EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active));
+            //SceneLoadHelper.Load_MainScene((s) => EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active));
+            SceneLoadingHelper.Instance.LoadScene(SceneLoadHelper.MainSceneName, () => EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active));
         }
 
-        //public void Save_RT_to_PNG(RenderTexture RT, string _photo_source, string file_name = "screenshot")
-        //{
-        //    _current_RT = _photo_source == "Dispatch" ? dispatchPhotoRT : roomPhotoRT;
-        //    StartCoroutine(CaptureAndSaveScreen(file_name, RT, _photo_source, true));
-        //}
+        // ================================================================
+        // 纹理缓存管理（引用计数 + 按需加载/自动卸载）
+        // ================================================================
 
-        //public void Save_RT_to_PNG(float x, float y, float width, float height, string _photo_source, string file_name = "screenshot")
-        //{
-        //    _current_RT = _photo_source == "Dispatch" ? dispatchPhotoRT : roomPhotoRT;
-        //    StartCoroutine(CaptureAndSaveScreen(file_name, x, y, width, height, _photo_source, true));
-        //}
+        private class CacheEntry
+        {
+            public Texture2D texture;
+            public int refCount;
+            public float lastAccessTime;
+        }
+        private Dictionary<string, CacheEntry> _textureCache = new Dictionary<string, CacheEntry>();
+        private const int MAX_CACHED_TEXTURES = 20;
 
+        public const int MAX_LOADED_PHOTOS = 20;
 
-        //private IEnumerator CaptureAndSaveScreen(string fileName, float x, float y, float width, float height, string _photo_source, bool is_RT = false)
-        //{
-        //    yield return new WaitForEndOfFrame();
+        /// <summary>
+        /// 获取已缓存的纹理，或异步从磁盘加载并缓存。
+        /// 首次调用返回 null（加载异步进行），加载完成后通过 callback 通知。
+        /// 调用方必须在不用时调用 ReleaseTexture()。
+        /// </summary>
+        public void LoadTexture(string path, Action<Texture2D> callback)
+        {
+            if (string.IsNullOrEmpty(path)) { callback?.Invoke(null); return; }
 
-        //    if (is_RT == true)
-        //    {
-        //        RenderTexture.active = _current_RT;
-        //        var tex = new Texture2D((int)width, (int)height, TextureFormat.RGB24, false);
-        //        tex.ReadPixels(new Rect(x, y, width, height), 0, 0);
-        //        tex.Apply();
-        //        save_image_to_disk(fileName, tex, _photo_source);
-        //    }
-        //    else
-        //    {
-        //        // 截取屏幕 
-        //        var tex = new Texture2D((int)width, (int)height, TextureFormat.RGB24, false);
-        //        tex.ReadPixels(new Rect(x, y, width, height), 0, 0);
-        //        tex.Apply();
-        //        save_image_to_disk(fileName, tex, _photo_source);
-        //        Destroy(tex);
-        //    }
-        //}
+            if (_textureCache.TryGetValue(path, out var entry))
+            {
+                entry.refCount++;
+                entry.lastAccessTime = Time.time;
+                callback?.Invoke(entry.texture);
+                return;
+            }
 
-        //public IEnumerator CaptureAndSaveScreen(string fileName, RenderTexture RT, string _photo_source, bool is_RT = true)
-        //{
-        //    yield return new WaitForEndOfFrame();
+            EvictCacheIfNeeded();
 
-        //    if (is_RT == true)
-        //    {
-        //        RenderTexture.active = RT;
-        //        var tex = new Texture2D(RT.width, RT.height, TextureFormat.RGB24, false);
-        //        tex.ReadPixels(new Rect(0, 0, RT.width, RT.height), 0, 0);
-        //        tex.Apply();
-        //        save_image_to_disk(fileName, tex, _photo_source);
-        //    }
-        //    else
-        //    {
-        //        // 截取屏幕 
-        //        var tex = new Texture2D(RT.width, RT.height, TextureFormat.RGB24, false);
-        //        tex.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
-        //        tex.Apply();
-        //        save_image_to_disk(fileName, tex, _photo_source);
-        //    }
+            PM_RM.load_png_as_texture(path, (tex) =>
+            {
+                if (tex != null)
+                {
+                    tex.name = path;
+                    _textureCache[path] = new CacheEntry { texture = tex, refCount = 1, lastAccessTime = Time.time };
+                }
+                callback?.Invoke(tex);
+            });
+        }
 
-        //}
+        /// <summary>
+        /// 持有方不再需要该纹理时调用，减少引用计数。
+        /// 引用归零后纹理从内存卸载。
+        /// </summary>
+        public void ReleaseTexture(string path)
+        {
+            if (!_textureCache.TryGetValue(path, out var entry)) return;
+            entry.refCount--;
+            if (entry.refCount <= 0)
+            {
+                DestroyTex(entry.texture);
+                _textureCache.Remove(path);
+            }
+        }
 
-        //        private void save_image_to_disk(string fileName, Texture2D _tex, string _photo_source, bool to_photo = true)
-        //        {
-        //            // 编码为 PNG
-        //            byte[] bytes = _tex.EncodeToPNG();
+        /// <summary>
+        /// 释放所有引用归零的纹理（自动调用）。
+        /// </summary>
+        public void UnloadUnusedTextures()
+        {
+            var toRemove = new List<string>();
+            foreach (var kvp in _textureCache)
+            {
+                if (kvp.Value.refCount <= 0)
+                {
+                    DestroyTex(kvp.Value.texture);
+                    toRemove.Add(kvp.Key);
+                }
+            }
+            foreach (var p in toRemove) _textureCache.Remove(p);
+        }
 
-        //            // 保存到硬盘
-        //            //fileName = fileName + "_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".png";
-        //            //Debug.Log("Image_Byte_as_str_=_" + General_Function.Serialization_Provider.SerializeObject(bytes));
-        //            string path = Path.Combine(Application.persistentDataPath, fileName);
-        //            File.WriteAllBytes(path, bytes);
+        /// <summary>
+        /// 关闭面板时调用，强制卸载所有纹理缓存。
+        /// </summary>
+        public void UnloadAllTextures()
+        {
+            foreach (var kvp in _textureCache)
+                DestroyTex(kvp.Value.texture);
+            _textureCache.Clear();
+        }
 
-        //            Debug.Log("Screenshot saved to: " + path);
-        //            Last_Photo_Path = path;
-        //            Last_Photo_Name = fileName;
+        public bool IsTextureLoaded(string path) => _textureCache.ContainsKey(path);
 
-        //            photo_info_saved _new_photo_info = new photo_info_saved();
-        //            _new_photo_info._photo_name = fileName;
-        //            _new_photo_info._local_path = path;
-        //            _new_photo_info._photo_type = "normal";
-        //            _new_photo_info._photo_upload_time = System.DateTime.Now;
-        //            if (_photo_source == "dispatch")
-        //            {
-        //                _new_photo_info._photo_source = "dispatch";
-        //            }
-        //            else if (_photo_source == "indoor")
-        //            {
-        //                _new_photo_info._photo_source = "indoor";
-        //            }
-        //            else if (_photo_source == "indoor_with_friend")
-        //            {
-        //                _new_photo_info._photo_source = "indoor_with_friend";
-        //            }
-        //            if (!string.IsNullOrEmpty(_photo_source))
-        //            {
-        //                _local_image_list.Add(_new_photo_info);
-        //            }
-        //            Save_PhotoList_Info();
+        private void EvictCacheIfNeeded()
+        {
+            while (_textureCache.Count >= MAX_CACHED_TEXTURES)
+            {
+                string victim = FindEvictionCandidate();
+                if (victim == null) break;
+                DestroyTex(_textureCache[victim].texture);
+                _textureCache.Remove(victim);
+            }
+        }
 
-        //#if UNITY_ANDROID || UNITY_IOS
-        //            if (to_photo == true)
-        //            {
-        //                SaveToGallery(path, fileName);
-        //            }
-        //#endif
-        //        }
+        private string FindEvictionCandidate()
+        {
+            string best = null;
+            float bestScore = float.MaxValue;
+            foreach (var kvp in _textureCache)
+            {
+                if (kvp.Value.refCount <= 0) return kvp.Key;
+                float score = kvp.Value.lastAccessTime;
+                if (score < bestScore) { bestScore = score; best = kvp.Key; }
+            }
+            return best;
+        }
+
+        private void DestroyTex(Texture2D tex)
+        {
+            if (tex == null) return;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(tex);
+            else UnityEngine.Object.DestroyImmediate(tex);
+        }
+
+        /// <summary>
+        /// 释放指定 photo_info_saved 对应的纹理。
+        /// </summary>
+        public void ReleaseTextureByInfo(photo_info_saved info)
+        {
+            if (info != null && !string.IsNullOrEmpty(info._local_path))
+                ReleaseTexture(info._local_path);
+        }
+
+        // ================================================================
+        // 照片查询辅助
+        // ================================================================
+
+        /// <summary>
+        /// 获取所有 Dispatch 照片的元数据（从 _local_image_list 过滤）。
+        /// </summary>
+        public List<photo_info_saved> GetDispatchPhotos()
+        {
+            return _local_image_list.FindAll(p => p._photo_source == PhotoMode.Dispatch.ToString());
+        }
+
+        /// <summary>
+        /// 添加一张派遣照片到元数据列表（同时写入 _local_image_list 和 _dispatch_photo_path_list 以保持向后兼容）。
+        /// </summary>
+        public void AddDispatchPhoto(string path, string photoName)
+        {
+            photo_info_saved info = new photo_info_saved();
+            info._photo_name = photoName;
+            info._local_path = path;
+            info._photo_upload_time = DateTime.Now;
+            info._photo_type = "normal";
+            info._photo_source = PhotoMode.Dispatch.ToString();
+            _local_image_list.Add(info);
+            Save_PhotoList_Info();
+
+        _dispatch_photo_path_list.Add(path);
+        }
+
+        /// <summary>
+        /// 根据 photo_name 查找元数据。
+        /// </summary>
+        public photo_info_saved GetPhotoInfo(string photoName)
+        {
+            return _local_image_list.Find(p => p._photo_name == photoName);
+        }
+ 
+        /// <summary>
+        /// 根据路径查找元数据。
+        /// </summary>
+        public photo_info_saved GetPhotoInfoByPath(string path)
+        {
+            return _local_image_list.Find(p => p._local_path == path);
+        }
+
+        /// <summary>
+        /// 删除照片元数据并同步删除文件。
+        /// </summary>
+        public void DeletePhoto(photo_info_saved info)
+        {
+            if (info == null) return;
+            if (File.Exists(info._local_path)) File.Delete(info._local_path);
+            ReleaseTextureByInfo(info);
+            _local_image_list.Remove(info);
+            _dispatch_photo_path_list.Remove(info._photo_name);
+            Save_PhotoList_Info();
+            Save_Dispatch_PhotoList();
+        }
+
+       
     }
-
 }

@@ -150,6 +150,7 @@ public class Placement_Panel : UIPanelBase
         Save_Load_Tools.Save("Room.json", roomSnapshot);
 
         EvtDsp.TriggerEvt<bool>(EvtNames.SetMainCharacterState,false);
+        CameraManager.Instance.ChangeState(CameraState.Placement);
     }
 
     public override void ClosePanel()

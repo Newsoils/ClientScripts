@@ -24,7 +24,6 @@ namespace CLIP
                     //panel.photoAlbum.SetActive(true);
                     UIManager.Instance.GetPanel<PersonalBriefPanel>().imageToChange = rawImage;
                     UIManager.Instance.GetPanel<PersonalBriefPanel>().imageToChangeIndex = index;
-                    UIManager.Instance.GetPanel<PersonalBriefPanel>().photoAlbum.SetActive(true);
                 }
             }
         }

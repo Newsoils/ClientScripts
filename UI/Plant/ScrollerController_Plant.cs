@@ -199,6 +199,13 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
         }
         if(_plantItemList.Find(x => x.item_name == data.name) != null)
         {
+            var seedItem = Global_Inventory_Manager.GetItem(data.name);
+            int seedCount = seedItem != null ? seedItem._item_count : 0;
+            if (seedCount <= 0)
+            {
+                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "种子数量不足");
+                return;
+            }
             EditManager.Instance.SetMode(new PlantPlantMode(data.name));
         }
     }

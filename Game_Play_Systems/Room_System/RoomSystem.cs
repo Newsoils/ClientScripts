@@ -3,13 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
-using CLIP.Framework_Core.Serialization;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.ENUM;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
 using CLIP.Project_Mouse.Kernel;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace CLIP.Project_Mouse.Game_Play_System
 {
@@ -145,14 +142,78 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 RoomData roomData = new RoomData(loadedRoom.roomType, loadedRoom.roomName, loadedRoom.roomUID);
                 roomDataDic.Add(roomData .roomUID,roomData);
                 roomDataNameDic.Add(roomData.roomName, roomData);
-                // 覆盖 placement 数据（深拷贝更安全）
-                //roomData.placementDatas = loadedRoom.placementDatas;
-                //roomData.potDatas = loadedRoom.potDatas;
+
+                // 深拷贝 special decoration IDs（无需重建实体，只记录 ID）
+                roomData.wallPlacementId = loadedRoom.wallPlacementId;
+                roomData.floorPlacementId = loadedRoom.floorPlacementId;
+                roomData.doorPlacementId = loadedRoom.doorPlacementId;
+
+                // 深拷贝 placementDatas（避免列表引用共享）
+                if (loadedRoom.placementDatas != null)
+                {
+                    foreach (var pd in loadedRoom.placementDatas)
+                    {
+                        roomData.placementDatas.Add(new PlacementData
+                        {
+                            UID = pd.UID,
+                            name = pd.name,
+                            placementId = pd.placementId,
+                            position = pd.position,
+                            rotation = pd.rotation,
+                            gridLayerUID = pd.gridLayerUID,
+                            subInstanceIds = new List<string>(pd.subInstanceIds)
+                        });
+                    }
+                }
+
+                if (loadedRoom.potDatas != null)
+                {
+                    foreach (var pod in loadedRoom.potDatas)
+                    {
+                        roomData.potDatas.Add(new PlacementData
+                        {
+                            UID = pod.UID,
+                            name = pod.name,
+                            placementId = pod.placementId,
+                            position = pod.position,
+                            rotation = pod.rotation,
+                            gridLayerUID = pod.gridLayerUID,
+                            subInstanceIds = new List<string>(pod.subInstanceIds)
+                        });
+                    }
+                }
             }
 
             GenerateGridData();
             BindRoomMonos();
-            //STEP 3：重建所有 PlacementRuntime和Pot
+
+            // STEP 3：恢复特殊装饰（墙纸/地板/门），无需实体，直接读取材质
+            foreach (var loadedRoom in saveData.rooms)
+            {
+                if (!roomDic.TryGetValue(loadedRoom.roomUID, out var roomMono))
+                    continue;
+
+                if (loadedRoom.wallPlacementId.HasValue)
+                {
+                    var info = GridObjectSystem.GetPlacementInfo(loadedRoom.wallPlacementId.Value);
+                    if (info != null)
+                        roomMono.RestoreSpecialDecoration(Placement_Second_Category.Wallpaper, loadedRoom.wallPlacementId.Value, info.res_url);
+                }
+                if (loadedRoom.floorPlacementId.HasValue)
+                {
+                    var info = GridObjectSystem.GetPlacementInfo(loadedRoom.floorPlacementId.Value);
+                    if (info != null)
+                        roomMono.RestoreSpecialDecoration(Placement_Second_Category.Floor, loadedRoom.floorPlacementId.Value, info.res_url);
+                }
+                if (loadedRoom.doorPlacementId.HasValue)
+                {
+                    var info = GridObjectSystem.GetPlacementInfo(loadedRoom.doorPlacementId.Value);
+                    if (info != null)
+                        roomMono.RestoreSpecialDecoration(Placement_Second_Category.Door, loadedRoom.doorPlacementId.Value, info.res_url);
+                }
+            }
+
+            //STEP 4：重建所有 PlacementRuntime和Pot
             foreach (var roomData in saveData.rooms)
             {
                 if (!roomDic.TryGetValue(roomData.roomUID, out var roomMono))
@@ -195,7 +256,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             ResetRoomObjectRenderer();
 
-            //STEP 4：统一 rebake（非常重要）
+            //STEP 5：统一 rebake（非常重要）
             Global_Home_Room_Manager._instance.re_bake_navmesh();
             SwitchRoom(RoomType.LivingRoom);
 

@@ -18,7 +18,6 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         public GameObject obj;
         public GameObject changeIcon;
         public GameObject changeName;
-        public GameObject photoAlbum;
         public Image expImage;
         public TMP_Text expLevelText;
         public TMP_Text expText;
@@ -48,7 +47,7 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         public GameObject friendListPanel;
         public TMP_Text friendListNameText;
         public RawImage friendListRawImage;
-        public string friendListIconPath;
+        //public string friendListIconPath;
 
         [Header("FriendDetail")]
         public GameObject friendDetailPanel;
@@ -56,7 +55,7 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         public TMP_Text friendDetailIDText;
         public TMP_Text friendDetailIntimacyText;
         public RawImage friendDetailRawImage;
-        public string friendDetailIconPath;
+        //public string friendDetailIconPath;
         public List<RawImage> friendDetailImageList = new List<RawImage>();
 
         [Header("PlayerDetail")]
@@ -74,21 +73,20 @@ namespace CLIP.Project_Mouse.NewFrame.UI
 
         private void Start()
         {
-            friendListIconPath = FriendsCanvasInteractManager.Instance.ChangeClothesAndTakePhotoForPlayer(FriendsCanvasInteractManager.Instance.photoRT, "FriendList");
-            friendDetailIconPath = FriendsCanvasInteractManager.Instance.ChangeClothesAndTakePhotoForPlayer(FriendsCanvasInteractManager.Instance.bigPhotoRT, "FriendList");
-        }
+            //friendListIconPath = FriendsCanvasInteractManager.Instance.ChangeClothesAndTakePhotoForPlayer(FriendsCanvasInteractManager.Instance.photoRT, "FriendList");
+            //friendDetailIconPath = FriendsCanvasInteractManager.Instance.ChangeClothesAndTakePhotoForPlayer(FriendsCanvasInteractManager.Instance.bigPhotoRT, "FriendList");
+            changeNameInputField.onSubmit.AddListener(value =>
+            {
+                canchange = false;
+                filterString = value;
 
-        private void OnEnable()
-        {
-            InitPersonalBrief();
-        }
+                if (currentCoroutine != null)
+                {
+                    StopCoroutine(currentCoroutine);
+                }
+                currentCoroutine = StartCoroutine(DebouncedValidate(filterString));
 
-
-        #region 接口方法实现
-
-        public override void OpenPanel(params object[] data)
-        {
-            canchange = false;
+            });
             changeNameInputField.onValueChanged.AddListener(value =>
             {
                 canchange = false;
@@ -101,10 +99,25 @@ namespace CLIP.Project_Mouse.NewFrame.UI
                 currentCoroutine = StartCoroutine(DebouncedValidate(filterString));
 
             });
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            InitPersonalBrief();
+        }
+
+
+        #region 接口方法实现
+
+        public override void OpenPanel(params object[] data)
+        {
+            canchange = false;
+
+            obj.SetActive(true);
             InitPersonalBrief();
             MainPanel.CloseMainFuncP();
             MainPanel.SetPhoneBTNEnable(false);
-            obj.SetActive(true);
         }
 
 
@@ -122,14 +135,13 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         public override void ClosePanel()
         {
             obj.SetActive(false);
-            changeNameInputField.onValueChanged.RemoveAllListeners();
             MainPanel.OpenMainFuncP();
             MainPanel.SetPhoneBTNEnable(true);
-            Global_Game_Manager._instance._player_brief._brief_photo_selected = photoInfoList;
-            Global_Game_Manager._instance._player_brief._icon_info = currentIcon;
-            Global_Game_Manager._instance._player_brief._icon_frame_info = currentIconFrame;
-            Global_Game_Manager._instance._player_brief.achievements_pinned = achievementRecordList;
-            Global_Game_Manager._instance.on_upload_player_brief_to_server();
+            Global_Game_Manager.Instance._player_brief._brief_photo_selected = photoInfoList;
+            Global_Game_Manager.Instance._player_brief._icon_info = currentIcon;
+            Global_Game_Manager.Instance._player_brief._icon_frame_info = currentIconFrame;
+            Global_Game_Manager.Instance._player_brief.achievements_pinned = achievementRecordList;
+            Global_Game_Manager.Instance.on_upload_player_brief_to_server();
             // 上传相册照片到服务器
         }
 
@@ -143,8 +155,8 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         {
             CloseChangeName();
             // 经验值和等级
-            nameText.text = Global_Game_Manager._instance._player_brief._player_nick_name;
-            idText.text = Global_Game_Manager._instance._current_player_id;
+            nameText.text = Global_Game_Manager.Instance._player_brief._player_nick_name;
+            idText.text = Global_Game_Manager.Instance._current_player_id;
             expLevelText.text = ExpManager.instance.curLevel.ToString();
             expSlider.value = 0;
             if (ExpManager.instance.curLevelInfo == null || ExpManager.instance.curLevelInfo.nextLevelExp == 0)
@@ -153,11 +165,13 @@ namespace CLIP.Project_Mouse.NewFrame.UI
             }
             else
             {
-                expSlider.value =Mathf.Min(0f,  ExpManager.instance.curExp * 1f / ExpManager.instance.curLevelInfo.nextLevelExp);
+                expSlider.value =  ExpManager.instance.curExp * 1f / ExpManager.instance.curLevelInfo.nextLevelExp;
             }
-            expSlider.value = Mathf.Max(0f, expSlider.value);
-            currentIcon = Global_Game_Manager._instance._player_brief._icon_info;
-            currentIconFrame = Global_Game_Manager._instance._player_brief._icon_frame_info;
+
+            expText.text = $"{ExpManager.instance.curExp}/{ExpManager.instance.curLevelInfo.nextLevelExp}";
+
+            currentIcon = Global_Game_Manager.Instance._player_brief._icon_info;
+            currentIconFrame = Global_Game_Manager.Instance._player_brief._icon_frame_info;
             // 加载头像
             // 加载头像框
             InitAchievements();
@@ -167,14 +181,14 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         // 初始化成就
         private void InitAchievements()
         {
-            achievementRecordList = Global_Game_Manager._instance._player_brief.achievements_pinned;
+            achievementRecordList = Global_Game_Manager.Instance._player_brief.achievements_pinned;
             StartCoroutine(LoadAchievementIconFromAchievementList());
         }
 
         // 初始化照片
         private void InitPhotos(List<RawImage> imageList)
         {
-            photoInfoList = Global_Game_Manager._instance._player_brief._brief_photo_selected;
+            photoInfoList = Global_Game_Manager.Instance._player_brief._brief_photo_selected;
             StartCoroutine(LoadImagesFromPhotoInfoList(imageList));
         }
 
@@ -186,7 +200,7 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         // 打开好友详情视角
         public void OpenFriendDetail()
         {
-            Global_Photo_Manager.Instance.try_load_image(friendListIconPath, friendDetailRawImage);
+            //Global_Photo_Manager.Instance.try_load_image(friendListIconPath, friendDetailRawImage);
             friendDetailNameText.text = nameText.text;
             friendDetailIDText.text = idText.text;
             friendDetailIntimacyText.text = expLevelText.text;
@@ -201,7 +215,7 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         {
             friendListPanel.SetActive(true);
             friendListNameText.text = nameText.text;
-            Global_Photo_Manager.Instance.try_load_image(friendListIconPath, friendListRawImage);
+            //Global_Photo_Manager.Instance.try_load_image(friendListIconPath, friendListRawImage);
             // 成就
             otherBriefPanel.SetActive(false);
         }
@@ -259,9 +273,9 @@ namespace CLIP.Project_Mouse.NewFrame.UI
                     return;
                 }
 
-                Global_Game_Manager._instance.on_upload_player_brief_to_server();
+                Global_Game_Manager.Instance.on_upload_player_brief_to_server();
 
-                Global_Game_Manager._instance._player_brief._player_nick_name = changeNameInputField.text;
+                Global_Game_Manager.Instance._player_brief._player_nick_name = changeNameInputField.text;
                 nameText.text = changeNameInputField.text;
                 changeName.SetActive(false);
             }

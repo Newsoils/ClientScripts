@@ -1,102 +1,156 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
+using CLIP.Project_Mouse.Kernel;
+using DG.Tweening.Plugins.Core.PathCore;
 using UnityEngine;
 using UnityEngine.UI;
+using static UnityEngine.GraphicsBuffer;
 
-namespace CLIP
+namespace CLIP.Project_Mouse.UI
 {
-    namespace Project_Mouse
+    public class ShowPhotoPanel : UIPanelBase
     {
-        namespace UI
+        public GameObject panelObj;
+        public RawImage photo;
+
+        public Button save;
+        public Button Weixin;
+        public Button QQ;
+
+        public Button btnExit;
+        public Button btnDeletePhoto;
+        public GameObject deletePhotoPage;
+        public Button btnConfirmDelete;
+        public Button btnCancelDelete;
+
+        // 当前查看的照片元数据
+        private photo_info_saved _currentPhotoInfo;
+        private string _currentPhotoPath;
+
+        private void Start()
         {
-            public class ShowPhotoPanel : UIPanelBase
+            btnExit.onClick.AddListener(ClosePanel);
+            btnDeletePhoto.onClick.AddListener(BtnDeletePhoto);
+            btnConfirmDelete.onClick.AddListener(BtnConfirmDelete);
+            btnCancelDelete.onClick.AddListener(BtnCancelDelete);
+            save.onClick.AddListener(() => Global_Photo_Manager.Instance.SaveToGallery(_currentPhotoPath, _currentPhotoInfo._photo_name));
+        }
+
+
+        public override void OnDestroy()
+        {
+            base.OnDestroy();
+            btnExit.onClick.RemoveListener(ClosePanel);
+            btnDeletePhoto.onClick.RemoveListener(BtnDeletePhoto);
+            btnConfirmDelete.onClick.RemoveListener(BtnConfirmDelete);
+            btnCancelDelete.onClick.RemoveListener(BtnCancelDelete);
+            save.onClick.RemoveAllListeners();
+        }
+
+        /// <summary>
+        /// 需要给照片路径
+        /// </summary>
+        /// <param name="data"></param>
+        public override void OpenPanel(params object[] data)
+        {
+            if (data.Length > 0 && data[0] is string photoPath && !string.IsNullOrEmpty(photoPath))
             {
-                public GameObject panelObj;
-                public RawImage photo;
 
-                public Button save;
-                public Button Weixin;
-                public Button QQ;
-
-
-                public Button btnExit;
-                public Button btnDeletePhoto;
-                public GameObject deletePhotoPage;
-                public Button btnConfirmDelete;
-                public Button btnCancelDelete;
-
-
-                private void Start()
+                _currentPhotoInfo = Global_Photo_Manager.Instance.GetPhotoInfoByPath(photoPath);
+                if (_currentPhotoInfo == null)
                 {
-                    btnExit.onClick.AddListener(ClosePanel);
-                    btnDeletePhoto.onClick.AddListener(BtnDeletePhoto);
-                    btnConfirmDelete.onClick.AddListener(BtnConfirmDelete);
-                    btnCancelDelete.onClick.AddListener(BtnCancelDelete);
+                    Log.Error($"ShowPhotoPanel: 未找到照片元数据: {photoPath}");
+                    return;
                 }
-                private void BtnDeletePhoto()
-                {
-                    deletePhotoPage.SetActive(true);
-                }
-                private void BtnConfirmDelete()
-                {
-                    deletePhotoPage.SetActive(false);
-                }
-                private void BtnCancelDelete()
-                {
-                    deletePhotoPage.SetActive(false);
-                }
+                _currentPhotoPath = photoPath;
+            }
+            else
+            {
+                // 没有传参数，加载最后一张
+                _currentPhotoPath = Global_Photo_Manager.Instance.Last_Photo_Path;
+                if (!string.IsNullOrEmpty(_currentPhotoPath))
+                    _currentPhotoInfo = Global_Photo_Manager.Instance.GetPhotoInfoByPath(_currentPhotoPath);
+            }
 
-                public override void OpenPanel(params object[] data)
-                {
-                    //panelObj.SetActive(true);
-                    //PhotoData photoData = data[0] as PhotoData;
-                    //photo.texture = PhotoManager.Instance.photos[photoData];
+            if (string.IsNullOrEmpty(_currentPhotoPath) || !File.Exists(_currentPhotoPath))
+            {
+                Log.Error($"ShowPhotoPanel: 照片文件不存在: {_currentPhotoPath}");
+                return;
+            }
 
-                    if(data.Length>0)
-                    {
-                        string photoName = data[0] as string;
-                        if (string.IsNullOrEmpty(photoName))
-                        {
-                            _ = Global_Photo_Manager.Instance.Load_Image(photoName, (texture) =>
-                            {
-                                if (texture != null)
-                                {
-                                    photo.texture = texture;
-                                    panelObj.SetActive(true);
-                                }
-                                else
-                                {
-                                    Log.Error($"Failed to load photo: {photoName}");
-                                }
-                            });
-                        }
-                    }
-                    else
-                    {
-                        _ = Global_Photo_Manager.Instance.Load_Last_Image((texture) =>
-                        {
-                            if (texture != null)
-                            {
-                                photo.texture = texture;
-                                panelObj.SetActive(true);
-                            }
-                            else
-                            {
-                                Log.Error("Failed to load photo.");
-                            }
-                        });
-                    }
-                   
-                }
-
-                public override void ClosePanel()
+            Global_Photo_Manager.Instance.LoadTexture(_currentPhotoPath, (tex) =>
+            {
+                if (tex != null)
                 {
-                    panelObj.SetActive(false);
+                    photo.texture = tex;
+                    panelObj.SetActive(true);
                 }
+                else
+                {
+                    Log.Error($"ShowPhotoPanel: 纹理加载失败: {_currentPhotoPath}");
+                }
+            });
+        }
+
+        public override void ClosePanel()
+        {
+            ReleaseCurrentTexture();
+            panelObj.SetActive(false);
+            deletePhotoPage?.SetActive(false);
+            _currentPhotoInfo = null;
+            _currentPhotoPath = null;
+        }
+
+        private void ReleaseCurrentTexture()
+        {
+            if (!string.IsNullOrEmpty(_currentPhotoPath))
+            {
+                Global_Photo_Manager.Instance.ReleaseTexture(_currentPhotoPath);
+                _currentPhotoPath = null;
             }
         }
+
+        // ================================================================
+        // 删除逻辑
+        // ================================================================
+
+        private void BtnDeletePhoto()
+        {
+            deletePhotoPage?.SetActive(true);
+        }
+
+        private void BtnConfirmDelete()
+        {
+            deletePhotoPage?.SetActive(false);
+            if (_currentPhotoInfo == null)
+            {
+                Debug.LogWarning("BtnConfirmDelete: 没有当前照片信息可删除。");
+                return;
+            }
+
+            // 1. 关闭预览
+            ReleaseCurrentTexture();
+
+            // 2. 删除文件 + 元数据 + 缓存
+            Global_Photo_Manager.Instance.DeletePhoto(_currentPhotoInfo);
+            UIManager.Instance.GetPanel<DispatchPhotoPanel>()?.RefreshAfterDelete(); // 刷新列表
+
+            Debug.Log($"照片已删除: {_currentPhotoInfo._photo_name}");
+            _currentPhotoInfo = null;
+            photo.texture = null;
+
+            // 3. 关闭面板（照片已不存在）
+            ClosePanel();
+        }
+
+        private void BtnCancelDelete()
+        {
+            deletePhotoPage?.SetActive(false);
+        }
+
     }
 }
-

@@ -4,7 +4,6 @@ using CLIP.Project_Mouse.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using static System.Net.Mime.MediaTypeNames;
 
 public class FriendPanel : MonoBehaviour
 {
@@ -37,8 +36,7 @@ public class FriendPanel : MonoBehaviour
             SM._on_refresh_social_state.AddListener(ShowSearchResults);
         }
 
-        searchInput.onSubmit.AddListener(DoSearch);
-
+        searchInput.onValueChanged.AddListener(DoSearch);
         btnSearch.onClick.AddListener(DoSearch);
         //btnClearSearch.onClick.AddListener(ClearSearch);
     }
@@ -51,7 +49,6 @@ public class FriendPanel : MonoBehaviour
         }
 
         searchInput.onSubmit.RemoveListener(DoSearch);
-
         btnSearch.onClick.RemoveAllListeners();
         //btnClearSearch.onClick.RemoveAllListeners();
     }
@@ -93,7 +90,13 @@ public class FriendPanel : MonoBehaviour
 
     private void DoSearch(string text)
     {
-        if (string.IsNullOrEmpty(text) || text == Global_Game_Manager._instance._current_player_id)
+        if(SensitiveWordManager.Instance.ContainsSensitiveWords(text))
+        {
+            searchInput.text = SensitiveWordManager.Instance.FilterText(text);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(text) || text == Global_Game_Manager.Instance._current_player_id)
         {
             ClearSearch();
             return;

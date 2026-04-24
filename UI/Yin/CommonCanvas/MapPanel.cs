@@ -1,9 +1,9 @@
 using System.Collections;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
+using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -69,14 +69,7 @@ namespace CLIP
                     if (room == null) return;
 
 
-                    var floorCollider = room.GetFloorCollider();
-                    if (floorCollider == null)
-                    {
-                        Log.Error("没找到地板的collider" + room.RoomName + "请检查");
-                        return;
-                    }
-
-                    Vector3 pos = GetNormalizedPositionInCollider(floorCollider);
+                    Vector3 pos = GetNormalizedPositionInRoom(room);
                     RectTransform image = null;
                     switch (room.RoomName)
                     {
@@ -99,16 +92,33 @@ namespace CLIP
                     characterIcon.anchoredPosition = iconPos;
 
                 }
-                private Vector3 GetNormalizedPositionInCollider(Collider collider)
+                private Vector3 GetNormalizedPositionInRoom(Room room)
                 {
-                    // 获取碰撞箱的边界
-                    Bounds bounds = collider.bounds;
+                    if (room == null)
+                    {
+                        return Vector3.zero;
+                    }
+                    var origin = room.GetGridOrigin(GridLayerType.Floor);
+                    if (origin == null)
+                    {
+                        Log.Error("MapPanel: 未找到地板 GridOrigin，无法计算小地图位置。");
+                        return Vector3.zero;
+                    }
+                    if (!room.GridState.TryGetFirstLayer(GridLayerType.Floor, out var floorLayer) || floorLayer == null)
+                    {
+                        Log.Error("MapPanel: 未找到地板 GridLayer，无法计算小地图位置。");
+                        return Vector3.zero;
+                    }
+                    if (floorLayer.Width <= 0 || floorLayer.Height <= 0)
+                    {
+                        Log.Error("MapPanel: Floor 网格尺寸非法。");
+                        return Vector3.zero;
+                    }
 
-                    // 计算物体在边界内的相对位置 (0到1)
-                    Vector3 relativePos = bounds.center - IndoorMainCharacter._instance.transform.position;
-
-                    float normalizedX = 1 - ((relativePos.z + bounds.extents.z) / (bounds.size.z));
-                    float normalizedY = ((relativePos.x + bounds.extents.x) / (bounds.size.x));
+                    // 基于房间网格尺寸进行归一化，替代旧的 collider bounds 算法。
+                    Vector3 relativePos = IndoorMainCharacter._instance.transform.position - origin.position;
+                    float normalizedX = Mathf.Clamp01(relativePos.z / floorLayer.Height);
+                    float normalizedY = Mathf.Clamp01(1f - (relativePos.x / floorLayer.Width));
                     return new Vector3(normalizedX, normalizedY, 0);
                 }
                 private Vector2 MapToImageLocalPosition(RectTransform targetImage, Vector3 normalizedPos)

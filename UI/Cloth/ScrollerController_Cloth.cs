@@ -4,7 +4,6 @@ using System.Linq;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
 using CLIP.Project_Mouse.Kernel;
 using UnityEngine;
 
@@ -69,7 +68,7 @@ public class ScrollerController_Cloth : ScrollerController_GameItem<ScrollData_G
             return;
         }
 
-        var _clothNameDic = Character_Cloth_Manager.Instance.clothNameDic;
+        var _clothNameDic = CharacterClothesManager.Instance.clothNameDic;
         if (_clothNameDic == null)
         {
             Log.Custom("衣服字典为空，无法刷新面板", "ScrollerController_cloth", Color.red);
@@ -94,7 +93,7 @@ public class ScrollerController_Cloth : ScrollerController_GameItem<ScrollData_G
                 if (item?.item_info == null) return false;
                 if (_clothNameDic.TryGetValue(item.item_info.name, out var meta))
                 {
-                    return meta.first_category == first_Category;
+                    return meta.firstCategory == first_Category;
                 }
                 return false;
             }).ToList();
@@ -107,7 +106,7 @@ public class ScrollerController_Cloth : ScrollerController_GameItem<ScrollData_G
             {
                 if (_clothNameDic.TryGetValue(item.item_info.name, out var meta))
                 {
-                    return meta.second_category == second_Category;
+                    return meta.secondCategory == second_Category;
                 }
                 return false;
             }).ToList();
@@ -144,7 +143,7 @@ public class ScrollerController_Cloth : ScrollerController_GameItem<ScrollData_G
 
     private void OnItemClick(ScrollData_GameItem data)
     {
-        Character_Cloth_Manager.Instance.Add_Cloth(Character_Type.Target_Character, data.name);
+        CharacterClothesManager.Instance.ChangeClothes(CharacterType.Target, data.name);
     }
 
 }

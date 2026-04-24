@@ -66,7 +66,29 @@ public class PlantPlantMode : IEditMode
         {
             if(pot.CheckPlant(plantData))
             {
+                var seedItem = Global_Inventory_Manager.GetItem(curSeedName);
+                int seedCount = seedItem != null ? seedItem._item_count : 0;
+                if (seedCount <= 0)
+                {
+                    EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "种子数量不足");
+                    EditManager.Instance.ExitCurrentMode();
+                    return;
+                }
+
                 await PlantManager.Instance.PlantPlant(curSeedName, pot.UId);
+
+                Global_Inventory_Manager.Change_Items_Count(
+                    new List<(string, int)> { (curSeedName, -1) }, "种植");
+                EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
+
+                var seedItemAfter = Global_Inventory_Manager.GetItem(curSeedName);
+                int seedCountAfter = seedItemAfter != null ? seedItemAfter._item_count : 0;
+                if (seedCountAfter <= 0)
+                {
+                    EditManager.Instance.ExitCurrentMode();
+                    return;
+                }
+
                 EvtDsp.TriggerEvt<PlantData>(EvtNames.ShowSeedPop, plantData);
             }
             else

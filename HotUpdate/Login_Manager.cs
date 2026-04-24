@@ -2,12 +2,8 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Core.Network;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Game_Play_System;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
-
 using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
-using ResourceMgr = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
 
 public class Login_Manager : SingletonMono<Login_Manager> , IMsg_Receiver
 {
@@ -34,7 +30,7 @@ public class Login_Manager : SingletonMono<Login_Manager> , IMsg_Receiver
 
     #region Login
 
-    public void TryLogin( string playerId,string password)
+    public void TryLogin(string playerId,string password)
     {
 
         // 时间拦截：如果当前时间距离上次发送不足 loginCooldown，则拦截
@@ -100,7 +96,7 @@ public class Login_Manager : SingletonMono<Login_Manager> , IMsg_Receiver
         _networkCenter._connect_to_player_server = true;
 
         // 2. Global Game Manager
-        Global_Game_Manager._instance.set_up_player_info(msg);
+        Global_Game_Manager.Instance.set_up_player_info(msg);
         Global_Game_Data_Sync_Receiver.Instance.On_Login_Success();
 
         // 3. Player Social
@@ -114,7 +110,8 @@ public class Login_Manager : SingletonMono<Login_Manager> , IMsg_Receiver
 
 
         // 6. Load Scene
-        ResourceMgr.load_scene_async("Scenes/MainScene");
+        //ResourceMgr.load_scene_async("Scenes/MainScene");
+        SceneLoadingHelper.Load_MainScene();
 
         Msg_Dispatcher._instance._is_locking = false;
     }

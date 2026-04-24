@@ -3,14 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
-using CLIP.Framework_Core.Network;
 using CLIP.Framework_Unity;
-using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
 using CLIP.Project_Mouse.Kernel;
 using Newtonsoft.Json;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace CLIP.Project_Mouse.Game_Play_System
 {
@@ -50,19 +46,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
             yield return null;
             yield return null;
             LoadCurrency();
-        }
-        private void Update()
-        {
-            Keyboard keyboard = Keyboard.current;
-            if(keyboard.digit8Key.wasPressedThisFrame)
-            {
-                _ = Test();
-                //LoadCurrency();
-            }
-            if(keyboard.digit9Key.wasPressedThisFrame)
-            {
-                ChangeCurrency("鱼币", 300, "测试");
-            }
         }
         private async Task Test()
         {

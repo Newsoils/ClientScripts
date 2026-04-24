@@ -55,8 +55,8 @@
 //                            irrigateTime += Time.deltaTime;
 //                            if (irrigateTime >= 3f)
 //                            {
-//                                Planting_System_Manager._instance.try_irrigate_all_level_pot(100);
-//                                Planting_System_Manager._instance._planting_event_hub._invoke_on_show_up_prompt("已浇水");
+//                                Planting_System_Manager.Instance.try_irrigate_all_level_pot(100);
+//                                Planting_System_Manager.Instance._planting_event_hub._invoke_on_show_up_prompt("已浇水");
 //                            }
 //                        }
 //                        // 手指抬起
@@ -64,8 +64,8 @@
 //                        {
 //                            if (irrigateTime < 3f)
 //                            {
-//                                Planting_System_Manager._instance.try_irrigate_all_level_pot(50);
-//                                Planting_System_Manager._instance._planting_event_hub._invoke_on_show_up_prompt("还未浇满水");
+//                                Planting_System_Manager.Instance.try_irrigate_all_level_pot(50);
+//                                Planting_System_Manager.Instance._planting_event_hub._invoke_on_show_up_prompt("还未浇满水");
 //                            }
 //                            if (manager.wateringParticle != null)
 //                            {
@@ -100,8 +100,8 @@
 //                            irrigateTime += Time.deltaTime;
 //                            if (irrigateTime >= 3f)
 //                            {
-//                                Planting_System_Manager._instance.try_irrigate_all_level_pot(100);
-//                                Planting_System_Manager._instance._planting_event_hub._invoke_on_show_up_prompt("已浇水");
+//                                Planting_System_Manager.Instance.try_irrigate_all_level_pot(100);
+//                                Planting_System_Manager.Instance._planting_event_hub._invoke_on_show_up_prompt("已浇水");
 //                            }
 //                        }
 //                        // 手指抬起
@@ -109,8 +109,8 @@
 //                        {
 //                            if (irrigateTime < 3f)
 //                            {
-//                                Planting_System_Manager._instance.try_irrigate_all_level_pot(50);
-//                                Planting_System_Manager._instance._planting_event_hub._invoke_on_show_up_prompt("还未浇满水");
+//                                Planting_System_Manager.Instance.try_irrigate_all_level_pot(50);
+//                                Planting_System_Manager.Instance._planting_event_hub._invoke_on_show_up_prompt("还未浇满水");
 //                            }
 //                            if (manager.wateringParticle != null)
 //                            {

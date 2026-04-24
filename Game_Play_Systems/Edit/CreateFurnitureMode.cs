@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
+using CLIP.Framework_Core.LYC.TaskSystem;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Kernel;
 using DG.Tweening;
@@ -157,10 +158,15 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 {
                     placement.SetBorderVisible(false);
                 }
+                // 通知任务系统
+                // "首次摆放一个家具"
+                TaskTriggers.TriggerEventOfMultipleOperations(1, 1);
             }
 
             _selected = null;
             EvtDsp.TriggerEvt(EvtNames.Close_Edit_Placement_Panel);
+
+
         }
 
         public void OnRotate()

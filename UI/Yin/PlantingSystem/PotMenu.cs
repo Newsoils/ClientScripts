@@ -18,7 +18,7 @@
 //                public Button btn_lock;
 //                private void OnEnable()
 //                {
-//                    GameObject pot = Planting_System_Manager._instance.current_selected_pot;
+//                    GameObject pot = Planting_System_Manager.Instance.current_selected_pot;
 //                    if (pot != null)
 //                    {
 //                        curentPot = pot.GetComponent<Pot_In_Scene>();
@@ -59,14 +59,14 @@
 //                    if (curentPot != null)
 //                    {
 //                        Pot_In_Scene pot_In_Scene = null;
-//                        GameObject pot = Planting_System_Manager._instance.current_selected_pot;
+//                        GameObject pot = Planting_System_Manager.Instance.current_selected_pot;
 //                        if (pot != null)
 //                        {
 //                            pot_In_Scene = pot.GetComponent<Pot_In_Scene>();
 //                        }
 //                        if (pot_In_Scene != null)
 //                        {
-//                            Planting_System_Manager._instance.try_remove_pot_from_level(pot_In_Scene);
+//                            Planting_System_Manager.Instance.try_remove_pot_from_level(pot_In_Scene);
 //                        }
 //                    }
 //                }
@@ -74,7 +74,7 @@
 //                public void RotatePot()
 //                {
 //                    Pot_In_Scene pot_In_Scene = null;
-//                    GameObject pot = Planting_System_Manager._instance.current_selected_pot;
+//                    GameObject pot = Planting_System_Manager.Instance.current_selected_pot;
 //                    if (pot != null)
 //                    {
 //                        pot_In_Scene = pot.GetComponent<Pot_In_Scene>();
@@ -97,7 +97,7 @@
 //                public void EnableOrDisableLock()
 //                {
 //                    Pot_In_Scene pot_In_Scene = null;
-//                    GameObject pot = Planting_System_Manager._instance.current_selected_pot;
+//                    GameObject pot = Planting_System_Manager.Instance.current_selected_pot;
 //                    if (pot != null)
 //                    {
 //                        pot_In_Scene = pot.GetComponent<Pot_In_Scene>();

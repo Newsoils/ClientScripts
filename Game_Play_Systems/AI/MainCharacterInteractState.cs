@@ -44,11 +44,9 @@ public class MainCharacterInteractState : MainCharacterState
             }
             if(!string.IsNullOrEmpty(info.itemRequire))
             {
-                if(mainCharacter.interactItemDic.TryGetValue(info.itemRequire, out InteractItem item))
-                {
-                    item.itemObj.SetActive(true);
-                }
+                CharacterHandHeldManager.Instance.ShowHandheld(CharacterType.Main, info.itemRequire);
             }
+            MainCharacterInteractSpecialBehavior.TryInvokeEnter(info.specialBehavior);
         }
 
         /// <summary>按 Animator 状态名取当前层上该 state's clip 时长（秒）；在 layer 0 上短暂 Play 采样后恢复原状态。</summary>
@@ -89,12 +87,10 @@ public class MainCharacterInteractState : MainCharacterState
         public override void Exit()
         {
             base.Exit();
+            MainCharacterInteractSpecialBehavior.TryInvokeExit(info.specialBehavior);
             if (!string.IsNullOrEmpty(info.itemRequire))
             {
-                if (mainCharacter.interactItemDic.TryGetValue(info.itemRequire, out InteractItem item))
-                {
-                    item.itemObj.SetActive(false);
-                }
+                CharacterHandHeldManager.Instance.HideHandheld(CharacterType.Main, info.itemRequire);
             }
             mainCharacter.liePosition = Vector3.zero;
             mainCharacter.curInteract = null;

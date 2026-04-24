@@ -6,7 +6,6 @@ using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 public class ScrollerController_Placement : ScrollerController_GameItem<ScrollData_GameItem, FirstCellView_GameItem>
 {
@@ -172,7 +171,7 @@ public class ScrollerController_Placement : ScrollerController_GameItem<ScrollDa
                 }
             }
 
-            Global_Inventory_Manager.Change_Item_Count(data.id, -1);
+            //Global_Inventory_Manager.Change_Item_Count(data.id, -1);
             EvtDsp.TriggerEvt(EvtNames.ReloadPlacementData);
 
         }

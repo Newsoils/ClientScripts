@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Kernel.Social;
+using RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
 
 namespace CLIP.Project_Mouse.UI
 {
@@ -27,16 +28,31 @@ namespace CLIP.Project_Mouse.UI
 
             if (!string.IsNullOrEmpty(social_Chat_Msg.res_url))
             {
-                string[] parts = social_Chat_Msg.res_url.Split('#');
-                Project_Mouse_Resource_Management.load_sub_sprite(parts[0], parts[1], (sprite) =>
+                string[] _image_url_data = social_Chat_Msg.res_url.Split('#');
+                if (_image_url_data.Length == 2)
                 {
-                    this.mSprite = sprite;
-                    image.sprite = sprite;
-                    if (sprite == null)
+                    RM.load_sub_sprite(_image_url_data[0], _image_url_data[1], (sprite) =>
                     {
-                        Debug.LogWarning($"[Emoji] 加载资源失败: {social_Chat_Msg.res_url}");
-                    }
-                });
+                        this.mSprite = sprite;
+                        image.sprite = sprite;
+                        if (sprite == null)
+                        {
+                            Debug.LogWarning($"[Emoji] 加载资源失败: {social_Chat_Msg.res_url}");
+                        }
+                    });
+                }
+                else
+                {
+                    RM.load_sprite_async(_image_url_data[0], (sprite) =>
+                    {
+                        this.mSprite = sprite;
+                        image.sprite = sprite;
+                        if (sprite == null)
+                        {
+                            Debug.LogWarning($"[Emoji] 加载资源失败: {social_Chat_Msg.res_url}");
+                        }
+                    });
+                }
             }
         }
 

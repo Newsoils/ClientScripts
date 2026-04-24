@@ -24,10 +24,6 @@ public class Plant : MonoBehaviour
     }
     private void Update()
     {
-        if(Keyboard.current.digit8Key.wasPressedThisFrame)
-        {
-            Grow();
-        }
         if(data != null)
         {
             water -= Time.deltaTime * 0.069f / 60;
@@ -100,6 +96,7 @@ public class Plant : MonoBehaviour
             if (room.potsDic.TryGetValue(data.potUid, out var pot))
             {
                 transform.position = pot.plantRoot.position;
+                transform.parent = pot.plantRoot;
                 flag = false;
                 break;
             }

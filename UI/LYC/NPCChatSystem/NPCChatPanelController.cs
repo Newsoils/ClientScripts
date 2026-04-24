@@ -70,6 +70,13 @@ namespace CLIP.Project_Mouse.UI
         private void Start()
         {
             EvtDsp.AddEvt<NPC_RuntimeData>(EvtNames.On_Single_NPC_Data_Updated, OnReceiveNPCFavorUpdate);
+            EvtDsp.AddEvt<List<NPC_RuntimeData>>(EvtNames.On_All_NPC_Data_Received, OnReceiveAllNPCFavorUpdate);
+        }
+
+        private void OnDestroy()
+        {
+            EvtDsp.RemoveEvt<NPC_RuntimeData>(EvtNames.On_Single_NPC_Data_Updated, OnReceiveNPCFavorUpdate);
+            EvtDsp.RemoveEvt<List<NPC_RuntimeData>>(EvtNames.On_All_NPC_Data_Received, OnReceiveAllNPCFavorUpdate);
         }
 
         // --------------------------------------------------------------------------------------------------------------
@@ -123,6 +130,11 @@ namespace CLIP.Project_Mouse.UI
         private List<IDialogueModel> LoadDialoguesByPath<T>(string filePath) where T : IDialogueModel
         {
             TextAsset jsonFile = Resources.Load<TextAsset>(filePath);
+            if (jsonFile == null)
+            {
+                Debug.LogError($"NPCChatPanelController: 未找到对话资源 {filePath}");
+                return new List<IDialogueModel>();
+            }
 
             return LoadDialoguesBySingleLine<T>(jsonFile);
         }
@@ -190,6 +202,11 @@ namespace CLIP.Project_Mouse.UI
         private List<ParagraphModel> LoadParagraghsByPath(string filePath)
         {
             TextAsset jsonFile = Resources.Load<TextAsset>(filePath);
+            if (jsonFile == null)
+            {
+                Debug.LogError($"NPCChatPanelController: 未找到段落资源 {filePath}");
+                return new List<ParagraphModel>();
+            }
 
             return JsonConvert.DeserializeObject<List<ParagraphModel>>(jsonFile.text);
         }
@@ -203,6 +220,8 @@ namespace CLIP.Project_Mouse.UI
         /// </summary>
         public void StartDisplayParagragh(int paraId, int npcId, UnityAction afterDisplay = null)
         {
+            EnsureDialogueDataLoaded();
+
             if (!_allParagraghsDic.ContainsKey(paraId))
             {
                 Debug.LogError($"id为 {paraId} 的段落不存在");
@@ -228,11 +247,13 @@ namespace CLIP.Project_Mouse.UI
                     {
                         // 正常展示对话内容（可能是以动画的形式展现，展示选项同理）
                         OnNormalDialogueProcess(dialogue, npcId, () => { waiting = false; });
+                        // 关闭选项面板
                     }
                     else
                     {
                         // 展示选项
                         OnOptionProcess(dialogue as OptionDialogueModel, () => { waiting = false; }, npcId);
+                        // 开启选项面板
                     }
 
                     // 2.等待一段时间，或等待前面内容完成（就是等待一定的动画时间，或者等待 View 层传来结束信号）
@@ -274,6 +295,25 @@ namespace CLIP.Project_Mouse.UI
             }
 
             StartDisplayParagragh(para.ParaId, npcId, afterDisplay);
+        }
+
+        private void EnsureDialogueDataLoaded()
+        {
+            // 这里做懒加载，避免外部忘记调用 NPCChatPanelMgr.Init() 或初始化时序导致关键字典仍为 null
+            if (AllNPCChatDataDic == null)
+            {
+                LoadDataFromSO();
+            }
+
+            if (_allDialoguesDic == null)
+            {
+                LoadAllDialogues();
+            }
+
+            if (_allParagraghsDic == null)
+            {
+                LoadAllParagraghs();
+            }
         }
 
 
@@ -329,7 +369,11 @@ namespace CLIP.Project_Mouse.UI
         // 关闭聊天面板协程
         public void StopChatCoroutine()
         {
-            StopCoroutine(_currentCoroutine);
+            if (_currentCoroutine != null)
+            {
+                StopCoroutine(_currentCoroutine);
+                _currentCoroutine = null;
+            }
         }
 
 
@@ -584,6 +628,8 @@ namespace CLIP.Project_Mouse.UI
                 }
             }
 
+            // 文件不存在时初始化：除了写盘，还必须写回内存字典，否则运行期查询会一直认为没有数据
+            LocalFavorDatas = datas;
             SaveNPCFavorToLocal(datas);
         }
 
@@ -644,7 +690,23 @@ namespace CLIP.Project_Mouse.UI
         /// </summary>
         public bool TryGetPendingParaIdByNPCId(NPC_RuntimeData newData, out int paraId, out int nextDiaAtFavorLevel)
         {
-            // 打印调试数据
+            if (newData == null)
+            {
+                paraId = -1;
+                nextDiaAtFavorLevel = -1;
+                return false;
+            }
+
+            // 确保内存字典存在（避免初始化时序导致空引用）
+            LocalFavorDatas ??= LoadFavorFromDisk();
+
+            // 确保该 NPC 的本地好感数据存在；若不存在则补建并注入触发列表
+            if (!LocalFavorDatas.ContainsKey(newData.npc_id))
+            {
+                UpdateFavorInMemory(newData);
+            }
+
+            // 打印调试数据（避免 KeyNotFound）
             Debug.Log($"当前好感度等级为：{newData.favor_level}");
             LocalFavorDatas[newData.npc_id].PrintDialogueToTriggerData();
 
@@ -664,12 +726,37 @@ namespace CLIP.Project_Mouse.UI
             return false;
         }
 
+        private void OnReceiveAllNPCFavorUpdate(List<NPC_RuntimeData> allDatas)
+        {
+            if (allDatas == null || allDatas.Count == 0)
+            {
+                return;
+            }
+
+            // 确保内存数据存在
+            LocalFavorDatas ??= LoadFavorFromDisk();
+            ParaIdOfEachFavorLevelDic ??= new Dictionary<int, Dictionary<int, int>>();
+            if (ParaIdOfEachFavorLevelDic.Count == 0)
+            {
+                LoadParaIdOfEachFavorLevelDic();
+            }
+
+            foreach (var data in allDatas)
+            {
+                if (data == null) continue;
+                UpdateFavorInMemory(data);
+            }
+
+            // 保存到磁盘，保证下次启动与运行期一致
+            SaveNPCFavorToLocal(LocalFavorDatas);
+        }
+
         /// <summary>
         /// 在点击 NPC 聊天格子时，首先调用这个方法，对是否触发剧情进行判断
         /// </summary>
         /// <param name="newData"></param>
         /// <returns></returns>
-        public bool HasPendingDialogue(NPC_RuntimeData newData)
+        private bool HasPendingDialogue(NPC_RuntimeData newData)
         {
             if (!LocalFavorDatas.ContainsKey(newData.npc_id))
             {
@@ -701,6 +788,11 @@ namespace CLIP.Project_Mouse.UI
             if (LocalFavorDatas == null)
             {
                 LocalFavorDatas = LoadFavorFromDisk();
+            }
+            ParaIdOfEachFavorLevelDic ??= new Dictionary<int, Dictionary<int, int>>();
+            if (ParaIdOfEachFavorLevelDic.Count == 0)
+            {
+                LoadParaIdOfEachFavorLevelDic();
             }
 
             // 更新内存数据
@@ -734,6 +826,12 @@ namespace CLIP.Project_Mouse.UI
                     newData.favor_Value
                 );
 
+                // 兜底：当本地文件刚被删除/首次启动导致内存为空时，确保新建对象也能注入触发列表
+                if (ParaIdOfEachFavorLevelDic != null && ParaIdOfEachFavorLevelDic.TryGetValue(newData.npc_id, out var paraMap))
+                {
+                    favorData.InitDialoguesToTrigger(paraMap);
+                }
+
                 LocalFavorDatas[newData.npc_id] = favorData;
             }
 
@@ -742,92 +840,6 @@ namespace CLIP.Project_Mouse.UI
             favorData.SetCurrentFavorValue(newData.favor_Value);
         }
 
-
-
-        //private void OnReceiveNPCFavorUpdate(NPC_RuntimeData newData)
-        //{
-        //    // 首先判断是否存在保存的地址
-        //    if (!File.Exists(_absolutePath))
-        //    {
-        //        // 如果不存在就创建初始化数据
-        //        Dictionary<int, LocalNPCFavorData> initDatas = new Dictionary<int, LocalNPCFavorData>();
-        //        initDatas[newData.npc_id] = new LocalNPCFavorData(newData.npc_id, newData.favor_level, newData.favor_Value);
-        //        UpdateLocalFavorDatas(newData);
-        //        SaveNPCFavorToLocal(initDatas);
-        //        return;
-        //    }
-
-        //    // 更新 类中的 LocalFavorDatas
-        //    UpdateLocalFavorDatas(newData);
-
-        //    // 主动保存 NPC 数据到硬盘
-        //    SaveNPCFavorToLocal(LocalFavorDatas);
-        //}
-
-        //private void UpdateLocalFavorDatas(NPC_RuntimeData newData)
-        //{
-        //    // 加载存储在本地的 NPC 数据
-        //    //TextAsset jsonFile = Resources.Load<TextAsset>(_npcFavorSavePath);
-
-        //    var json = GetFavorSavePath();
-
-        //    bool isNull = true;
-        //    if (jsonFile == null)
-        //    {
-        //        // 如果不存在就创建初始化数据
-        //        Dictionary<int, LocalNPCFavorData> initDatas = new Dictionary<int, LocalNPCFavorData>();
-        //        initDatas[newData.npc_id] = new LocalNPCFavorData(newData.npc_id, newData.favor_level, newData.favor_Value);
-        //        SaveNPCFavorToLocal(initDatas);
-        //        // 然后再次加载
-        //        StartCoroutine(CheckIfJsonFileCanLoad());
-        //        return;
-        //    }
-
-        //    IEnumerator CheckIfJsonFileCanLoad()
-        //    {
-
-        //        while (isNull)
-        //        {
-        //            jsonFile = Resources.Load<TextAsset>(_npcFavorSavePath);
-        //            if (jsonFile != null)
-        //            {
-        //                isNull = false;
-        //            }
-        //            yield return null;
-        //        }
-
-        //        UpdateLocalFavorDatas(newData);
-        //    }
-
-
-        //    // 先创建一个
-        //    Dictionary<int, LocalNPCFavorData> oldDatas
-        //        = JsonConvert.DeserializeObject<Dictionary<int, LocalNPCFavorData>>(jsonFile.text);
-
-        //    if (oldDatas == null)
-        //    {
-        //        oldDatas = new Dictionary<int, LocalNPCFavorData>();
-        //        oldDatas[newData.npc_id] = new LocalNPCFavorData(newData.npc_id, newData.favor_level, newData.favor_Value);
-        //        Debug.Log($"这是 {_npcFavorSavePath} 路径下文件的 第一次初始化");
-        //    }
-        //    else if (!oldDatas.ContainsKey(newData.npc_id))
-        //    {
-        //        // 如果进到这里，表示这是该 NPC 第一次检测到被修改，需要添加到本地数据中
-        //        oldDatas[newData.npc_id] = new LocalNPCFavorData(newData.npc_id, newData.favor_level, newData.favor_Value);
-        //    }
-
-        //    // 更新数据
-        //    oldDatas[newData.npc_id].UpdateUnlockStatus(newData.favor_level);
-        //    oldDatas[newData.npc_id].SetCurrentFavorLevel(newData.favor_level);
-        //    oldDatas[newData.npc_id].SetCurrentFavorValue(newData.favor_Value);
-
-        //    // 这里需要进行判断：是否需要新添加
-
-        //    // 然后覆盖为新数据
-        //    LocalFavorDatas = oldDatas;
-        //}
-
-        // 将 NPC 当前的 favor 值保存到本地
         private void SaveNPCFavorToLocal(Dictionary<int, LocalNPCFavorData> newData)
         {
             // Formatting.Indented 可以使得生成的 Json 文本可读性好一些
@@ -883,6 +895,7 @@ namespace CLIP.Project_Mouse.UI
         /// </summary>
         public void LoadPastChatHistory(NPC_RuntimeData newData)
         {
+            EnsureDialogueDataLoaded();
             UIManager.Instance.GetPanel<SocialPanel>().npcChatPanel.ClearOptions();
             if (LocalFavorDatas.TryGetValue(newData.npc_id, out LocalNPCFavorData data))
             {

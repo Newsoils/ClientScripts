@@ -1,6 +1,7 @@
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Project_Mouse.UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,6 +12,7 @@ public class MainPanel : UIPanelBase
     public TopPanel topPanel;
 
     public Button dispatchButton;
+    public GameObject dispatchWarningButton;
 
     public MainFunctionPanel mainFunctionPanel;
 
@@ -20,6 +22,7 @@ public class MainPanel : UIPanelBase
     {
         editRoom.onClick.AddListener(OpenPlacementInventory);
         dispatchButton.onClick.AddListener(Dispatch);
+        RefreshDispatchWarningVisibility();
 
 
         EvtDsp.AddEvt<Room>(EvtNames.SwitchRoom, SwitchPanelByRoomType);
@@ -37,13 +40,16 @@ public class MainPanel : UIPanelBase
         EvtDsp.AddEvt(EvtNames.OnClothPanelOpen, ShowTopPanelOnly);
         EvtDsp.AddEvt(EvtNames.OnClothPanelClose, ShowAll);
         EvtDsp.AddEvt(EvtNames.OnShoppingPanelOpen, ShowTopPanelOnly);
-        EvtDsp.AddEvt(EvtNames.OnShoppingPanelClose, ShowAll);
+        EvtDsp.AddEvt(EvtNames.OnShoppingPanelClose, HandleShoppingPanelClose);
         EvtDsp.AddEvt(EvtNames.OnDispatchPanelOpen, ShowTopPanelOnly);
         EvtDsp.AddEvt(EvtNames.OnDispatchPanelClose, ShowAll);
         EvtDsp.AddEvt(EvtNames.OnPhonePanelOpen, CloseMainFuncP);
         EvtDsp.AddEvt(EvtNames.OnPhonePanelClose, ShowAll);
         EvtDsp.AddEvt(EvtNames.OnPerseonBriefOpen, ShowTopPanelOnly);
         EvtDsp.AddEvt(EvtNames.OnPerseonBriefClose, ShowAll);
+        EvtDsp.AddEvt(EvtNames.OnTakePhotoPanelOpen, CloseAllUI);
+        EvtDsp.AddEvt(EvtNames.OnTakePhotoPanelClose, ShowAll);
+        EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshDispatchWarningVisibility);
     }
 
     public override void OnDestroy()
@@ -65,6 +71,8 @@ public class MainPanel : UIPanelBase
         EvtDsp.RemoveEvt(EvtNames.OnPlantPanelClose, ShowAll);
         EvtDsp.RemoveEvt(EvtNames.OnClothPanelOpen, ShowTopPanelOnly);
         EvtDsp.RemoveEvt(EvtNames.OnClothPanelClose, ShowAll);
+        EvtDsp.RemoveEvt(EvtNames.OnShoppingPanelOpen, ShowTopPanelOnly);
+        EvtDsp.RemoveEvt(EvtNames.OnShoppingPanelClose, HandleShoppingPanelClose);
         EvtDsp.RemoveEvt(EvtNames.Set_MainPanel_All_Active, ShowAll);
         EvtDsp.RemoveEvt(EvtNames.OnDispatchPanelOpen, ShowTopPanelOnly);
         EvtDsp.RemoveEvt(EvtNames.OnDispatchPanelClose, ShowAll);
@@ -72,6 +80,9 @@ public class MainPanel : UIPanelBase
         EvtDsp.RemoveEvt(EvtNames.OnPhonePanelClose, ShowAll);
         EvtDsp.RemoveEvt(EvtNames.OnPerseonBriefOpen, ShowTopPanelOnly);
         EvtDsp.RemoveEvt(EvtNames.OnPerseonBriefClose, ShowAll);
+        EvtDsp.RemoveEvt(EvtNames.OnTakePhotoPanelOpen, ShowTopPanelOnly);
+        EvtDsp.RemoveEvt(EvtNames.OnTakePhotoPanelClose, ShowAll);
+        EvtDsp.RemoveEvt(EvtNames.RefreshUI, RefreshDispatchWarningVisibility);
     }
 
     #region 开关面板元素
@@ -148,6 +159,22 @@ public class MainPanel : UIPanelBase
 
         this.transform.parent.GetComponent<Canvas>().sortingOrder = 100;
     }
+    public void CloseAllUI()
+    {
+        ShowTopPanelOnly();
+        topPanel.gameObject.SetActive(false);
+    }
+
+    private void HandleShoppingPanelClose()
+    {
+        // 派遣流程中关闭商店应返回派遣界面，不应恢复主界面所有入口。
+        if (SceneLoadHelper.IsDispatchScene)
+        {
+            ShowTopPanelOnly();
+            return;
+        }
+        ShowAll();
+    }
 
     // 恢复原来的所有 UI 显示
     public void ShowAll()
@@ -155,6 +182,7 @@ public class MainPanel : UIPanelBase
         topPanel.gameObject.SetActive(true);
         mainFunctionPanel.OpenPanel();
         dispatchButton.gameObject.SetActive(true);
+        RefreshDispatchWarningVisibility();
         PhoneButton.Instance.OpenPanel();
         UIManager.Instance.GetPanel<PlantInteractPanel>().SetRight(true);
         SwitchPanelByRoomType(RoomSystem.currentRoom);
@@ -178,7 +206,8 @@ public class MainPanel : UIPanelBase
     {
         if (!SceneLoadHelper.IsDispatchScene)
         {
-            SceneLoadHelper.Load_DispatchScene();
+            //SceneLoadHelper.Load_DispatchScene();
+            SceneLoadingHelper.Load_DispatchScene();
             CloseMainFuncP();
             dispatchButton.gameObject.SetActive(false);
         }
@@ -215,5 +244,44 @@ public class MainPanel : UIPanelBase
         UIManager.Instance.GetPanel<PlantInteractPanel>().ClosePanel();
         mainFunctionPanel.SetRight(true);
         dispatchButton.gameObject.SetActive(true);
+        RefreshDispatchWarningVisibility();
+    }
+
+    private void RefreshDispatchWarningVisibility()
+    {
+        if (dispatchWarningButton == null)
+        {
+            return;
+        }
+
+        dispatchWarningButton.SetActive(ShouldShowDispatchWarning());
+    }
+
+    private bool ShouldShowDispatchWarning()
+    {
+        var mgr = Dispatch_Manager._instance;
+        if (mgr == null || mgr.dispatch_Bags == null || mgr.dispatch_Bags.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var bag in mgr.dispatch_Bags)
+        {
+            if (bag == null)
+            {
+                continue;
+            }
+
+            bool hasAnyItem =
+                !string.IsNullOrEmpty(bag.foodName) ||
+                !string.IsNullOrEmpty(bag.snackName) ||
+                !string.IsNullOrEmpty(bag.tapeName);
+            if (hasAnyItem)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

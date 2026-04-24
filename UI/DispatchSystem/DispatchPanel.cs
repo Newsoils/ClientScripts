@@ -3,6 +3,7 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.ENUM;
+using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Project_Mouse.UI;
 using DG.Tweening;
@@ -51,8 +52,13 @@ public class DispatchPanel : UIPanelBase
     public GameObject Bag3StateIcon1;
     public GameObject Bag3StateIcon2;
     public Button confirmButton;
+    [Header("确认打包按钮高亮图 派遣新增_确认打包")]
+    public Sprite confirmButtonHighlightSprite;
+    private Sprite confirmButtonNormalSprite;
     private int curBagIndex;
     private DispatchBagInfo curBagInfo;
+
+    public int CurrentBagIndex => curBagIndex;
 
     public Button selectFoodButton;
     public Button selectCDButton;
@@ -86,6 +92,11 @@ public class DispatchPanel : UIPanelBase
         popOriginPosition = popUpObj.GetComponent<RectTransform>().anchoredPosition;
         scrollerOriginPosition = confirmAndScroller.anchoredPosition;
 
+        if (confirmButton != null && confirmButton.image != null)
+        {
+            confirmButtonNormalSprite = confirmButton.image.sprite;
+        }
+
         animation_Player = procedurePlayAnimation.GetComponentInChildren<UIFrameAnimation>();
 
 
@@ -95,22 +106,6 @@ public class DispatchPanel : UIPanelBase
         {
             Log.Error("DispatchPanel: UIFrameAnimation not found in procudurePlayAnimation");
         }
-
-        //random_Button.onClick.AddListener(() =>
-        //{
-        //    var package = Dispatch_Manager._instance.Get_Random_Package();
-        //});
-
-        ////prepare_Button.onClick.AddListener(FinshPrepare);
-        //force_Start_Button.onClick.AddListener(() =>
-        //{
-        //    Dispatch_Manager._instance.force_dispatch_start();
-        //});
-
-        //force_Return_Button.onClick.AddListener(() =>
-        //{
-        //    UIManager.Instance.OpenPanel<DispatchPhotoPanel>();
-        //});
 
 
         Bag1Button.onClick.AddListener(() =>
@@ -159,9 +154,6 @@ public class DispatchPanel : UIPanelBase
             mainPanel.SetPhoneButtonEnable(true);
         });
 
-        //EvtDsp.AddEvt<string>(EvtNames.Dispatch_Text_Notice, Update_Notice_Text);
-        //EvtDsp.AddEvt(EvtNames.Dispatch_Text_Clear, Clear_Notice_Text);
-        //EvtDsp.AddEvt<Item_Type, string>(EvtNames.Dispatch_Change_Item, (_,_) => RefreshPanel());
         EvtDsp.TriggerEvt(EvtNames.OnDispatchPanelOpen);
         SwitchProcedure(Procedure_Dispatch.SelectBag, false);
 
@@ -169,14 +161,6 @@ public class DispatchPanel : UIPanelBase
 
     public override void OnDestroy()
     {
-        //prepare_Button.onClick.RemoveListener(FinshPrepare);
-        //force_Start_Button.onClick.RemoveAllListeners();
-        //force_Return_Button.onClick.RemoveAllListeners();
-
-        //EvtDsp.RemoveEvt<string>(EvtNames.Dispatch_Text_Notice, Update_Notice_Text);
-        //EvtDsp.RemoveEvt(EvtNames.Dispatch_Text_Clear, Clear_Notice_Text);
-        //EvtDsp.RemoveEvt<Item_Type, string>(EvtNames.Dispatch_Change_Item, (_, _) => RefreshPanel());
-
         Bag1Button.onClick.RemoveAllListeners();
         Bag2Button.onClick.RemoveAllListeners();
         Bag3Button.onClick.RemoveAllListeners();
@@ -189,16 +173,6 @@ public class DispatchPanel : UIPanelBase
         UIManager.Instance.UnregisterPanel(typeof(DispatchPanel).Name);
         EvtDsp.TriggerEvt(EvtNames.OnDispatchPanelClose);
     }
-
-    //public void Update_Notice_Text(string str)
-    //{
-    //    noticeText.text = str;
-    //}
-
-    //public void Clear_Notice_Text()
-    //{
-    //    noticeText.text = "";
-    //}
 
     private void SwitchBag(int bagIndex)
     {
@@ -247,8 +221,11 @@ public class DispatchPanel : UIPanelBase
                 exitDispatchButton.onClick.AddListener(() =>
                 {
                     MainPanel.SetPhoneBTNEnable(true);
-                    SceneLoadHelper.Load_MainScene((s) =>EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active));
+                    //SceneLoadHelper.Load_MainScene((s) =>EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active));
+                    SceneLoadingHelper.Load_MainScene(() => EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active));
                 });
+                lastBagButton.gameObject.SetActive(true);
+                nextBagButton.gameObject.SetActive(true);
                 Bag1State.text = GetBagState(0);
                 Bag2State.text = GetBagState(1);
                 Bag3State.text = GetBagState(2);
@@ -380,6 +357,31 @@ public class DispatchPanel : UIPanelBase
         {
             AddCDImage.SetActive(false);
         }
+
+        RefreshConfirmButtonHighlight(current_info);
+    }
+
+    // 三个物品（food / snack / tape）都装填后，确认按钮才切到高亮 sprite
+    private void RefreshConfirmButtonHighlight(DispatchBagInfo info)
+    {
+        if (confirmButton == null || confirmButton.image == null)
+        {
+            return;
+        }
+
+        bool isFull = info != null
+                      && !string.IsNullOrEmpty(info.foodName)
+                      && !string.IsNullOrEmpty(info.snackName)
+                      && !string.IsNullOrEmpty(info.tapeName);
+
+        if (isFull && confirmButtonHighlightSprite != null)
+        {
+            confirmButton.image.sprite = confirmButtonHighlightSprite;
+        }
+        else if (confirmButtonNormalSprite != null)
+        {
+            confirmButton.image.sprite = confirmButtonNormalSprite;
+        }
     }
     private void ShowScroller()
     {
@@ -392,7 +394,7 @@ public class DispatchPanel : UIPanelBase
         RectTransform rectTransform = scrollerController_Dispatch_Food.GetComponent<RectTransform>();
         confirmAndScroller.DOAnchorPos(scrollerOriginPosition - new Vector2(0, rectTransform.rect.height), 0.4f).SetEase(Ease.OutBack).OnComplete(() =>
         {
-            //scrollerController_Dispatch_Food.gameObject.SetActive(false);
+            scrollerController_Dispatch_Food.gameObject.SetActive(false);
         });
     }
 
@@ -446,7 +448,6 @@ public class DispatchPanel : UIPanelBase
                 break;
         }
 
-
     }
 
     private string GetBagState(int index)
@@ -467,11 +468,19 @@ public class DispatchPanel : UIPanelBase
         if(string.IsNullOrEmpty(curBagInfo.foodName)||string.IsNullOrEmpty(curBagInfo.snackName))
         {
             ShowPopUp("食物或幸运小物未装填，打包失败！");
+            return;
         }
-        else
+
+        ShowPopUp("打包​完毕，​小苔随时​可能​出门​哦！");
+        Dispatch_Manager._instance.SetBagContent(curBagIndex, curBagInfo);
+
+        // 三样齐全（= 确认按钮处于高亮态）时，直接跳回选择背包界面，不播放过渡动画
+        bool isFullyPacked = !string.IsNullOrEmpty(curBagInfo.foodName)
+                             && !string.IsNullOrEmpty(curBagInfo.snackName)
+                             && !string.IsNullOrEmpty(curBagInfo.tapeName);
+        if (isFullyPacked)
         {
-            ShowPopUp("打包​完毕，​小苔随时​可能​出门​哦！");
-            Dispatch_Manager._instance.SetBagContent(curBagIndex, curBagInfo);
+            SwitchProcedure(Procedure_Dispatch.SelectBag, false);
         }
     }
     private void ShowPopUp(string text)

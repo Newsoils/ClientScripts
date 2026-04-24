@@ -1,10 +1,7 @@
-using System.Collections;
-using System.Collections.Generic;
-using CLIP.Project_Mouse;
+using CLIP.Project_Mouse.NewFrame.UI;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using CLIP.Project_Mouse.NewFrame.UI;
 
 namespace CLIP
 {
@@ -32,16 +29,13 @@ namespace CLIP
                 public void OnToggleValueChange(bool isOn)
                 {
                     isSelected = isOn;
-                    //ShoppingCanvasInteractManager.Instance.UpdateCartUI();
                     UIManager.Instance.GetPanel<ShoppingPanel>().UpdateCartUI();
                 }
 
                 public void DeleteItem()
                 {
-                    //ShoppingCanvasInteractManager.Instance.shoppingCartItems.Remove(gameObject.GetComponent<ShoppingCartItem>());
                     UIManager.Instance.GetPanel<ShoppingPanel>().shoppingCartItems.Remove(gameObject.GetComponent<ShoppingCartItem>());
                     Destroy(gameObject);
-                    //ShoppingCanvasInteractManager.Instance.UpdateCartUI();
                     UIManager.Instance.GetPanel<ShoppingPanel>().UpdateCartUI();
                 }
             }

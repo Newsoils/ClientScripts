@@ -62,7 +62,7 @@
 //                            PlantingInteractManager.Instance.bTN_Begin_Planting.SetActive(false);
 //                            PlantingInteractManager.Instance.CameraDown();
 //                            PlantingInteractManager.Instance.ChangeState(new NonePlantState());
-//                            Planting_System_Manager._instance.can_edit_pot = true;
+//                            Planting_System_Manager.Instance.can_edit_pot = true;
 //                        }
 //                    }
 //                }

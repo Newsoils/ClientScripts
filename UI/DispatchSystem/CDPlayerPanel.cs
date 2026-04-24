@@ -15,20 +15,57 @@ public class CDPlayerPanel : UIPanelBase
     public Button NextCDButton;
     public Button playOrStopButton;
 
+    public Sprite playSprite;
+    public Sprite stopSprite;
+
 
     // Start is called before the first frame update
     void Start()
     {
         EvtDsp.AddEvt<Item_Type, string>(EvtNames.Dispatch_Change_Item, ChangeMoodTagText);
+        EvtDsp.AddEvt<bool>(EvtNames.CD_Player_Playing, UpdatePlayButtonSprite);
 
-        //playOrStopButton.onClick.AddListener(()=>)
+        playOrStopButton.onClick.AddListener(OnPlayOrStopButtonClick);
+
+        LastCDButton.onClick.AddListener( () => EvtDsp.TriggerEvt(EvtNames.CD_Play_Before) );
+          
+        NextCDButton.onClick.AddListener(()=> EvtDsp.TriggerEvt(EvtNames.CD_Play_Next) );
+    }
+
+    protected override void OnEnable()
+    {
+        base.OnEnable();
+        UpdatePlayButtonSprite(ScrollerController_CD.isPlaying);
     }
 
     public override void OnDestroy()
     {
         base.OnDestroy();
         EvtDsp.RemoveEvt<Item_Type, string>(EvtNames.Dispatch_Change_Item, ChangeMoodTagText);
+        EvtDsp.RemoveEvt<bool>(EvtNames.CD_Player_Playing, UpdatePlayButtonSprite);
+        LastCDButton.onClick.RemoveAllListeners();
+        NextCDButton.onClick.RemoveAllListeners();
     }
+
+
+    private void UpdatePlayButtonSprite(bool play)
+    {
+        if ( playOrStopButton != null)
+        {
+            playOrStopButton.image.sprite = play ? stopSprite : playSprite;
+        }
+    }
+
+    private void OnPlayOrStopButtonClick()
+    {
+        var _scrollerController = UIManager.Instance.GetPanel<DispatchPanel>().scrollerController_CD;
+
+        if (_scrollerController != null)
+        {
+            _scrollerController.TogglePlayPause();
+        }
+    }
+
 
     public void ChangeMoodTagText(Item_Type type, string name)
     {
@@ -60,6 +97,7 @@ public class CDPlayerPanel : UIPanelBase
 
     public override void UpdatePanel(params object[] data)
     {
+
     }
 
 

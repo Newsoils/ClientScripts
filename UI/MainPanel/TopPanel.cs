@@ -49,7 +49,7 @@ namespace CLIP
                 }
                 private void BtnLevel()
                 {
-                    LevelPanel.instance.OpenPanel();
+                    UIManager.Instance.OpenPanel<LevelPanel>();
                 }
                 private void BtnCoin()
                 {

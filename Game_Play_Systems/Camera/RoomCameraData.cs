@@ -26,8 +26,9 @@ public class CameraViewData
     /// <summary>
     /// 相机旋转
     /// </summary>
-    public Vector3 euler = new Vector3(45f, -45f, 0);            
-
+    public Vector3 euler = new Vector3(45f, -45f, 0);
+    public float pitch;
+    public float yaw;
     public float orthographicSize = 18f;
     public bool enableYaw = true;
 

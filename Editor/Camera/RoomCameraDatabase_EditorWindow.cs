@@ -1,4 +1,3 @@
-#if UNITY_EDITOR
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -193,4 +192,3 @@ public class RoomCameraDatabase_EditorWindow : EditorWindow
         EditorPrefs.SetString(ROOM_CAMERA_DB_KEY, dbPath);
     }
 }
-#endif

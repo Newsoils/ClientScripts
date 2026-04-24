@@ -1,10 +1,6 @@
-using System.Collections;
 using CLIP.Project_Mouse.UI;
-using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
 using CLIP.Framework_Core.Event;
-using UnityEngine.UIElements.Experimental;
-using UnityEngine.UIElements;
 
 public class GuideStepHelper : MonoBehaviour
 {
@@ -192,5 +188,23 @@ public class GuideStepHelper : MonoBehaviour
         }
     }
 
+
+    public void GetDispatchConfirmButton(GuideStep step)
+    {
+        var DispatchPanel = UIManager.Instance.GetPanel<DispatchPanel>();
+        if (DispatchPanel != null)
+        {
+            step.SetListenButton(DispatchPanel.confirmButton);
+        }
+    }
+
+    public void GetDispatchCDConfirmButton(GuideStep step)
+    {
+        var DispatchPanel = UIManager.Instance.GetPanel<DispatchPanel>();
+        if (DispatchPanel != null)
+        {
+            step.SetListenButton(DispatchPanel.confirmCD);
+        }
+    }
 
 }

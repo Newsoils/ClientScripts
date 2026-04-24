@@ -6,7 +6,6 @@ using UnityEngine.UI;
 
 namespace CLIP.Project_Mouse.UI
 {
-
     public class NpcDetailPanel : MonoBehaviour
     {
         public GameObject obj;
@@ -23,6 +22,11 @@ namespace CLIP.Project_Mouse.UI
         public Slider slider;
         public TMP_Text intimacyValueText;
         public GameObject reward;
+        public Button exitButton;
+        private void Start()
+        {
+            exitButton.onClick.AddListener(ClosePanel);
+        }
 
         public void OpenPanel(NPC_Info info)
         {

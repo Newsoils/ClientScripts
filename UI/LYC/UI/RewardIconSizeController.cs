@@ -25,10 +25,12 @@ namespace CLIP.Project_Mouse.LYC.UI
             }
         }
 
+        // 自动调整奖励格子的大小适配
         private void AutoFitSize()
         {
             float curWidth = this.GetComponent<RectTransform>().rect.width;
             //Debug.Log(curWidth);
+            // 根据父物体的宽度计算比率
             float ratio = curWidth / ori_width;
 
             GridLayoutGroup g = this.GetComponent<GridLayoutGroup>();

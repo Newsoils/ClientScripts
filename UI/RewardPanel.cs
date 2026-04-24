@@ -41,6 +41,7 @@ namespace CLIP
                     EvtDsp.RemoveReturnEvt<List<(string, int)>, bool>(EvtNames.Show_Reward, OpenPanel);
                     EvtDsp.RemoveEvt<List<(string, int)>>(EvtNames.ShowFirstLoginReward, OpenPanelFirstLogin);
                     EvtDsp.RemoveReturnEvt<List<(string, int)>, bool>(EvtNames.Dispatch_Show_Reward, DispatchOpenPanel);
+                    exitButton.onClick.RemoveAllListeners();
                 }
 
                 public bool DispatchOpenPanel(List<(string, int)> items)
@@ -66,11 +67,7 @@ namespace CLIP
                     panelObj.SetActive(true);
                     RefreshUI(items);
 
-                    exitButton.onClick.AddListener(() =>
-                    {
-                        OpenGuide();
-                        exitButton.onClick.RemoveListener(OpenGuide);
-                    });
+                    exitButton.onClick.AddListener(OpenGuide);
 
                     Log.Sucess("DispatchRewardPanel Show Items");
                     AudioManager.Instance.PlayAudioByRefKey("getReward");
@@ -79,6 +76,8 @@ namespace CLIP
                 private void OpenGuide()
                 {
                     GuideManager.Instance.StartGuide();
+                    exitButton.onClick.RemoveAllListeners();
+                    exitButton.onClick.AddListener(ClosePanel);
                 }
 
                 private void RefreshUI(List<(string, int)> items)

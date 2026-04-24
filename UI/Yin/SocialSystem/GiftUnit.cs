@@ -65,7 +65,7 @@ namespace CLIP.Project_Mouse.UI
             var socialPanel = UIManager.Instance.GetPanel<SocialPanel>();
             var friendChatPanel = socialPanel != null ? socialPanel.friendChatPanel : null;
             if (friendChatPanel == null) return;
-            ItemDescriptionPanel.Instance.OpenPanel(_game_item_in_inventory);
+            UIManager.Instance.OpenPanel<ItemDescriptionPanel>(_game_item_in_inventory);
         }
 
         public void toggle_selection()

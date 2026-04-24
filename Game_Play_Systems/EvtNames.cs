@@ -17,14 +17,15 @@ public static class EvtNames
     public static string Give_Gift_TO_NPC = "Give_Gift_TO_NPC";
     public static string On_Single_NPC_Data_Updated = "On_Single_NPC_Data_Updated";
     public static string On_All_NPC_Data_Received = "On_All_NPC_Data_Received";
+    public static string On_NPC_Data_Update = "On_NPC_Data_Update";
     public static string Receive_NPC_Gift_TO_Player = "Receive_NPC_Gift_TO_Player";
     public static string Updata_NPC_Favor_Level = "Updata_NPC_Favor_Level";
+
 
     public static string On_Get_Exp = "On_GetExp";
 
     public static string Check_Chat_Play = "Check_Chat_Play";
     public static string Stop_Chat_Coroutine = "Stop_Chat_Coroutine";
-
 
     public static string Reconnect = "Reconnect";
 
@@ -39,6 +40,7 @@ public static class EvtNames
     public static string ReloadDispatchData = "ReloadDispatchData";
     public static string ReloadClothData = "ReloadClothData";
     public static string ReloadPlantData = "ReloadPlantData";
+    public static string ReloadRecycleData = "ReloadRecycleData";
 
 
     //家具UI
@@ -72,7 +74,11 @@ public static class EvtNames
     public static string Dispatch_Show_Reward = "Dispatch_Get_Reward";
     public static string Dispatch_Get_Photo = "Dispatch_Get_Photo";
 
-    public static string Consume_Ticket = "Consume_Ticket";
+    public static string CD_Player_Playing = "CD_Player_Playing";
+    public static string CD_Player_Toggle = "CD_Player_Toggle";
+    public static string CD_Play_Next = "CD_Play_Next";
+    public static string CD_Play_Before = "CD_Play_Before";
+
     public static string OnPlacementPanelOpen = "OnPlacementPanelOpen";
     public static string OnPlacementPanelClose = "OnPlacementPanelClose";
 
@@ -81,6 +87,9 @@ public static class EvtNames
 
     public static string OnPlantPanelOpen = "OnPlantPanelOpen";
     public static string OnPlantPanelClose = "OnPlantPanelClose";
+
+    public static string OnRecyclePanelOpen = "OnRecyclePanelOpen";
+    public static string OnRecyclePanelClose = "OnRecyclePanelClose";
 
     public static string OnDispatchPanelOpen = "OnDispatchPanelOpen";
     public static string OnDispatchPanelClose = "OnDispatchPanelClose";
@@ -96,6 +105,11 @@ public static class EvtNames
 
     public static string OnLevelPanelOpen = "OnLevelPanelOpen";
     public static string OnLevelPanelClose = "OnLevelPanelClose";
+
+    public static string OnTakePhotoPanelOpen = "OnTakePhotoPanelOpen";
+    public static string OnTakePhotoPanelClose = "OnTakePhotoPanelClose";
+
+    public static string ShowItemDetail = "ShowItemDetail";
     //---------------------------------------------------------------------------------------------
     #endregion
 
@@ -112,15 +126,6 @@ public static class EvtNames
     public static string ShowFirstLoginReward = "ShowFirstLoginReward";
 
 
-    //换装系统
-    public static string On_Target_Character_All_Cloth_Changed = "On_Target_Character_All_Cloth_Changed";
-    public static string On_Target_Character_Single_Cloth_Changed = "On_Target_Character_Single_Cloth_Changed";
-
-    public static string On_Main_Character_All_Cloth_Changed = "On_Main_Character_All_Cloth_Changed";
-    public static string On_Main_Character_Single_Cloth_Changed = "On_Main_Character_Single_Cloth_Changed";
-
-    public static string On_Shopping_Character_All_Cloth_Changed = "On_Shopping_Character_All_Cloth_Changed";
-    public static string On_Shopping_Character_Single_Cloth_Changed = "On_Shopping_Character_Single_Cloth_Changed";
 
     public static string Audio_Change_Play = "Audio_Change_Play";
     public static string Audio_Play = "Audio_Play";
@@ -144,6 +149,10 @@ public static class EvtNames
     public static string Save_Data_To_Server = "Save_Data_To_Server";
     public static string Get_Data_From_Server = "Get_Data_From_Server";
     public static string Excute_Server_Task = "ExcuteServerTask";
+    public static string OnWSLError = "OnWSLError";
+
+    public static string Network_Disconnect = "Network_Disconnect";
+
 
     //时间
     public static string On_Set_Time = "OnSetTime";
@@ -179,6 +188,13 @@ public static class EvtNames
     //点击
     public static string OnClickNothing = "OnClickNothing";
     public static string ShowUpPrompt = "ShowUpPrompt";
+    public static string ShowPrompt = "ShowPrompt";
     //刷新
     public static string RefreshGridView = "RefreshGridView";
-    public static string RefreshPlacementPanel = "RefreshPlacementPanel";}
+    public static string RefreshPlacementPanel = "RefreshPlacementPanel";
+
+    //场景 Loading 进度条
+    public static string SceneLoading_Open = "SceneLoading_Open";
+    public static string SceneLoading_Progress = "SceneLoading_Progress";
+    public static string SceneLoading_Close = "SceneLoading_Close";
+}

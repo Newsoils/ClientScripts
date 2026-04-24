@@ -190,7 +190,7 @@
 //                }
 //                public void update_layer_mask()
 //                {
-//                    if (Global_Home_Room_Manager._instance != null && Global_Home_Room_Manager._instance._can_switch_scene)
+//                    if (Global_Home_Room_Manager.Instance != null && Global_Home_Room_Manager.Instance._can_switch_scene)
 //                    {
 //                        targetLayers = normalTargetLayers;
 //                    }

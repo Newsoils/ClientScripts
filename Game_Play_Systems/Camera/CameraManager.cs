@@ -1,13 +1,22 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Cinemachine;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.UI;
 using UnityEngine;
+using UnityEngine.Experimental.GlobalIllumination;
 
 public class CameraManager : SingletonMono<CameraManager>
 {
     public CameraControl cameraControl;
     public RoomCameraDatabase camera_db;
+    public List<CameraCtrlData> cameraControllers;
+    public Dictionary<string, Dictionary<CameraType, CameraCtrlData>> cameras; //房间名-照相机种类-相机
+    public CinemachineCameraController curCtrl;
+    public CinemachineBrain mainCamera;
     public GameObject obj;
 
     private string currentRoomName;
@@ -20,7 +29,8 @@ public class CameraManager : SingletonMono<CameraManager>
         InitState(CameraState.Normal);
         EvtDsp.AddEvt(EvtNames.OnLevelPanelOpen, ChangeFrozenState);
         EvtDsp.AddEvt(EvtNames.OnLevelPanelClose, ChangeNormalState);
-
+        InitCamera();
+        //SwitchCamera("客厅", CameraType.Normal);
     }
     protected override void OnDestroy()
     {
@@ -45,14 +55,29 @@ public class CameraManager : SingletonMono<CameraManager>
 
     public void ChangeRoom(string name)
     {
+        //SwitchCamera(name, CameraType.Normal);
         currentRoomName = name;
         RefreshCamera();
     }
-
+    private void InitCamera()
+    {
+        cameras = cameraControllers
+        .GroupBy(data => data.roomName)
+        .ToDictionary(
+            group => group.Key,
+            group => group.ToDictionary(data => data.type, data => data)
+        );
+    }
+    private void SwitchCamera(string roomName, CameraType type)
+    {
+        curCtrl?.gameObject.SetActive(false);
+        curCtrl = cameras[roomName][type].ctrl;
+        curCtrl.gameObject.SetActive(true);
+    }
     private void RefreshRoomName()
     {
         var room = RoomSystem.currentRoom;
-        if(room!=null)
+        if (room != null)
             currentRoomName = room.RoomName;
     }
 
@@ -164,4 +189,17 @@ public class CameraManager : SingletonMono<CameraManager>
     {
         obj.SetActive(true);
     }
+}
+
+[Serializable]
+public class CameraCtrlData
+{
+    public string roomName;
+    public CameraType type;
+    public CinemachineCameraController ctrl;
+}
+public enum CameraType
+{
+    Normal,
+    Placement
 }

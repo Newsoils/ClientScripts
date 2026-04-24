@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
 using CLIP.Project_Mouse.UI;
 using Lean.Common;
 using Lean.Touch;
@@ -106,10 +106,11 @@ namespace CLIP.Project_Mouse.NewFrame.UI
             foundCamera.targetTexture = null;
 
             photoCanvas.SetActive(true);
-
+            InputManager.Instance.AllowTouchOnUI = true;
             CameraManager.Instance.CloseCamera();
             //ResetCamera resetCamera = currentPhotoCamerRoot.GetComponentInChildren<ResetCamera>(true);
             //resetCamera.Reset();
+            EvtDsp.TriggerEvt(EvtNames.OnTakePhotoPanelOpen);
         }
 
         // 关闭拍照界面
@@ -117,10 +118,11 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         {
             currentPhotoCamerRoot.SetActive(false);
             photoCanvas.SetActive(false);
-
+            InputManager.Instance.AllowTouchOnUI = false;
             RoomSystem.Instance.canSwitchRoom = true;
 
             CameraManager.Instance.OpenCamera();
+            EvtDsp.TriggerEvt(EvtNames.OnTakePhotoPanelClose);
         }
 
         #endregion
@@ -335,7 +337,10 @@ namespace CLIP.Project_Mouse.NewFrame.UI
             }
         }
 
-
+        public void SavePhoto()
+        {
+            Global_Photo_Manager.Instance.SaveLastPhotoToGallery();
+        }
 
     }
 

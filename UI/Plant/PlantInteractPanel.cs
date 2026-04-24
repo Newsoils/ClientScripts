@@ -27,7 +27,11 @@ public class PlantInteractPanel : UIPanelBase
     {
         BtnRemove.onClick.AddListener(() => EditManager.Instance.SetMode(new RemovePlantMode()));
         BtnHarvest.onClick.AddListener(() => EditManager.Instance.SetMode(new HarvestPlantMode()));
-        BtnWater.onClick.AddListener(() => EditManager.Instance.SetMode(new WaterPlantMode()));
+        BtnWater.onClick.AddListener(() =>
+        {
+            EditManager.Instance.SetMode(new WaterPlantMode());
+            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "现在手指可以在屏幕上划动，给植物浇水");
+        });
         //BtnRemoveGrass.onClick.AddListener(() => ChangeState(PlantState.RemoveGrass));
         BtnEdit.onClick.AddListener(() => UIManager.Instance.OpenPanel<PlantPanel>());
         EvtDsp.AddEvt<PlantData>(EvtNames.ShowSeedPop, ShowSeedPops);

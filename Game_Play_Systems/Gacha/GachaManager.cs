@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using CLIP.Framework_Unity;
+using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Kernel;
 using DataStructures.RandomSelector;
 using Newtonsoft.Json;
@@ -15,17 +16,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
     {
         private const int RARITY_4_PITY_THRESHOLD = 10;
         public int count;
-        private void Update()
-        {
-            Keyboard keyboard = Keyboard.current;
-            if (keyboard != null)
-            {
-                if(keyboard.gKey.wasPressedThisFrame)
-                {
-                    Gacha_Multi_Pull(0, 5);
-                }
-            }
-        }
+
         public List<int> Gacha_Multi_Pull(int poolID, int pullCount)
         {
             string json = JsonData_Manager.Load_Single_JsonData("project_mouse_tb_gacha_pool");
@@ -33,7 +24,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
             var pool = gacha_Pools[poolID];
             if (pool == null) return new List<int>();
 
-            var allPoolItems = Global_Inventory_Manager.GetItemInfos(pool.items);
+            var allPoolItems = Global_Inventory_Manager.GetItemInfos(pool.items)
+                .Where(item => item != null && !ShouldExcludeOwnedWallpaperOrFloor(item))
+                .ToList();
+            if (allPoolItems.Count == 0) return new List<int>();
             var probDic = pool.probs.ToDictionary(p => p.Item1, p => p.Item2);
 
             List<int> resultItemIds = new List<int>();
@@ -51,12 +45,26 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 if (count >= RARITY_4_PITY_THRESHOLD)
                 {
                     var four_star_items = allPoolItems.Where(x => x.rarity == Enum_RarityType.Elegant).ToList();
-                    selected = four_star_items[Random.Range(0, four_star_items.Count)];
+                    if (four_star_items.Count > 0)
+                    {
+                        selected = four_star_items[Random.Range(0, four_star_items.Count)];
+                    }
+                    else
+                    {
+                        selected = allPoolItems[Random.Range(0, allPoolItems.Count)];
+                    }
                 }
                 else
                 {
                     var items = allPoolItems.Where(x => x.rarity == rarity).ToList();
-                    selected = items[Random.Range(0, items.Count)];
+                    if (items.Count > 0)
+                    {
+                        selected = items[Random.Range(0, items.Count)];
+                    }
+                    else
+                    {
+                        selected = allPoolItems[Random.Range(0, allPoolItems.Count)];
+                    }
                 }
 
                 // 更新当前循环内的临时水位
@@ -72,6 +80,30 @@ namespace CLIP.Project_Mouse.Game_Play_System
             // 一次性保存到数据库
             Debug.Log(JsonConvert.SerializeObject( resultItemIds));
             return resultItemIds;
+        }
+
+        private static bool ShouldExcludeOwnedWallpaperOrFloor(Game_Item_Info item)
+        {
+            if (item.type != Item_Type.Room_Placement)
+            {
+                return false;
+            }
+
+            var placementInfo = GridObjectSystem.GetPlacementInfo(item.item_id);
+            if (placementInfo == null)
+            {
+                return false;
+            }
+
+            bool isWallpaperOrFloor = placementInfo.second_Category == Placement_Second_Category.Wallpaper
+                                      || placementInfo.second_Category == Placement_Second_Category.Floor;
+            if (!isWallpaperOrFloor)
+            {
+                return false;
+            }
+
+            var inventoryItem = Global_Inventory_Manager.GetItem(item.item_id);
+            return inventoryItem != null && inventoryItem._item_count > 0;
         }
     }
     public class GachaPool

@@ -2,34 +2,29 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using CLIP.Project_Mouse.Client_Event_Systems;
+using CLIP.Framework_Core.Network;
+using CLIP.Framework_Unity;
+using CLIP.Project_Mouse.Kernel;
+using CLIP.Project_Mouse.Kernel.Social;
 using Newtonsoft.Json;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
 using PM_RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
-using TMPro;
-using CLIP.Project_Mouse.Kernel;
-using CLIP.Framework_Core.Network;
 
 
 namespace CLIP.Project_Mouse.Game_Play_System
 {
-    public class Global_Game_Manager : MonoBehaviour
+    public class Global_Game_Manager : SingletonMono<Global_Game_Manager>
     {
-        public static Global_Game_Manager _instance;
-        [Header("Event_System")]
-        public Scene_Management_Event_Hub_SO _scene_management_event_hub;
-
         [Header("Global_State")]
         public string _current_player_id = "Default_Player_ID";
         public string _current_player_name = "Default_Player";
+
         [HideInInspector]
-        //public Character_On_Body_Clothes_Info _main_character_cloth;
         public Weather_State _weather_state;
-        public Kernel.Social.Player_Social_Setting _player_brief;
+        public Player_Social_Setting _player_brief;
         [Header("Config")]
         public global_const _global_const;
         public List<avatar_icon_info> _avatar_icon_list;
@@ -54,56 +49,22 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public UnityEvent _on_upload_player_brief_to_server = new UnityEvent();
         void Start()
         {
-            if (_instance == null)
-            {
-                _instance = this;
+            DontDestroyOnLoad(this.gameObject);
 
-                DontDestroyOnLoad(this.gameObject);
-                if (_scene_management_event_hub != null)
-                {
-                    _scene_management_event_hub._on_load_new_scene.AddListener(load_scene);
-                }
-
-                _weather_state = new Weather_State();
-                _weather_state._on_weather_change += upload_weather_state;
-                load_from_json();
-            }
-
-            else
-            {
-                if (_instance != this)
-                {
-#if UNITY_EDITOR
-                    DestroyImmediate(this.gameObject);
-#else
-           Destroy(this.gameObject);
-#endif
-                }
-            }
+            _weather_state = new Weather_State();
+            _weather_state._on_weather_change += upload_weather_state;
+            load_from_json();
         }
 
-    
-        public void OnDestroy()
-        {
-            if (_scene_management_event_hub != null)
-            {
-                _scene_management_event_hub._on_load_new_scene.RemoveListener(load_scene);
-            }
-
-        }
         public void quit_game(string _reason, float _delay)
         {
             _ouput_text.text = _reason;
             StartCoroutine(quit_game_co(_delay));
         }
 
-        public void quit_game()
-        {
-            Application.Quit();
-        }
+
         public IEnumerator quit_game_co(float _delay)
         {
-
             if (_on_quit_game != null) _on_quit_game.Invoke();
             yield return new WaitForSecondsRealtime(_delay);
             Application.Quit();
@@ -119,25 +80,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     upload_weather_state();
                 }
             }
-        }
-
-        public void load_scene(string scene_name)
-        {
-            if (scene_name.Contains(SceneManager.GetActiveScene().name) == true)
-            {
-                Debug.Log("Already_in_target_room");
-                return;
-            }
-            PM_RM.load_scene_async(scene_name, (_scene) => { });
-        }
-        public void load_scene(string scene_name, Action<Scene> _callback)
-        {
-            if (scene_name.Contains(SceneManager.GetActiveScene().name) == true)
-            {
-                Debug.Log("Already_in_target_room");
-                return;
-            }
-            PM_RM.load_scene_async(scene_name, _callback);
         }
 
         public void load_default_character()
@@ -168,7 +110,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             var _info = _msg.detail_info.Split("_#_");
             _current_player_id = _info.Last<string>();
         }
-      
+
         public void update_main_character_cloth()
         {
             _update_main_character_cloth_from_server.Invoke();
@@ -198,7 +140,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void load_player_brief_from_json(string json)
         {
-            var _brief = GF_SP.DeserializeObject<Project_Mouse.Kernel.Social.Player_Social_Setting>(json);
+            var _brief = GF_SP.DeserializeObject<Player_Social_Setting>(json);
             if (_brief != null)
             {
                 _player_brief = _brief;
@@ -212,8 +154,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             if (_on_upload_player_brief_to_server != null) _on_upload_player_brief_to_server.Invoke();
         }
-
-
 
     }
 

@@ -62,7 +62,7 @@ namespace CLIP.Project_Mouse.UI
         }
         public void SetUp()
         {
-            SetJoystickPosition(originPosition + new Vector3(0, 0.35f * Screen.height, 0));
+            SetJoystickPosition(originPosition + offset);
         }
         public void SetDown()
         {

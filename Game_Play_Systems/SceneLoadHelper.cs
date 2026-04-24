@@ -9,7 +9,10 @@ public class SceneLoadHelper : SingletonMono<SceneLoadHelper>
     public static string MainSceneName = "MainScene";
     public static string LoginScene = "LoginScene";
 
-
+    public static bool IsLoginScene
+    {
+        get { return SceneManager.GetActiveScene().name ==LoginScene; }
+    }
     public static bool IsMainScene
     {
         get { return SceneManager.GetActiveScene().name == MainSceneName; }

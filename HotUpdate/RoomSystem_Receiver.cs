@@ -4,7 +4,6 @@ using CLIP.Framework_Core.Network;
 using CLIP.Framework_Core.Serialization;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -51,7 +50,7 @@ public class RoomSystem_Receiver : MonoBehaviour, IMsg_Receiver
             return;
         }
 
-        //_socialManager = Player_Social_Manager._instance;
+        //_socialManager = Player_Social_Manager.Instance;
 
         BindEvents();
         RegisterToNetwork();

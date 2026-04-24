@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
+using CLIP.Framework_Core.LYC.TaskSystem;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Kernel;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -26,6 +28,9 @@ namespace CLIP
                 public List<Sprite> priceIconSprites;
                 public Image background;
                 public List<Sprite> backgroundIcons;
+
+
+                public Button detailButton;
 
                 [Header("选择状态")]
                 public Button itemButton;
@@ -56,11 +61,16 @@ namespace CLIP
                 {
                     EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshBuyButtonState);
                     RefreshBuyButtonState();
+
+                    detailButton.onClick.AddListener(() =>
+                        UIManager.Instance.OpenPanel<ItemDescriptionPanel>(itemInShop)
+                    );
                 }
 
                 private void OnDestroy()
                 {
                     EvtDsp.RemoveEvt(EvtNames.RefreshUI, RefreshBuyButtonState);
+                    detailButton.onClick.RemoveAllListeners();
                 }
 
                 /// <summary>根据当前数据刷新购买按钮图与 interactable；限购杂志在生成后设 useLimitMagazineBuyRule 再调一次。</summary>
@@ -77,11 +87,13 @@ namespace CLIP
                 {
                     if (itemInShop.sell_price < 0)
                         return false;
+                    
 
-                    if (useLimitMagazineBuyRule)
+                    if (true)
                     {
                         var info = Global_Inventory_Manager.GetItem(itemInShop.name);
-                        return info == null || info._item_count <= 0;
+                        if (info == null) return true;
+                        if (info.item_info.type == ENUM.Item_Type.Cloth && info._item_count > 0) return false;
                     }
 
                     return true;
@@ -146,6 +158,11 @@ namespace CLIP
                                 PromptMessage.Instance.ShowUpPrompt("购买成功");
                                 Global_Inventory_Manager.Change_Items_Count(items, "商店购买");
                                 EvtDsp.TriggerEvt(EvtNames.RefreshUI);
+
+                                if (itemInShop.type == Project_Mouse.ENUM.Item_Type.Food)
+                                {
+                                    TaskTriggers.TriggerEventOfMultipleOperations(2, 1);
+                                }
                             }
                             else
                             {

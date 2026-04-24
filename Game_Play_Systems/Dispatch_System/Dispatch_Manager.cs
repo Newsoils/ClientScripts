@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Core.LYC.TaskSystem;
 using CLIP.Framework_Unity;
-using CLIP.Project_Mouse.Client_Event_Systems;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Kernel.Dispatch;
 using UnityEngine;
@@ -45,10 +44,6 @@ namespace CLIP
                     /// </summary>
                     public Dispatch_DB_SO _dispatch_configuration_so;
 
-                    /// <summary>
-                    /// 派遣中拍摄的照片路径列表
-                    /// </summary>
-                    public List<string> _dispatch_photo_path_list = new List<string>();
 
                     /// <summary>
                     /// 可以准备的背包个数，暂定为3个
@@ -134,12 +129,23 @@ namespace CLIP
                             // 开启周期性tick协程
                             StartCoroutine(start_dispatch_co());
                         }
-                        dispatch_Bags = new List<DispatchBagInfo>()
+                        // 仅在未初始化时创建，避免覆盖从服务器拉回的背包数据
+                        if (dispatch_Bags == null || dispatch_Bags.Count == 0)
                         {
-                            new DispatchBagInfo(),
-                            new DispatchBagInfo(),
-                            new DispatchBagInfo()
-                        };
+                            dispatch_Bags = new List<DispatchBagInfo>()
+                            {
+                                new DispatchBagInfo(),
+                                new DispatchBagInfo(),
+                                new DispatchBagInfo()
+                            };
+                        }
+                        else
+                        {
+                            while (dispatch_Bags.Count < 3)
+                            {
+                                dispatch_Bags.Add(new DispatchBagInfo());
+                            }
+                        }
                         // 监听场景加载事件
                         SceneManager.sceneLoaded += on_scene_loaded;
                     }
@@ -172,7 +178,6 @@ namespace CLIP
                         // 开启协程处理，不要直接调用
                         StartCoroutine(DelayedTriggerReward());
                     }
-
 
                     private void OnDestroy()
                     {
@@ -469,8 +474,55 @@ namespace CLIP
                     }
                     public void SetBagContent(int index, DispatchBagInfo bagInfo)
                     {
-                        dispatch_Bags[index] = bagInfo;
-                        dispatch_Bags[index].isPacked = true;
+                        if (dispatch_Bags == null)
+                        {
+                            Debug.LogError("SetBagContent: dispatch_Bags is null");
+                            return;
+                        }
+                        if (index < 0 || index >= dispatch_Bags.Count)
+                        {
+                            Debug.LogError($"SetBagContent: invalid index {index}, bags.Count={dispatch_Bags.Count}");
+                            return;
+                        }
+
+                        // 不替换 slot 对象，改成按字段 copy；避免外部用同一个 bagInfo 反复传进来，
+                        // 造成三个 slot 指向同一引用后同步变化。同时保留 dispatch_Bags[index] 的原有
+                        // 对象身份，避免上层持有它的引用（如 DispatchPanel.curBagInfo）被悄悄挤掉。
+                        var slot = dispatch_Bags[index];
+                        if (slot == null)
+                        {
+                            slot = new DispatchBagInfo();
+                            dispatch_Bags[index] = slot;
+                        }
+
+                        if (bagInfo != null && !ReferenceEquals(bagInfo, slot))
+                        {
+                            slot.foodName = bagInfo.foodName;
+                            slot.snackName = bagInfo.snackName;
+                            slot.tapeName = bagInfo.tapeName;
+                        }
+                        slot.isPacked = true;
+
+                        // 强制让各 slot 保持不同引用，防御上游重复赋值
+                        for (int i = 0; i < dispatch_Bags.Count; i++)
+                        {
+                            if (i == index) continue;
+                            if (ReferenceEquals(dispatch_Bags[i], slot))
+                            {
+                                Debug.LogWarning($"SetBagContent: slot {i} shares ref with slot {index}, cloning");
+                                dispatch_Bags[i] = new DispatchBagInfo
+                                {
+                                    foodName = slot.foodName,
+                                    snackName = slot.snackName,
+                                    tapeName = slot.tapeName,
+                                    isPacked = slot.isPacked
+                                };
+                            }
+                        }
+
+                        Debug.Log($"Dispatch_Manager.SetBagContent: index={index}, food={slot.foodName}, snack={slot.snackName}, tape={slot.tapeName}");
+
+                        upload_dispatch_info_to_server();
                     }
 
                     // -------------------- 各类事件回调 --------------------
@@ -515,9 +567,6 @@ namespace CLIP
                     {
                         _on_clear_previous_dispatch?.Invoke();
                     }
-
-
-
 
                     public void SwitchBag(int bagIndex)
                     {

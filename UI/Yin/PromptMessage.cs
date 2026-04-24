@@ -3,12 +3,10 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using CLIP.Framework_Core.Event;
-using CLIP.Project_Mouse.Client_Event_Systems;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace CLIP
 {
@@ -38,9 +36,6 @@ namespace CLIP
                 public List<PromptConfig> promptConfigs = new List<PromptConfig>();
                 public Dictionary<int, bool> dontRemindDict = new Dictionary<int, bool>();
 
-                private static string savePath => Path.Combine(UnityEngine.Application.persistentDataPath, "PromptMessage.json");
-
-
                 private void Awake()
                 {
                     if (Instance != null && Instance != this)
@@ -48,7 +43,6 @@ namespace CLIP
                         Destroy(gameObject);
                         return;
                     }
-                    //LoadDontRemind();
                     InitializeDict();
                     Instance = this;
                     DontDestroyOnLoad(gameObject);
@@ -57,17 +51,15 @@ namespace CLIP
                 private void Start()
                 {
                     popOriginPosition = popUpObj.GetComponent<RectTransform>().anchoredPosition;
-                    //generalInteractionEventHub._on_show_warning_panel.AddListener(ShowWarningPanel);
                     EvtDsp.AddEvt<string>(EvtNames.ShowUpPrompt, ShowUpPrompt);
+                    EvtDsp.AddEvt<string, Action>(EvtNames.ShowPrompt, ShowPrompt);
                 }
 
                 public void OnDestroy()
                 {
-                    //generalInteractionEventHub._on_show_warning_panel.RemoveListener(ShowWarningPanel);
                     EvtDsp.RemoveEvt<string>(EvtNames.ShowUpPrompt, ShowUpPrompt);
+                    EvtDsp.RemoveEvt<string, Action>(EvtNames.ShowPrompt, ShowPrompt);
                 }
-
-     
 
                 public void ShowUpPrompt(string message)
                 {
@@ -89,8 +81,6 @@ namespace CLIP
                     popTween = sequence;
                 }
 
-        
-
                 public string GetMessageById(int id)
                 {
                     foreach (var config in promptConfigs)
@@ -111,7 +101,6 @@ namespace CLIP
                 public void SetDontRemindNextTime(int id, bool value)
                 {
                     dontRemindDict[id] = value;
-                    //SaveDontRemind();
                 }
 
                 public void InitializeDict()
@@ -137,7 +126,6 @@ namespace CLIP
                     //Debug.Log(GetDontRemindNextTime(id));
                     if (!GetDontRemindNextTime(id))
                     {
-
                         prompt.text = message;
                         dontRemindNextTime.isOn = false;
                         onConfirm = onConfirmAction;
@@ -174,54 +162,7 @@ namespace CLIP
                 public void ResetDontRemindAll()
                 {
                     dontRemindDict.Clear();
-                    SaveDontRemind();
                     Debug.Log("所有不再提醒状态已重置");
-                }
-
-                private void SaveDontRemind()
-                {
-                    var json = JsonUtility.ToJson(new Serialization<int, bool>(dontRemindDict));
-                    File.WriteAllText(savePath, json);
-                }
-
-                // 反序列化加载
-                private void LoadDontRemind()
-                {
-                    if (File.Exists(savePath))
-                    {
-                        var json = File.ReadAllText(savePath);
-                        dontRemindDict = JsonUtility.FromJson<Serialization<int, bool>>(json).ToDictionary();
-                    }
-                    else
-                    {
-                        dontRemindDict = new Dictionary<int, bool>();
-                    }
-                }
-
-                [Serializable]
-                private class Serialization<TKey, TValue>
-                {
-                    public List<TKey> keys = new List<TKey>();
-                    public List<TValue> values = new List<TValue>();
-
-                    public Serialization(Dictionary<TKey, TValue> dict)
-                    {
-                        foreach (var kv in dict)
-                        {
-                            keys.Add(kv.Key);
-                            values.Add(kv.Value);
-                        }
-                    }
-
-                    public Dictionary<TKey, TValue> ToDictionary()
-                    {
-                        var dict = new Dictionary<TKey, TValue>();
-                        for (int i = 0; i < keys.Count; i++)
-                        {
-                            dict[keys[i]] = values[i];
-                        }
-                        return dict;
-                    }
                 }
 
                 public IEnumerator UpPrompt(float time, string message)

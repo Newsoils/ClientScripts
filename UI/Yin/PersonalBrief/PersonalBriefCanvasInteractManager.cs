@@ -116,7 +116,7 @@ namespace CLIP
                 // 初始化成就
                 public void InitAchievements()
                 {
-                    achievementRecordList = Global_Game_Manager._instance._player_brief.achievements_pinned;
+                    achievementRecordList = Global_Game_Manager.Instance._player_brief.achievements_pinned;
                     StartCoroutine(LoadAchievementIconFromAchievementList());
                 }
 
@@ -164,7 +164,7 @@ namespace CLIP
                 // 初始化照片
                 public void InitPhotos(List<RawImage> imageList)
                 {
-                    photoInfoList = Global_Game_Manager._instance._player_brief._brief_photo_selected;
+                    photoInfoList = Global_Game_Manager.Instance._player_brief._brief_photo_selected;
                     StartCoroutine(LoadImagesFromPhotoInfoList(imageList));
                 }
 
@@ -226,7 +226,7 @@ namespace CLIP
                 {
                     if (!string.IsNullOrEmpty(changeNameInputField.text))
                     {
-                        Global_Game_Manager._instance._player_brief._player_nick_name = changeNameInputField.text;
+                        Global_Game_Manager.Instance._player_brief._player_nick_name = changeNameInputField.text;
                         nameText.text = changeNameInputField.text;
                     }
                     changeName.SetActive(false);
@@ -243,11 +243,11 @@ namespace CLIP
                 public void InitPersonalBrief()
                 {
                     // 经验值和等级
-                    nameText.text = Global_Game_Manager._instance._player_brief._player_nick_name;
-                    idText.text = Global_Game_Manager._instance._current_player_id;
-                    expLevelText.text = Global_Game_Manager._instance._player_brief._affinity_with_main_character.ToString();
-                    currentIcon = Global_Game_Manager._instance._player_brief._icon_info;
-                    currentIconFrame = Global_Game_Manager._instance._player_brief._icon_frame_info;
+                    nameText.text = Global_Game_Manager.Instance._player_brief._player_nick_name;
+                    idText.text = Global_Game_Manager.Instance._current_player_id;
+                    expLevelText.text = Global_Game_Manager.Instance._player_brief._affinity_with_main_character.ToString();
+                    currentIcon = Global_Game_Manager.Instance._player_brief._icon_info;
+                    currentIconFrame = Global_Game_Manager.Instance._player_brief._icon_frame_info;
                     // 加载头像
                     // 加载头像框
                     InitAchievements();
@@ -266,11 +266,11 @@ namespace CLIP
                 {
                     personalbriefCanvas.SetActive(false);
                     //CommonInteractManager.Instance.OpenPanelWithoutUp();
-                    Global_Game_Manager._instance._player_brief._brief_photo_selected = photoInfoList;
-                    Global_Game_Manager._instance._player_brief._icon_info = currentIcon;
-                    Global_Game_Manager._instance._player_brief._icon_frame_info = currentIconFrame;
-                    Global_Game_Manager._instance._player_brief.achievements_pinned = achievementRecordList;
-                    Global_Game_Manager._instance.on_upload_player_brief_to_server();
+                    Global_Game_Manager.Instance._player_brief._brief_photo_selected = photoInfoList;
+                    Global_Game_Manager.Instance._player_brief._icon_info = currentIcon;
+                    Global_Game_Manager.Instance._player_brief._icon_frame_info = currentIconFrame;
+                    Global_Game_Manager.Instance._player_brief.achievements_pinned = achievementRecordList;
+                    Global_Game_Manager.Instance.on_upload_player_brief_to_server();
                     // 上传相册照片到服务器
                 }
 

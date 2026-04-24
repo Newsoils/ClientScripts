@@ -78,12 +78,18 @@ namespace CLIP.NewSoil
             CreateOrFindSystem<GameAssets>(root);
             CreateOrFindSystem<UIManager>(root);
             CreateOrFindSystem<ObjectPool>(root);
+            CreateOrFindSystem<SceneLoadingHelper>(root);
 
             // 初始化 AssetManager
             AssetLoader.Instance.Init();
 
-            // 预加载全局资源
-            await GameAssets.Instance.InitAsync();
+            //加载资源,播放健康游戏忠告
+            var loadTask = GameAssets.Instance.InitAsync();
+
+            var noticeTask = ShowHealthNotice(); // 👈 新增
+
+            // ✅ 等两个都完成
+            await Task.WhenAll(loadTask, noticeTask);
 
             await Task.Delay(100); // 单位是毫秒，100ms = 0.1秒
 
@@ -92,9 +98,9 @@ namespace CLIP.NewSoil
             var loadOp = SceneManager.LoadSceneAsync(activeSceneIndex);
             while (!loadOp.isDone)
                 await Task.Yield();
-            CreateOrFindSystem<Character_Cloth_Manager>(root);
             CreateOrFindSystem<SceneLoadHelper>(root);
-
+            CreateOrFindSystem<CharacterClothesManager>(root);
+            CreateOrFindSystem<CharacterHandHeldController>(root);
 
 
             // -------------------------------
@@ -111,6 +117,16 @@ namespace CLIP.NewSoil
 
 
             Debug.Log("<color=green>=== [GameBootstrap] Done ===</color>");
+        }
+
+
+
+        private static async Task ShowHealthNotice()
+        {
+            // 通过 UIManager 创建
+            var notice = UIManager.Instance.GetPanel<HealthNoticePanel>();
+
+            await notice.PlayAsync();
         }
 
         /// <summary>

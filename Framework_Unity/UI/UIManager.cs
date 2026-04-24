@@ -82,7 +82,8 @@ public class UIManager : SingletonMono<UIManager>
         string panelID = typeof(T).Name;
         if (!_registeredPanels.TryGetValue(panelID, out IPanel panel))
         {
-            var panelMono = GameObject.FindObjectOfType(typeof(T)) as IPanel;
+            // 尝试通过 FindObjectOfType 查找
+            var panelMono = FindObjectOfType(typeof(T)) as IPanel;
 
             if (panelMono != null)
             {
@@ -92,14 +93,12 @@ public class UIManager : SingletonMono<UIManager>
             else
             {
                 Debug.LogWarning($"Panel {panelID} is not registered!");
+                return null;
             }
         }
 
         // 调用面板的打开方法
         panel.OpenPanel(data);
-
-        // 排序面板层级
-        //SortPanelLayers();
 
         Debug.Log($"Panel {panelID} opened");
         return panel as T;
@@ -124,6 +123,14 @@ public class UIManager : SingletonMono<UIManager>
         {
             panel.ClosePanel();
         }
+    }
+
+    /// <summary>
+    /// 检查面板是否已注册
+    /// </summary>
+    public bool IsPanelRegistered(string panelID)
+    {
+        return _registeredPanels.ContainsKey(panelID);
     }
 
     /// <summary>

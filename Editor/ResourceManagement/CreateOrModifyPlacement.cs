@@ -275,9 +275,13 @@ public class CreateOrModifyPlacement : EditorWindow
                 navMeshObs.shape = NavMeshObstacleShape.Box;
                 navMeshObs.size = box.size;
                 navMeshObs.center = box.center;
+                navMeshObs.carving = true; // 开启挖空，确保导航网格正确更新
 
                 // 7. 处理 Pivot (Root 偏移)
                 rootT.localPosition = new Vector3(meshSize.x / 2f, 0, meshSize.z / 2f);
+
+                // 整棵 Prefab 层级设为 Placement（含 Collider，便于射线/触发检测）
+                SetLayerRecursively(newPrefabRoot.transform, GetPlacementLayer());
 
                 // 8. 保存 Prefab (这会成为一个独立的、不依赖原始 FBX 层级的 Prefab)
                 string saveName = meshName + ".prefab";
@@ -602,6 +606,22 @@ public class CreateOrModifyPlacement : EditorWindow
             Mathf.RoundToInt(rawSize.y),
             Mathf.RoundToInt(rawSize.z)
         );
+    }
+
+    /// <summary>与项目里 Layer 名称 "Placement" 对应，一般为索引 6。</summary>
+    private static int GetPlacementLayer()
+    {
+        int layer = LayerMask.NameToLayer("Placement");
+        if (layer < 0)
+            layer = 6;
+        return layer;
+    }
+
+    private static void SetLayerRecursively(Transform t, int layer)
+    {
+        t.gameObject.layer = layer;
+        for (int i = 0; i < t.childCount; i++)
+            SetLayerRecursively(t.GetChild(i), layer);
     }
 
     private Transform GetOrCreateChild(Transform parent, string name)

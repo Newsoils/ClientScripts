@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
@@ -147,7 +148,18 @@ public class SocialPanel : UIPanelBase
     private void RefreshCurrentTab()
     {
         if (SM == null) return;
-
+        switch(_currentTab)
+            {
+            case SocialTab.Requests:
+                friendRequestPanel.RefreshPanel();
+                break;
+            case SocialTab.Friends:
+                friendPanel.RefreshPanel();
+                break;
+            case SocialTab.Npc:
+                npcPanel.RefreshNPCList();
+                break;
+        }
         UpdateRequestRedDot();
     }
 

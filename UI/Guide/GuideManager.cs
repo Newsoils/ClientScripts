@@ -5,7 +5,6 @@ using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-
 public class GuideState
 {
     public bool current1finished = false;
@@ -27,14 +26,13 @@ public class GuideManager : SingletonMono<GuideManager>
 
     private bool IsShowingSteps = false;
 
-
     private Queue<GuideStep> steps = new Queue<GuideStep>();
 
     [HideInInspector]
     public GuideStep currentStep;
 
     public GuideState guideState = new GuideState();
-    public static string guideStateFile = "guideStateFile";
+    public static string guideStateFile = "guideStateFile.json";
 
     private void OnSceneLoaded(Scene _s, LoadSceneMode _m)
     {
@@ -49,10 +47,6 @@ public class GuideManager : SingletonMono<GuideManager>
             else if (guideState.current1finished && guideState.dispatch2Finished && !guideState.moveFurntureFinished)
             {
                 StartMoveFurnitureGuide();
-            }
-            else if (guideState.current1finished && guideState.dispatch2Finished && guideState.moveFurntureFinished && !guideState.shopSteps4Finished)
-            {
-
             }
         }
     }
@@ -78,10 +72,6 @@ public class GuideManager : SingletonMono<GuideManager>
         }
         mask.Hide();
 
-        //StartDispatchGuide();
-
-        //StartMoveFurnitureGuide();
-
         SceneManager.sceneLoaded += OnSceneLoaded;
 
         guideState = Save_Load_Tools.Load<GuideState>(guideStateFile);
@@ -89,6 +79,10 @@ public class GuideManager : SingletonMono<GuideManager>
         {
             guideState = new GuideState();
         }
+
+        //StartDispatchGuide();
+        //StartMoveFurnitureGuide();
+        //StartDispatchReturnGuide();
     }
 
     protected override void OnDestroy()
@@ -188,55 +182,22 @@ public class GuideManager : SingletonMono<GuideManager>
     }
 
     private float curStepTime = 0f;
+    private float stepWaitTime = 2f;
 
     public IEnumerator WaitForButtonAndShow(GuideStep step)
     {
         step.ResolveListenButton?.Invoke(step);
-        while (!step.IsReady)
+        while (!step.IsReady && curStepTime < stepWaitTime)
         {
-            yield return new WaitForSeconds(0.3f);
+            yield return new WaitForSeconds(0.5f);
+            curStepTime += 0.3f;
             step.ResolveListenButton?.Invoke(step);
         }
+        curStepTime = 0;
         step.Show();
-        //curStepTime = 0;
-        //StartCoroutine(CountTimeAndSHowNext(step));
+       
     }
 
-    //public IEnumerator CountTimeAndSHowNext(GuideStep step, float timeoutSeconds = 4f)
-    //{
-    //    float timer = 0f;
-    //    while (currentStep == step && timer < timeoutSeconds)
-    //    {
-    //        yield return new WaitForSeconds(0.3f);
-    //        timer += 0.3f;
-    //    }
-    //    NextStep();
-    //}
-    
-
-    //public IEnumerator WaitForButtonAndShow(GuideStep step, float timeoutSeconds = 5f)
-    //{
-    //    float timer = 0f;
-    //    float showTime = 0f;
-    //    // 首次尝试解析按钮
-    //    step.ResolveListenButton?.Invoke(step);
-
-    //    while (!step.IsReady && timer < timeoutSeconds)
-    //    {
-    //        yield return new WaitForSeconds(0.3f);
-    //        timer += 0.3f;
-    //        step.ResolveListenButton?.Invoke(step);
-    //    }
-
-    //    if (step.IsReady)
-    //    {
-    //        step.Show(); // 准备就绪，正常显示
-    //    }
-    //    else
-    //    {
-    //        Debug.LogWarning($"引导步骤“{step.name}”超时（{timeoutSeconds}秒），已自动跳过。");
-    //        NextStep(); // 超时，直接进入下一步
-    //    }
-    //}
+   
 
 }

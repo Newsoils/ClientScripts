@@ -1,6 +1,4 @@
-using System.Collections;
 using System.Collections.Generic;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
 using UnityEngine;
 
 namespace CLIP.Project_Mouse.Game_Play_System

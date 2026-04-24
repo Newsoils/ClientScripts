@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
@@ -7,91 +6,84 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace CLIP
+namespace CLIP.Project_Mouse.UI
 {
-    namespace Project_Mouse
+    public class EmailDetail : MonoBehaviour
     {
-        namespace UI
+        public Mail_Record record;
+
+        public TMP_Text titleText;
+        public TMP_Text contentText;
+        public Button receive;
+
+        public Transform awardRoot;
+        public GameObject awardUnitPrefab;
+
+        public void InitEmailDatail(Mail_Record record)
         {
-            public class EmailDetail : MonoBehaviour
+            this.record = record;
+            titleText.text = record.mail_title;
+            contentText.text = record.mail_text;
+
+            if (record.item_list.Count > 0 && !record.isGetReward)
             {
-                public Mail_Record record;
+                receive.interactable = true;
+            }
+            else
+            {
+                receive.interactable = false;
+            }
 
-                public TMP_Text titleText;
-                public TMP_Text contentText;
-                public Button receive;
+            foreach (Transform child in awardRoot)
+            {
+                Destroy(child.gameObject);
+            }
+            foreach (var item in record.item_list)
+            {
+                var obj = Instantiate(awardUnitPrefab, awardRoot);
 
-                public Transform awardRoot;
-                public GameObject awardUnitPrefab;
+                var itemInfo = Global_Inventory_Manager.GetItemInfo(item.item_name);
+                obj.GetComponent<EmailItem>().InitItem(itemInfo, item.item_quantity);
+            }
+        }
 
-                public void InitEmailDatail(Mail_Record record)
-                {
-                    this.record = record;
-                    titleText.text = record.mail_title;
-                    contentText.text = record.mail_text;
+        public void Receive()
+        {
+            var emailPanel = UIManager.Instance.GetPanel<EmailPanel>();
 
-                    if (record.item_list.Count > 0 && !record.isGetReward)
-                    {
-                        receive.interactable = true;
-                    }
-                    else
-                    {
-                        receive.interactable = false;
-                    }
+            emailPanel.ReceiveAwards(new List<Mail_Record> { record });
+            emailPanel.UploadAfterOpenGifts();
+            receive.interactable = false;
+            record.isGetReward = true;
 
-                    foreach(Transform child in awardRoot)
-                    {
-                        Destroy(child.gameObject);
-                    }
-                    foreach(var item in record.item_list)
-                    {
-                        var obj = Instantiate(awardUnitPrefab, awardRoot);
-                        var itemInfo = Global_Inventory_Manager.GetItemInfo(item.item_name);
-                        obj.GetComponent<EmailItem>().InitItem(itemInfo, item.item_quantity);
-                    }
-                }
+            // 重新显示一键领取按钮
+            emailPanel.ShowGetAllRewardsButton();
 
-                public void Receive()
-                {
-                    //EmailCanvasInteracterManager.Instance.ReceiveAwards(new List<Mail_Record> { record });
-                    //EmailCanvasInteracterManager.Instance.UploadAfterOpenGifts();
-                    //EmailCanvasInteracterManager.Instance.generalInteractionEventHub._invoke_on_refresh_gift();
-                    UIManager.Instance.GetPanel<EmailPanel>().ReceiveAwards(new List<Mail_Record> { record });
-                    UIManager.Instance.GetPanel<EmailPanel>().UploadAfterOpenGifts();
-                    UIManager.Instance.GetPanel<EmailPanel>().generalInteractionEventHub._invoke_on_refresh_gift();
-                    receive.interactable = false;
-                    record.isGetReward = true;
+            // 隐藏ReceiveOrDelete按钮
+            emailPanel.HideReceiveOrDelete();
+        }
 
-                    // 重新显示一键领取按钮
-                    UIManager.Instance.GetPanel<EmailPanel>().ShowGetAllRewardsButton();
 
-                    // 隐藏ReceiveOrDelete按钮
-                    UIManager.Instance.GetPanel<EmailPanel>().HideReceiveOrDelete();
-                }
-                
+        public void Delete()
+        {
+            if (record.item_list.Count > 0 && !record.isGetReward)
+            {
+                Receive();
+            }
 
-                public void Delete()
-                {
-                    if (record.item_list.Count > 0 && !record.isGetReward)
-                    {
-                        Receive();
-                    }
-
-                    List<int> readId = new List<int>
+            List<int> readId = new List<int>
                     {
                         record.mail_id
                     };
-                    Email_And_Announcement_Manager.instance.on_delete_mail(readId);
-                    //EmailCanvasInteracterManager.Instance.OpenEmailCanvas();
-                    UIManager.Instance.OpenPanel<EmailPanel>();
+            Email_And_Announcement_Manager.instance.on_delete_mail(readId);
+            var panel = UIManager.Instance.OpenPanel<EmailPanel>();
 
-                    // 重新显示一键领取按钮
-                    UIManager.Instance.GetPanel<EmailPanel>().ShowGetAllRewardsButton();
+            // 重新显示一键领取按钮
+            panel.ShowGetAllRewardsButton();
 
-                    // 隐藏ReceiveOrDelete按钮
-                    UIManager.Instance.GetPanel<EmailPanel>().HideReceiveOrDelete();
-                }
-            }
+            // 隐藏ReceiveOrDelete按钮
+            panel.HideReceiveOrDelete();
         }
     }
+
 }

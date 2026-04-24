@@ -18,8 +18,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
     [Serializable]
     public class IndoorMainCharacter : CharacterBase, IClick
     {
-        public List<InteractItem> interactItems;
-        public Dictionary<string, InteractItem> interactItemDic;
         public PlacementRuntime interactPlacement;
         public Pot interactPot;
         public string interactName;
@@ -66,7 +64,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 gameObject.SetActive(false);
             }
             _instance = this;
-            interactItemDic = interactItems.ToDictionary(property => property.itemName, property => property);
             if (isFirstOpen)
             {
                 WrapPosition();
@@ -636,11 +633,5 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             return totalLength;
         }
-    }
-    [Serializable]
-    public class InteractItem
-    {
-        public string itemName;
-        public GameObject itemObj;
     }
 }

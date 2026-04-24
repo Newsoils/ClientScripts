@@ -1,6 +1,7 @@
 using Cinemachine;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
+using static TMPro.SpriteAssetUtilities.TexturePacker_JsonArray;
 public class CinemachineCameraController : MonoBehaviour
 {
     [Header("Cinemachine References")]
@@ -18,11 +19,8 @@ public class CinemachineCameraController : MonoBehaviour
     [SerializeField] private float minDistance = 2f;
     [SerializeField] private float maxDistance = 20f;
 
-    // 输入值（由外部提供）
-    private Vector2 singleFingerDelta; // 单指拖动增量
-    private Vector2 doubleFingerDelta; // 双指拖动增量
-    private float pinchDelta;
     private float scaleRatio;
+    private Vector2 originPos;
 
     private void Start()
     {
@@ -34,48 +32,29 @@ public class CinemachineCameraController : MonoBehaviour
             freeLookCamera.Follow = targetObject;
             freeLookCamera.LookAt = targetObject;
         }
+        originPos = new Vector2(freeLookCamera.m_XAxis.Value, freeLookCamera.m_YAxis.Value);
     }
-
-    private void Update()
+    public void CheckMove()
     {
-        singleFingerDelta = InputManager.Instance.SingleDragDelta;
-        doubleFingerDelta = InputManager.Instance.MultiDragDelta;
-        pinchDelta = InputManager.Instance.PinchRatio;
-        HandleCameraControl();
-        CheckScale();
-    }
-
-    private void HandleCameraControl()
-    {
-        if (targetObject == null || freeLookCamera == null) return;
-
-        // 单指拖动：旋转摄像机
-        if (singleFingerDelta != Vector2.zero)
+        Vector2 input = InputManager.Instance.MultiDragDelta;
+        if(input != Vector2.zero)
         {
-            RotateCamera(singleFingerDelta);
-        }
-
-        // 双指拖动：平移摄像机（保持角度不变）
-        if (doubleFingerDelta != Vector2.zero)
-        {
-            PanCamera(doubleFingerDelta);
+            offset.m_Offset += (Vector3)input * panSpeed * -1;
         }
     }
-
-    private void RotateCamera(Vector2 delta)
+    public void CheckRotate()
     {
-        // 水平旋转
-        freeLookCamera.m_XAxis.Value += delta.x * rotationSpeed;
+        Vector2 input = InputManager.Instance.SingleDragDelta;
+        if(input != Vector2.zero)
+        {
+            // 水平旋转
+            freeLookCamera.m_XAxis.Value += input.x * rotationSpeed;
 
-        // 垂直旋转（限制角度范围）
-        float newY = freeLookCamera.m_YAxis.Value + delta.y * rotationSpeed * -0.01f;
-        newY = Mathf.Clamp(newY, minVerticalAngle / maxVerticalAngle, maxVerticalAngle / maxVerticalAngle);
-        freeLookCamera.m_YAxis.Value = newY;
-    }
-
-    private void PanCamera(Vector2 delta)
-    {
-        offset.m_Offset += (Vector3)delta * panSpeed * -1;
+            // 垂直旋转（限制角度范围）
+            float newY = freeLookCamera.m_YAxis.Value + input.y * rotationSpeed * -0.01f;
+            newY = Mathf.Clamp(newY, 0.5f, 1);
+            freeLookCamera.m_YAxis.Value = newY;
+        }
     }
     public void CheckScale()
     {
@@ -83,14 +62,13 @@ public class CinemachineCameraController : MonoBehaviour
         scaleRatio = Mathf.Lerp(scaleRatio, input, Time.deltaTime * 10);
         freeLookCamera.m_Lens.OrthographicSize = Mathf.Lerp(scaleRatio * freeLookCamera.m_Lens.OrthographicSize, Mathf.Clamp(scaleRatio * freeLookCamera.m_Lens.OrthographicSize, 10, 30), Time.deltaTime * 10);
     }
-    // 由外部调用的方法，用于传递输入值
-    public void SetSingleFingerDelta(Vector2 delta)
+    public void CheckReset()
     {
-        singleFingerDelta = delta;
-    }
-
-    public void SetDoubleFingerDelta(Vector2 delta)
-    {
-        doubleFingerDelta = delta;
+        bool input = InputManager.Instance.WasDoubleTapThisFrame;
+        if (input)
+        {
+            freeLookCamera.m_XAxis.Value = originPos.x;
+            freeLookCamera.m_YAxis.Value = originPos.y;
+        }
     }
 }

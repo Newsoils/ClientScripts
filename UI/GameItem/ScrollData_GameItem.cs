@@ -4,6 +4,7 @@ public class ScrollData_GameItem
     public int id;
     public string name;
     public int count;
+    public bool isSelected;
 
     public Enum_RarityType rarity;
 

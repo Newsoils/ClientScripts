@@ -69,11 +69,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
     {
         if (_globalGameManager != null)
         {
-            _globalGameManager._update_main_character_cloth_from_server
-                .AddListener(UpdateMainCharacterClothFromServer);
-            _globalGameManager._upload_main_character_cloth_to_server
-                .AddListener(UploadMainCharacterClothToServer);
-
             _globalGameManager._update_weather_state_from_server
                 .AddListener(UpdateWeatherStateFromServer);
             _globalGameManager._upload_weather_state_to_server
@@ -103,11 +98,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
     {
         if (_globalGameManager != null)
         {
-            _globalGameManager._update_main_character_cloth_from_server
-                .RemoveListener(UpdateMainCharacterClothFromServer);
-            _globalGameManager._upload_main_character_cloth_to_server
-                .RemoveListener(UploadMainCharacterClothToServer);
-
             _globalGameManager._update_weather_state_from_server
                 .RemoveListener(UpdateWeatherStateFromServer);
             _globalGameManager._upload_weather_state_to_server
@@ -170,12 +160,13 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         SendMsg(action, target);
         TaskCompletionSource<string> result = new TaskCompletionSource<string>();
         responseTasks.Add(action, result);
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(5));
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(2));
         var completedTask = await Task.WhenAny(result.Task, timeoutTask);
         if (completedTask == timeoutTask)
         {
             responseTasks.Remove(action);
             Debug.Log($"获取服务器{action}数据超时");
+            EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "与服务器断开连接，请检查网络设置！",()=> EvtDsp.TriggerEvt(EvtNames.Network_Disconnect));
             onTaskComplete?.Invoke(null);
             return null;
         }
@@ -248,22 +239,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
 
         SendMsg("Save_Data",lastJson) ;
     }
-
-    private void UpdateMainCharacterClothFromServer()
-    {
-        SendMsg("Get_Data", "Main_Character_Cloth");
-    }
-
-    private void UploadMainCharacterClothToServer()
-    {
-        if (_globalGameManager == null) return;
-
-        string json = GF_SP.SerializeObject(Character_Cloth_Manager.Instance.mainClothes);
-        var lastData = GF_SP.SerializeObject( new List<string>() { "Main_Character_Cloth", json });
-
-        SendMsg("Save_Data", lastData);
-    }
-
     private void UpdateWeatherStateFromServer()
     {
         SendMsg("Get_Data", "Weather_State");
@@ -312,7 +287,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
     {
         _networkCenter._connect_to_player_server = true;
 
-        UpdateMainCharacterClothFromServer();
         StartCoroutine(LoginSequence());
     }
 
@@ -341,9 +315,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         while (true)
         {
             Log.Info("in_refresh_state_loop");
-
-            Character_Cloth_Manager.Instance.Try_refresh_main_character_cloth();
-            yield return new WaitForSeconds(1.024f);
 
             _globalGameManager?.try_update_weahter();
             yield return new WaitForSeconds(1.024f);
@@ -401,12 +372,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
                 _globalGameManager?.try_update_weahter();
                 break;
 
-            case "Main_Character_Cloth":
-                var _cloth_info = GF_SP.DeserializeObject<Character_Clothes_Info>(payload);
-                Character_Cloth_Manager.Instance.mainClothes.Refresh_Cloth_Data(_cloth_info);
-                Character_Cloth_Manager.Instance.Try_refresh_main_character_cloth();
-                break;
-
             case "Shop_State":
                 _inventoryManager?.load_shop_state_from_json(payload);
                 _inventoryManager?.try_refresh_shop_state();
@@ -422,7 +387,7 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
 
     #region Helper Struct
 
-    [System.Serializable]
+    [Serializable]
     private class StringArrayWrapper
     {
         public string[] items;

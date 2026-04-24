@@ -1,6 +1,6 @@
 using UnityEditor;
 using UnityEngine;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
+using CLIP.Project_Mouse.Game_Play_System;
 namespace CLIP.Project_Mouse.Custom_Tool
 {
 
@@ -22,7 +22,6 @@ namespace CLIP.Project_Mouse.Custom_Tool
                 Debug.Log("已触发 NavMesh 重烘焙 (re_bake_navmesh)。");
             }
         }
-
 
     }
 }

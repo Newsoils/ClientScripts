@@ -129,7 +129,8 @@ namespace CLIP.Project_Mouse.UI
             yaw.transform.position = data.pivotOffset;
             yaw.transform.rotation = Quaternion.Euler(data.pivotEuler);
             controlCamera.orthographicSize = data.orthographicSize;
-
+            if (data.pitch != 0) yaw.Pitch = data.pitch;
+            if (data.yaw != 0) yaw.Yaw = data.yaw;
             if (state == CameraState.Normal)
             {
                 controlCamera.transform.localPosition = new Vector3(0, 0, -12);

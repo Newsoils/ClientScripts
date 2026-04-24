@@ -7,7 +7,6 @@ using CLIP.Framework_Core.Event;
 
 namespace CLIP.Project_Mouse.UI
 {
-
     public class NpcChatUnit : MonoBehaviour
     {
         public bool isGroupChat = false;
@@ -39,7 +38,16 @@ namespace CLIP.Project_Mouse.UI
         {
             if (isGroupChat)
             {
-                GameAssets.Instance.GetAssetByKeyword<Sprite>(s => icon.sprite = s, "qun".ToUpper(), "icon".ToUpper());
+                // 群聊头像用精确 key，避免关键字匹配到错误资源
+                if (GameAssets.TryConvertFileNameToResKey("qun", "icon", out var resKey))
+                {
+                    GameAssets.Instance.LoadAndSet<Sprite>(resKey, s => icon.sprite = s);
+                }
+                else
+                {
+                    // 兜底：保持旧的关键字匹配（可能会误命中）
+                    GameAssets.Instance.GetAssetByKeyword<Sprite>(s => icon.sprite = s, "QUN", "ICON");
+                }
                 avatarButton.interactable = false;
                 intimacy.SetActive(false);
                 return;

@@ -1,115 +1,130 @@
+using System;
 using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.UI;
 
-public class GuideMask : MonoBehaviour
+public class GuideMask : MaskableGraphic, ICanvasRaycastFilter
 {
-    public RectTransform target;
+    private RectTransform _target;
+    private Vector2 _targetMin;
+    private Vector2 _targetMax;
+    public RectTransform _targetArea;
 
-    public RectTransform topMask;
-    public RectTransform bottomMask;
-    public RectTransform leftMask;
-    public RectTransform rightMask;
+    //// 暴露空洞点击事件
+    //public UnityEvent OnHoleClicked;
 
-    public RectTransform clickArea;
 
-    Canvas canvas;
-
-    void Awake()
+    void LateUpdate()
     {
-        canvas = GetComponentInParent<Canvas>();
+        RefreshView();
     }
 
-    void Update()
+    public bool IsRaycastLocationValid(Vector2 sp, Camera eventCamera)
     {
-        //if (target == null) return;
-
-        //Refresh();
+        return !RectTransformUtility.RectangleContainsScreenPoint(_targetArea, sp, eventCamera);
     }
 
     public void Show(RectTransform t)
     {
-        target = t;
-        gameObject.SetActive(true);
-        Refresh();
+        _targetArea.gameObject.SetActive(true);
+        Play(t);
     }
 
     public void Hide()
     {
-        target = null;
+        _targetArea.gameObject.SetActive(false);
         gameObject.SetActive(false);
     }
 
-    void Refresh()
+
+    private void Play(RectTransform target)
     {
-        Vector3[] corners = new Vector3[4];
-        target.GetWorldCorners(corners);
+        gameObject.SetActive(true);
 
-        Vector2 min = RectTransformUtility.WorldToScreenPoint(null, corners[0]);
-        Vector2 max = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
+        var screenPoint = RectTransformUtility.WorldToScreenPoint(null, target.position);
 
+        Vector2 localPoint;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, null,
+            out localPoint))
+        {
+            Hide();
+            return;
+        }
 
-        RectTransform parentRect = (RectTransform)transform.parent;
+        _targetArea.anchorMax = target.anchorMax;
+        _targetArea.anchorMin = target.anchorMin;
+        _targetArea.anchoredPosition = target.anchoredPosition;
+        _targetArea.anchoredPosition3D = target.anchoredPosition3D;
+        _targetArea.offsetMax = target.offsetMax;
+        _targetArea.offsetMin = target.offsetMin;
+        _targetArea.pivot = target.pivot;
+        _targetArea.sizeDelta = target.sizeDelta;
+        _targetArea.localPosition = localPoint;
 
-
-        //float screenW = 1080f;
-        //float screenH = 1920f;
-        float screenW = Screen.width;
-        float screenH = Screen.height;
-
-        SetRect(topMask, new Vector2(screenW / 2, (screenH + max.y) / 2),
-            new Vector2(screenW, screenH - max.y));
-
-        SetRect(bottomMask, new Vector2(screenW / 2, min.y / 2),
-            new Vector2(screenW, min.y));
-
-        SetRect(leftMask, new Vector2(min.x / 2, (min.y + max.y) / 2),
-            new Vector2(min.x, max.y - min.y));
-
-        SetRect(rightMask, new Vector2((screenW + max.x) / 2, (min.y + max.y) / 2),
-            new Vector2(screenW - max.x, max.y - min.y));
-
-        SetRect(clickArea, (min + max) / 2, max - min);
-
-
-        var topPer = max.y / screenH;
-        var downPer = min.y / screenH;
-        var leftPer = min.x / screenW;
-        var rightPer = max.x / screenW;
-
-        topMask.anchorMin = new Vector2(0, topPer);
-        topMask.anchorMax = new Vector2(1, 1);
-
-        bottomMask.anchorMin = new Vector2(0, 0);
-        bottomMask.anchorMax = new Vector2(1, downPer);
-
-        leftMask.anchorMin = new Vector2(0, downPer);
-        leftMask.anchorMax = new Vector2(leftPer, topPer);
-
-        rightMask.anchorMin = new Vector2(rightPer, downPer);
-        rightMask.anchorMax = new Vector2(1, topPer);
-
-        SetPosition(topMask);
-        SetPosition(bottomMask);
-        SetPosition(leftMask);
-        SetPosition(rightMask);
-
+        _targetArea.ForceUpdateRectTransforms();
+        _target = _targetArea;
+        _target.ForceUpdateRectTransforms();
+        RefreshView();
     }
 
-    void SetPosition(RectTransform rt)
+
+    protected override void OnPopulateMesh(VertexHelper toFill)
     {
-       rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        toFill.Clear();
+
+        var maskRect = rectTransform.rect;
+
+        var maskRectLeftTop = new Vector2(-maskRect.width / 2, maskRect.height / 2);
+        var maskRectLeftBottom = new Vector2(-maskRect.width / 2, -maskRect.height / 2);
+        var maskRectRightTop = new Vector2(maskRect.width / 2, maskRect.height / 2);
+        var maskRectRightBottom = new Vector2(maskRect.width / 2, -maskRect.height / 2);
+
+        var targetRectLeftTop = new Vector2(_targetMin.x, _targetMax.y);
+        var targetRectLeftBottom = _targetMin;
+        var targetRectRightTop = _targetMax;
+        var targetRectRightBottom = new Vector2(_targetMax.x, _targetMin.y);
+
+        toFill.AddVert(maskRectLeftBottom, color, Vector2.zero);
+        toFill.AddVert(targetRectLeftBottom, color, Vector2.zero);
+        toFill.AddVert(targetRectRightBottom, color, Vector2.zero);
+        toFill.AddVert(maskRectRightBottom, color, Vector2.zero);
+        toFill.AddVert(targetRectRightTop, color, Vector2.zero);
+        toFill.AddVert(maskRectRightTop, color, Vector2.zero);
+        toFill.AddVert(targetRectLeftTop, color, Vector2.zero);
+        toFill.AddVert(maskRectLeftTop, color, Vector2.zero);
+
+        toFill.AddTriangle(0, 1, 2);
+        toFill.AddTriangle(2, 3, 0);
+        toFill.AddTriangle(3, 2, 4);
+        toFill.AddTriangle(4, 5, 3);
+        toFill.AddTriangle(6, 7, 5);
+        toFill.AddTriangle(5, 4, 6);
+        toFill.AddTriangle(7, 6, 1);
+        toFill.AddTriangle(1, 0, 7);
     }
 
-    void SetRect(RectTransform rt, Vector2 center, Vector2 size)
-    {
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            canvas.transform as RectTransform,
-            center,
-            canvas.worldCamera,
-            out Vector2 localPos);
 
-        rt.localPosition = localPos;
-        rt.sizeDelta = size;
+    private void RefreshView()
+    {
+        Vector2 newMin;
+        Vector2 newMax;
+        if (_target != null && _target.gameObject.activeSelf)
+        {
+            var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(transform, _target);
+            newMin = bounds.min;
+            newMax = bounds.max;
+        }
+        else
+        {
+            newMin = Vector2.zero;
+            newMax = Vector2.zero;
+        }
+        if (_targetMin != newMin || _targetMax != newMax)
+        {
+            _targetMin = newMin;
+            _targetMax = newMax;
+            SetAllDirty();
+        }
     }
 
 }

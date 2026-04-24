@@ -4,7 +4,6 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.ENUM;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
 using CLIP.Project_Mouse.Kernel;
 using UnityEngine;
 
@@ -69,16 +68,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
             switch (info.second_Category)
             {
                 case Placement_Second_Category.Door:
-                    var mat = await GameAssets.LoadAsyncByPath<Material>(info.res_url);
-                    RoomSystem.currentRoom.SetDoorRender(mat);
-                    break;
                 case Placement_Second_Category.Floor:
-                    mat = await GameAssets.LoadAsyncByPath<Material>(info.res_url);
-                    RoomSystem.currentRoom.SetFloorRender(mat);
-                    break;
                 case Placement_Second_Category.Wallpaper:
-                    mat = await GameAssets.LoadAsyncByPath<Material>(info.res_url);
-                    RoomSystem.currentRoom.SetWallRender(mat);
+                    var mat = await GameAssets.LoadAsyncByPath<Material>(info.res_url);
+                    RoomSystem.currentRoom.SetSpecialDecoration(info.second_Category, mat, info.room_placement_id);
                     break;
                 default:
                     var prefab = await GameAssets.LoadAsyncByPath<GameObject>(info.res_url);
@@ -87,7 +80,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     if (placement != null)
                     {
                         placement.Init(info);
-                        
+
                     }
                     return placement;
 
@@ -115,28 +108,22 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             if (CheckGridObjectVaild(obj, room, gridLayerUId, pos))
             {
-                RegisterGridObject(obj, room, gridLayerUId, pos);
-                AudioManager.Instance.PlayAudioByRefKey("setPlacement");
-                EvtDsp.TriggerEvt<GridObject>(EvtNames.OnPutPlacement, obj);
-
-               
-
-                return true;
-            }
-            //失败归还一个物品
-            else
-            {
                 if (obj is PlacementRuntime placement)
                 {
-                    Global_Inventory_Manager.Change_Item_Count(placement.ID, 1);
+                    Global_Inventory_Manager.Change_Item_Count(placement.ID, -1);
                     EvtDsp.TriggerEvt(EvtNames.ReloadPlacementData);
 
                 }
                 if (obj is Pot pot)
                 {
-                    Global_Inventory_Manager.Change_Item_Count(pot.info.id, 1);
+                    Global_Inventory_Manager.Change_Item_Count(pot.info.id, -1);
                     EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
                 }
+                RegisterGridObject(obj, room, gridLayerUId, pos);
+                AudioManager.Instance.PlayAudioByRefKey("setPlacement");
+                EvtDsp.TriggerEvt<GridObject>(EvtNames.OnPutPlacement, obj);
+
+                return true;
             }
 
         

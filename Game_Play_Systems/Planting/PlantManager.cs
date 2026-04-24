@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
+using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
 using Newtonsoft.Json;
@@ -19,6 +20,7 @@ public class PlantManager : SingletonMono<PlantManager>
     public Dictionary<string, PlantData> plantSeedNameDic;
     public Dictionary<string, FertilizerData> fertilizerDatas;
     public Dictionary<string, PotData> potDatas;
+    public GameObject waterObj;
 
     [Header("实例")]
     public GameObject plantPrefab;
@@ -30,6 +32,11 @@ public class PlantManager : SingletonMono<PlantManager>
     {
         InitData();
         EvtDsp.AddReturnEvt(EvtNames.InitPlant, LoadPlant);
+        _ = LoadAsset();
+    }
+    private async Task LoadAsset()
+    {
+        waterObj = await GameAssets.Instance.LoadAsycByKey<GameObject>(ResKeys.PREFAB_WATERFALL);
     }
     protected override void OnDestroy()
     {

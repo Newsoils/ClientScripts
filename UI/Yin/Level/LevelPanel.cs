@@ -14,9 +14,8 @@ namespace CLIP
     {
         namespace UI
         {
-            public class LevelPanel : MonoBehaviour
+            public class LevelPanel : UIPanelBase
             {
-                public static LevelPanel instance;
                 public GameObject panelObj;
 
                 public TMP_Text curLevel;
@@ -30,14 +29,13 @@ namespace CLIP
                 public GameObject rewardItemCell;
                 public GameObject thresholdLine;
                 public List<ThresholdLine> lines = new List<ThresholdLine>();
-                private void Awake()
+
+                private void Start()
                 {
-                    instance = this;
                     btnReturn.onClick.AddListener(ClosePanel);
                     btnExit.onClick.AddListener(ClosePanel);
                     EvtDsp.AddEvt(EvtNames.On_Get_Exp, Refresh);
                 }
-
                 private void OnDestroy()
                 {
                     EvtDsp.RemoveEvt(EvtNames.On_Get_Exp, Refresh);
@@ -46,8 +44,8 @@ namespace CLIP
                 public void Refresh()
                 {
                     curLevel.text = ExpManager.instance.curLevel.ToString();
-                    nextLevel.text = (ExpManager.instance.curLevel + 1).ToString();
-                    if(ExpManager.instance.curLevelInfo.nextLevelExp > 0)
+                    nextLevel.text = (ExpManager.instance.curLevelInfo.nextLevelExp - ExpManager.instance.curExp).ToString();
+                    if (ExpManager.instance.curLevelInfo.nextLevelExp > 0)
                     {
                         curExp.fillAmount = (float)ExpManager.instance.curExp / ExpManager.instance.curLevelInfo.nextLevelExp;
                     }
@@ -103,14 +101,14 @@ namespace CLIP
                     }
                 }
 
-                public void OpenPanel()
+                public override void OpenPanel(params object[] data)
                 {
                     InputManager.Instance.AllowTouchOnUI = true;
                     panelObj.SetActive(true);
                     Refresh();
                     EvtDsp.TriggerEvt(EvtNames.OnLevelPanelOpen);
                 }
-                public void ClosePanel()
+                public override void ClosePanel()
                 {
                     InputManager.Instance.AllowTouchOnUI = false;
                     panelObj.SetActive(false);

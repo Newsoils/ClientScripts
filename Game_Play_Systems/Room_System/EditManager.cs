@@ -23,8 +23,12 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             InputManager.Instance.OnSingleTap -= HandleTap;
             InputManager.Instance.OnSingleDrag -= HandleDrag;
+            InputManager.Instance.OnDragBegin -= HandleDragBegin;
             InputManager.Instance.OnDragRelease -= HandleDragRelease;
             InputManager.Instance.OnLongPress -= HandleLongPress;
+            InputManager.Instance.OnRotate -= HandleRotate;
+            InputManager.Instance.OnLongPress -= HandleLongPress;
+        
         }
 
 

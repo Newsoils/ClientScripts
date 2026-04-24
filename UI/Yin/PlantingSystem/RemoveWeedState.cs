@@ -74,7 +74,7 @@
 //                            }
 //                            activeFinger = null;
 
-//                            foreach (var pot in CLIP.Project_Mouse.Game_Play_System.Planting_System.Planting_System_Manager._instance._pot_list)
+//                            foreach (var pot in CLIP.Project_Mouse.Game_Play_System.Planting_System.Planting_System_Manager.Instance._pot_list)
 //                            {
 //                                pot.on_exit_removing_weed();
 //                            }
@@ -126,7 +126,7 @@
 //                            }
 //                            activeFinger = null;
 
-//                            foreach (var pot in CLIP.Project_Mouse.Game_Play_System.Planting_System.Planting_System_Manager._instance._pot_list)
+//                            foreach (var pot in CLIP.Project_Mouse.Game_Play_System.Planting_System.Planting_System_Manager.Instance._pot_list)
 //                            {
 //                                pot.on_exit_removing_weed();
 //                            }

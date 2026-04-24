@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
+using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Scene_View_Control;
-using UnityEditor;
 using UnityEngine;
 
 namespace CLIP.Project_Mouse.Game_Play_System
@@ -26,7 +26,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public RoomType RoomType;
 
         public bool isActive = false;
-
 
         public Dictionary<string, PlacementRuntime> placementsDic = new Dictionary<string, PlacementRuntime>();
         public Dictionary<string, Pot> potsDic = new Dictionary<string, Pot>();
@@ -161,6 +160,16 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
         }
 
+        public void AddOtherPlacementToRoomData(PlacementData placementData)
+        {
+            roomData.placementDatas.Add(placementData);
+        }
+
+        public void RemoveOtherPlacementToRoomDat(PlacementData placementData)
+        {
+            roomData.placementDatas.Remove(placementData);
+        }
+
         public void RemovePlacementFromRoom(PlacementRuntime placement, string gridLayerUId)
         {
             roomData.placementDatas.Remove(placement.data);
@@ -184,6 +193,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
             placementsDic.Clear();
             gridLayerPlacementDic.Clear();
             roomData.placementDatas.Clear();
+            roomData.wallPlacementId = null;
+            roomData.floorPlacementId = null;
+            roomData.doorPlacementId = null;
         }
         #endregion
         #region 花盆
@@ -335,6 +347,69 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
         }
 
+        public void SetSpecialDecoration(Placement_Second_Category category, Material material, int placementId)
+        {
+            switch (category)
+            {
+                case Placement_Second_Category.Door:
+                    if (roomData.doorPlacementId.HasValue)
+                        RemoveSpecialDecorationData(category);
+                    roomData.doorPlacementId = placementId;
+                    SetDoorRender(material);
+                    break;
+                case Placement_Second_Category.Floor:
+                    if (roomData.floorPlacementId.HasValue)
+                        RemoveSpecialDecorationData(category);
+                    roomData.floorPlacementId = placementId;
+                    SetFloorRender(material);
+                    break;
+                case Placement_Second_Category.Wallpaper:
+                    if (roomData.wallPlacementId.HasValue)
+                        RemoveSpecialDecorationData(category);
+                    roomData.wallPlacementId = placementId;
+                    SetWallRender(material);
+                    break;
+            }
+        }
+
+        public int? GetSpecialDecorationId(Placement_Second_Category category)
+        {
+            return category switch
+            {
+                Placement_Second_Category.Door => roomData.doorPlacementId,
+                Placement_Second_Category.Floor => roomData.floorPlacementId,
+                Placement_Second_Category.Wallpaper => roomData.wallPlacementId,
+                _ => null
+            };
+        }
+
+        public void RemoveSpecialDecorationData(Placement_Second_Category category)
+        {
+            switch (category)
+            {
+                case Placement_Second_Category.Door:
+                    roomData.doorPlacementId = null;
+                    break;
+                case Placement_Second_Category.Floor:
+                    roomData.floorPlacementId = null;
+                    break;
+                case Placement_Second_Category.Wallpaper:
+                    roomData.wallPlacementId = null;
+                    break;
+            }
+        }
+
+        public void RestoreSpecialDecoration(Placement_Second_Category category, int placementId, string resUrl)
+        {
+            GameAssets.LoadAsyncByPath<Material>(resUrl).ContinueWith(mat =>
+            {
+                if (mat != null)
+                {
+                    //SetSpecialDecoration(category, mat, placementId);
+                }
+            });
+        }
+
         #endregion
 
 
@@ -378,7 +453,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             var orginal = GetGridOrigin(GridLayerType.Floor);
             if(orginal!=null)
             {
-                var relativePos = new Vector3(pos.x, 0, pos.y) - orginal.position;
+                var relativePos = pos - orginal.position;
 
                 return roomData.IsPointInFloor(new System.Numerics.Vector2(relativePos.x, relativePos.z));
             }

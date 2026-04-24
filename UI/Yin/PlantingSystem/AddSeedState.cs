@@ -13,14 +13,14 @@
 //            {
 //                public void EnterState(PlantingInteractManager manager)
 //                {
-//                    Planting_System_Manager._instance.can_edit_pot = false;
-//                    Planting_System_Manager._instance.on_deselect_pot();
+//                    Planting_System_Manager.Instance.can_edit_pot = false;
+//                    Planting_System_Manager.Instance.on_deselect_pot();
 //                    PlantingInteractManager.Instance.SetCanRotatePot(false);
 //                }
 
 //                public void ExitState(PlantingInteractManager manager)
 //                {
-//                    Planting_System_Manager._instance.can_edit_pot = true;
+//                    Planting_System_Manager.Instance.can_edit_pot = true;
 //                    PlantingInteractManager.Instance.SetCanRotatePot(true);
 //                }
 

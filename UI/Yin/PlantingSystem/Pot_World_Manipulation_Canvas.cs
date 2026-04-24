@@ -54,15 +54,15 @@
 //                public void DeselectPot()
 //                {
 //                    Pot_In_Scene pot_In_Scene = gameObject.GetComponentInParent<Pot_In_Scene>();
-//                    if (Planting_System_Manager._instance == null)
+//                    if (Planting_System_Manager.Instance == null)
 //                    {
 //                        Debug.LogError("Planting_System_Manager.Instance is null");
 //                        return;
 //                    }
 //                    Debug.Log("EnableResetCamera");
-//                    Planting_System_Manager._instance.on_deselect_pot();
+//                    Planting_System_Manager.Instance.on_deselect_pot();
 //                    pot_World_Manipulation_Canvas.SetActive(false);
-//                    CustomEvent.Trigger(Planting_System_Manager._instance.planting_interaction_manager, "_CE_exit_moving_pot");
+//                    CustomEvent.Trigger(Planting_System_Manager.Instance.planting_interaction_manager, "_CE_exit_moving_pot");
 //                    if (pot_In_Scene != null)
 //                    {
 //                        pot_In_Scene.on_exit_moving_pot();
@@ -78,7 +78,7 @@
 //                    Pot_In_Scene pot_In_Scene = gameObject.GetComponentInParent<Pot_In_Scene>();
 //                    if (pot_In_Scene != null)
 //                    {
-//                        Planting_System_Manager._instance.current_selected_pot = pot_In_Scene.gameObject;
+//                        Planting_System_Manager.Instance.current_selected_pot = pot_In_Scene.gameObject;
 //                    }
 //                }
 //            }

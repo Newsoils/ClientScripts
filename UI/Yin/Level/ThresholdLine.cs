@@ -55,7 +55,7 @@ namespace CLIP
                 }
                 private void BtnShowReward()
                 {
-                    LevelPanel.instance.CloseOtherLine(this);
+                    UIManager.Instance.GetPanel<LevelPanel>().CloseOtherLine(this);
                     if (isRewardPanelOpen)
                     {
                         CloseRewardPanel();

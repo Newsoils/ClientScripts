@@ -214,7 +214,7 @@
 //                    bTN_Begin_Planting.SetActive(false);
 //                    CameraDown();
 //                    ChangeState(new NonePlantState());
-//                    Planting_System_Manager._instance.can_edit_pot = true;
+//                    Planting_System_Manager.Instance.can_edit_pot = true;
 //                }
 
 //                public void SetLeanPitch(int x)
@@ -284,7 +284,7 @@
 
 //                private void Update()
 //                {
-//                    if (Player_Social_Manager._instance != null && Player_Social_Manager._instance._on_visit_friend_room)
+//                    if (Player_Social_Manager.Instance != null && Player_Social_Manager.Instance._on_visit_friend_room)
 //                    {
 //                        SetUIOnVisitFriendRoom(false);
 //                    }
@@ -441,11 +441,11 @@
 //                    ChangeState(new PlantingState());
 
 //                    //Planting_System_Manager.Instance.saving_current_state_to_disk_as_json("planting.json");
-//                    Planting_System_Manager._instance.save_current_state_to_memory();
-//                    Global_Home_Room_Manager._instance._can_switch_scene = false;
+//                    Planting_System_Manager.Instance.save_current_state_to_memory();
+//                    Global_Home_Room_Manager.Instance._can_switch_scene = false;
 //                    main_Character_AI_Control.SetActive(false);
 
-//                    Planting_System_Manager._instance.can_edit_pot = true;
+//                    Planting_System_Manager.Instance.can_edit_pot = true;
 //                }
 
 //                // 关闭右侧种植功能面板和任务拍照面板
@@ -535,7 +535,7 @@
 //                public void ExitPlanting()
 //                {
 //                    CommonInteractManager.Instance.SetMainFunctionActive(true);
-//                    if (Planting_System_Manager._instance.isSave())
+//                    if (Planting_System_Manager.Instance.isSave())
 //                    {
 //                        Exit_Planting();
 //                    }
@@ -547,7 +547,7 @@
 //                        });
 //                    }
 
-//                    Planting_System_Manager._instance.current_selected_pot = null;
+//                    Planting_System_Manager.Instance.current_selected_pot = null;
 //                }
 
 //                // 退出种植功能
@@ -568,9 +568,9 @@
 //                    balconyDoor.enabled = true;
 //                    ChangeState(new NonePlantState());
 
-//                    Global_Home_Room_Manager._instance._can_switch_scene = true;
+//                    Global_Home_Room_Manager.Instance._can_switch_scene = true;
 
-//                    Planting_System_Manager._instance.can_edit_pot = false;
+//                    Planting_System_Manager.Instance.can_edit_pot = false;
 //                    main_Character_AI_Control.SetActive(true);
 //                }
 
@@ -579,14 +579,14 @@
 //                {
 //                    PromptMessage.Instance.ShowPrompt(1, () =>
 //                    {
-//                        Planting_System_Manager._instance.CancelAllModifacation();
+//                        Planting_System_Manager.Instance.CancelAllModifacation();
 //                    });
 //                }
 
 //                // 放弃种植并退出临时状态
 //                public void GiveUpPlantingAndSetIsTempFalse()
 //                {
-//                    Planting_System_Manager._instance.CancelAllModifacation();
+//                    Planting_System_Manager.Instance.CancelAllModifacation();
 //                    SetIsTemp(false);
 //                }
 
@@ -661,7 +661,7 @@
 //                // 检查是否有花盆有杂草
 //                public bool AnyPotHasWeed()
 //                {
-//                    foreach (var pot in Planting_System_Manager._instance._pot_list)
+//                    foreach (var pot in Planting_System_Manager.Instance._pot_list)
 //                    {
 //                        if (pot._pot_info != null && pot._pot_info.have_weed)
 //                        {
@@ -683,13 +683,13 @@
 //                // 设置临时状态
 //                public void SetIsTemp(bool isTemp)
 //                {
-//                    Planting_System_Manager._instance.is_temp = isTemp;
+//                    Planting_System_Manager.Instance.is_temp = isTemp;
 //                }
 
 //                // 设置是否可以旋转花盆
 //                public void SetCanRotatePot(bool canRotatePot)
 //                {
-//                    Planting_System_Manager._instance.canPotRotate = canRotatePot;
+//                    Planting_System_Manager.Instance.canPotRotate = canRotatePot;
 //                }
 
 //                public void ShowGrid(GameObject gameObject)
@@ -831,7 +831,7 @@
 
 //                public void SetAllPlacementCollider(bool enabled)
 //                {
-//                    foreach (var placement_In_Level in Planting_System_Manager._instance._pot_list)
+//                    foreach (var placement_In_Level in Planting_System_Manager.Instance._pot_list)
 //                    {
 //                        Collider[] colliders = placement_In_Level.gameObject.GetComponentsInChildren<Collider>(true);
 //                        foreach (var collider in colliders)
@@ -846,7 +846,7 @@
 //                {
 //                    yield return new WaitForSecondsRealtime(0.25f);
 
-//                    Planting_System_Manager._instance.on_select_cell(gridCell.gameObject);
+//                    Planting_System_Manager.Instance.on_select_cell(gridCell.gameObject);
 
 //                    yield return new WaitForSecondsRealtime(0.25f);
 
@@ -860,7 +860,7 @@
 
 //                    _warehouse_UI_event_hub._invoke_deselected_item();
 
-//                    Planting_System_Manager._instance.hide_grid();
+//                    Planting_System_Manager.Instance.hide_grid();
 //                    SetAllPlacementCollider(true);
 //                }
 
@@ -967,7 +967,7 @@
 //                                    {
 //                                        StartCoroutine(WaitForGridSelection(gridCell, () =>
 //                                        {
-//                                            Planting_System_Manager._instance.on_exit_placing_pot();
+//                                            Planting_System_Manager.Instance.on_exit_placing_pot();
 //                                            OnExitPlacePot();
 //                                        }));
 //                                        //Debug.Log(leftTopCorner);
@@ -990,7 +990,7 @@
 //                                Debug.LogError("选中物体没有 BoxCollider！");
 //                            }
 
-//                        Planting_System_Manager._instance.on_exit_placing_pot();
+//                        Planting_System_Manager.Instance.on_exit_placing_pot();
 //                        OnExitPlacePot();
 //                    }
 //                }
@@ -1052,7 +1052,7 @@
 //                        else
 //                        {
 //                            //Debug.Log("手指按下不在选中的物体上，取消选择");
-//                            Planting_System_Manager._instance.on_deselect_pot();
+//                            Planting_System_Manager.Instance.on_deselect_pot();
 //                            return;
 //                        }
 //                    }
@@ -1102,7 +1102,7 @@
 //                                {
 //                                    StartCoroutine(WaitForGridSelection(gridCell, () =>
 //                                    {
-//                                        Planting_System_Manager._instance.on_deselect_pot();
+//                                        Planting_System_Manager.Instance.on_deselect_pot();
 //                                    }));
 //                                    //Debug.Log(leftTopCorner);
 //                                    //Debug.Log($"左下角网格：{gridCell.name}");
@@ -1126,7 +1126,7 @@
 //                            Debug.LogError("选中物体没有 Collider！");
 //                        }
 
-//                        Planting_System_Manager._instance.on_deselect_pot();
+//                        Planting_System_Manager.Instance.on_deselect_pot();
 //                    }
 //                }
 
@@ -1163,7 +1163,7 @@
 //                            pressTime += Time.deltaTime;
 //                            if (pressTime >= longPressThreshold)
 //                            {
-//                                Planting_System_Manager._instance.on_select_pot(longPressPot.gameObject);
+//                                Planting_System_Manager.Instance.on_select_pot(longPressPot.gameObject);
 //                                longPressTarget = null;
 //                                pressTime = 0;
 //                                Debug.Log("长按成功，选中家具" + longPressPot.gameObject.name);

@@ -19,6 +19,8 @@ public class AudioManager : SingletonMono<AudioManager>
     [Range(-80, 20)]
     public float bgmSound = 0;
 
+    public static bool isPlayingMusic = false;
+
     public List<WavInfo> audioInfos;
 
     void Start()
@@ -99,7 +101,7 @@ public class AudioManager : SingletonMono<AudioManager>
     }
     public async Task PlayMusicAsync(string key,float volume, float fadeOut = 0, float fadeIn = 0)
     {
-        if (currentMusic == key) return;
+        if (currentMusic == key&& isPlayingMusic) return;
         // 停止当前正在进行的淡出淡入动画
         currentFadeTween?.Kill();
         // 获取新的音乐（这个需要你自己实现）
@@ -110,6 +112,7 @@ public class AudioManager : SingletonMono<AudioManager>
             Debug.LogError($"找不到对应key的音乐: {key}");
             return;
         }
+        isPlayingMusic = true;
 
         Sequence sequence = DOTween.Sequence();
 
@@ -135,7 +138,7 @@ public class AudioManager : SingletonMono<AudioManager>
     public void StopMusic(float fadeOut = 0)
     {
         currentFadeTween?.Kill();
-
+        isPlayingMusic = false;
         if (fadeOut <= 0)
         {
             MusicSource.Stop();

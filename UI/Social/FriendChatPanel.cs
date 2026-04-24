@@ -135,7 +135,10 @@ public class FriendChatPanel : MonoBehaviour
     private void InitEmojis()
     {
         var emojiList = chatMsgSO.chat_msg_db;
-
+        foreach(Transform emoji in emojiRoot)
+        {
+            Destroy(emoji.gameObject);
+        }
         for (int i = 0; i < emojiList.Count; i++)
         {
             GameObject go;
@@ -183,7 +186,7 @@ public class FriendChatPanel : MonoBehaviour
             Global_Photo_Manager.Instance.Load_Dispatch_PhotoList();
             if (Dispatch_Manager._instance != null)
             {
-                foreach (string path in Dispatch_Manager._instance._dispatch_photo_path_list)
+                foreach (string path in Global_Photo_Manager.Instance._dispatch_photo_path_list)
                 {
                     string fileName = Path.GetFileName(path);
                     if (fileName.StartsWith($"#PhotoWith{_record.friend_name}#"))
@@ -243,11 +246,21 @@ public class FriendChatPanel : MonoBehaviour
                     var dbMsg = chatMsgSO.chat_msg_db.Find(m => m.msg_id == msgContent.msg_id);
                     if (dbMsg != null && !string.IsNullOrEmpty(dbMsg.res_url))
                     {
-                        string[] parts = dbMsg.res_url.Split('#');
-                        Project_Mouse_Resource_Management.load_sub_sprite(parts[0], parts[1], sprite =>
+                        string[] _image_url_data = dbMsg.res_url.Split('#');
+                        if (_image_url_data.Length == 2)
                         {
-                            msgComp.message.sprite = sprite;
-                        });
+                            Project_Mouse_Resource_Management.load_sub_sprite(_image_url_data[0], _image_url_data[1], (sprite) =>
+                            {
+                                msgComp.message.sprite = sprite;
+                            });
+                        }
+                        else
+                        {
+                            Project_Mouse_Resource_Management.load_sprite_async(_image_url_data[0], (sprite) =>
+                            {
+                                msgComp.message.sprite = sprite;
+                            });
+                        }
                     }
                 }
             }

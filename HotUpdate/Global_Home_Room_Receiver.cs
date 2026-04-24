@@ -2,12 +2,10 @@ using System.Collections;
 using CLIP.Framework_Core.Network;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
 using UnityEngine;
 
 public class Global_Home_Room_Receiver : SingletonMono<Global_Home_Room_Receiver>, IMsg_Receiver
 {
-    public static Global_Home_Room_Receiver Instance;
     private Global_Home_Room_Manager _homeManager;
     private NetWork_Center_WSS _networkCenter;
 

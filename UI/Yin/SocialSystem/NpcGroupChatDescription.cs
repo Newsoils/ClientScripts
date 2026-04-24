@@ -81,9 +81,9 @@ namespace CLIP
                     {
                         titleText.text = "小苔信息";
                         // 模型照片
-                        nameText.text = $"主角名字：{Global_Game_Manager._instance._current_player_name}";
+                        nameText.text = $"主角名字：{Global_Game_Manager.Instance._current_player_name}";
                         personality.text = "id号码";
-                        personalityText.text = Global_Game_Manager._instance._current_player_id;
+                        personalityText.text = Global_Game_Manager.Instance._current_player_id;
                         area.gameObject.SetActive(false);
                         areaText.gameObject.SetActive(false);
                         intimacy.SetActive(false);

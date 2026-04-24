@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.UI;
@@ -8,10 +9,21 @@ public class NPCPanel : MonoBehaviour
 {
     public GameObject obj;
 
-
     public Transform npcChatUnitRoot;
 
     public GameObject npcChatUnitPrefab;
+
+
+    private void Start()
+    {
+        EvtDsp.AddEvt(EvtNames.On_NPC_Data_Update, RefreshNPCList);
+    }
+
+    private void OnDestroy()
+    {
+        EvtDsp.RemoveEvt(EvtNames.On_NPC_Data_Update, RefreshNPCList);
+    }
+
 
     public  void OpenPanel(params object[] data)
     {
@@ -24,7 +36,6 @@ public class NPCPanel : MonoBehaviour
         obj.SetActive(true);
         RefreshNPCList();
     }
-
     
     public void ClosePanel()
     {

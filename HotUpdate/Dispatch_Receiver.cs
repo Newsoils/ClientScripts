@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Collections.Generic;
+using CLIP.Framework_Core.Event;
 using CLIP.Framework_Core.Network;
 using CLIP.Framework_Core.Serialization;
 using CLIP.Framework_Unity;
@@ -9,11 +11,19 @@ using UnityEngine;
 
 public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
 {
+    [System.Serializable]
+    private class DispatchSavePayload
+    {
+        public string dispatchStateJson;
+        public List<DispatchBagInfo> dispatchBags;
+    }
+
     private Dispatch_Manager dispatchManager;
     private NetWork_Center_WSS _networkCenter;
 
     private const string ReceiverName = "Dispatch_Receiver";
     private const string DataKey = "Dispatch_Info";
+    private const int ExpectedBagCount = 3;
 
     #region Unity Life Cycle
 
@@ -37,7 +47,8 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
         BindUnityEvents();
         RegisterToNetwork();
 
-        // 如果已连接服务器，则更新调度信息
+        EvtDsp.AddEvt<string>(EvtNames.Login_Messsage, OnLoginMessage);
+
         if (_networkCenter._connect_to_player_server)
         {
             UpdateDispatchInfoFromServer();
@@ -48,6 +59,8 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
 
     private void OnDestroy()
     {
+        EvtDsp.RemoveEvt<string>(EvtNames.Login_Messsage, OnLoginMessage);
+
         UnbindUnityEvents();
         UnregisterFromNetwork();
     }
@@ -87,7 +100,10 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
     private void SendMsg(string action, string detail)
     {
         if (_networkCenter == null || !_networkCenter._connect_to_player_server)
+        {
+            Debug.LogWarning($"{ReceiverName}: SendMsg skipped. action={action}, connected={_networkCenter?._connect_to_player_server}");
             return;
+        }
 
         Network_Msg msg = new Network_Msg
         {
@@ -105,8 +121,46 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
 
     #region Client -> Server Methods
 
+    private void OnLoginMessage(string loginMsg)
+    {
+        if (loginMsg != "Login_Success")
+        {
+            return;
+        }
+
+        // Login_Messsage 事件在 _connect_to_player_server 被置 true 之前就触发了，
+        // 所以用协程等连接就绪再拉，避免和 Login_Manager 的执行顺序耦合。
+        Debug.Log($"{ReceiverName}: OnLoginMessage received, waiting for connection ready");
+        StartCoroutine(RequestDispatchInfoWhenReady());
+    }
+
+    private IEnumerator RequestDispatchInfoWhenReady()
+    {
+        const float timeoutSeconds = 10f;
+        float elapsed = 0f;
+        while (_networkCenter == null || !_networkCenter._connect_to_player_server)
+        {
+            if (elapsed >= timeoutSeconds)
+            {
+                Debug.LogWarning($"{ReceiverName}: Wait for player-server connection timeout, skip dispatch info request");
+                yield break;
+            }
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        Debug.Log($"{ReceiverName}: Connection ready after {elapsed:F2}s, requesting dispatch info");
+        UpdateDispatchInfoFromServer();
+    }
+
     private void UpdateDispatchInfoFromServer()
     {
+        if (_networkCenter == null || !_networkCenter._connect_to_player_server)
+        {
+            Debug.Log($"{ReceiverName}: Skip update, not connected to player server");
+            return;
+        }
+
         Debug.Log($"{ReceiverName}: Requesting dispatch info from server");
         SendMsg("Get_Data", DataKey);
     }
@@ -119,21 +173,55 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
             return;
         }
 
-        // 序列化调度信息
-        string serializedData = Serialization_Provider.SerializeObject(dispatchManager._player_dispatch_state);
+        string serializedState = Serialization_Provider.SerializeObject(dispatchManager._player_dispatch_state);
 
-        // 发送JSON数组：[dataKey, serializedData]
-        //string jsonArray = $"[\"{DataKey}\",\"{serializedData}\"]";
+        // 上传前把 bags 逐项深拷贝一份，断开与 Dispatch_Manager 内部 list 的任何引用共享；
+        // 同时检查三包是否意外指向同一引用（那会导致序列化出来 3 份一模一样的 JSON）。
+        var snapshot = new List<DispatchBagInfo>(ExpectedBagCount);
+        if (dispatchManager.dispatch_Bags != null)
+        {
+            for (int i = 0; i < dispatchManager.dispatch_Bags.Count; i++)
+            {
+                var src = dispatchManager.dispatch_Bags[i];
+                snapshot.Add(src == null
+                    ? new DispatchBagInfo()
+                    : new DispatchBagInfo
+                    {
+                        foodName = src.foodName,
+                        snackName = src.snackName,
+                        tapeName = src.tapeName,
+                        isPacked = src.isPacked
+                    });
+            }
 
+            for (int i = 0; i < dispatchManager.dispatch_Bags.Count; i++)
+            {
+                for (int j = i + 1; j < dispatchManager.dispatch_Bags.Count; j++)
+                {
+                    if (dispatchManager.dispatch_Bags[i] != null
+                        && ReferenceEquals(dispatchManager.dispatch_Bags[i], dispatchManager.dispatch_Bags[j]))
+                    {
+                        Debug.LogError($"{ReceiverName}: dispatch_Bags[{i}] and [{j}] share the same reference before upload! 这会导致三个背包内容相同。");
+                    }
+                }
+            }
+        }
+        EnsureDispatchBagsCount(snapshot, ExpectedBagCount);
 
-        List<string> data = new() { DataKey, serializedData };
+        var payload = new DispatchSavePayload
+        {
+            dispatchStateJson = serializedState,
+            dispatchBags = snapshot
+        };
 
+        string serializedPayload = Serialization_Provider.SerializeObject(payload);
+
+        List<string> data = new() { DataKey, serializedPayload };
         string lastData = Serialization_Provider.SerializeObject(data);
 
+        Debug.Log($"{ReceiverName}: Uploading dispatch info. bags={DescribeBags(payload.dispatchBags)}");
 
         SendMsg("Save_Data", lastData);
-
-        Debug.Log($"{ReceiverName}: Dispatch info sent to server");
     }
 
     private void OnClearPreviousDispatch()
@@ -146,7 +234,6 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
 
         Debug.Log($"{ReceiverName}: Clearing previous dispatch info");
 
-        // 重置调度状态
         dispatchManager._player_dispatch_state._current_dispatch_info = new single_dispatch_info();
         dispatchManager._player_dispatch_state.player_state = "At_Home";
         dispatchManager._player_dispatch_state.player_at_home_length_in_minute = 0;
@@ -164,7 +251,6 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
 
         dispatchManager._player_dispatch_state.last_friend_event_name = "";
 
-        // 上传清空后的状态到服务器
         UploadDispatchInfoToServer();
     }
 
@@ -203,27 +289,115 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
     {
         try
         {
-            // 使用提供的JSON解析方式
             var data = Serialization_Provider.DeserializeObject<string[]>(detailInfo);
 
-            if (data != null && data.Length == 2)
+            if (data == null || data.Length != 2)
             {
-                if (data[0] == DataKey)
-                {
-                    // 加载调度信息
-                    dispatchManager._player_dispatch_state.load_dispatch_info_from_json(data[1]);
-
-                    // 触发调度tick
-                    dispatchManager.dispatch_tick();
-
-                    Debug.Log($"{ReceiverName}: Dispatch data loaded and tick triggered");
-                }
+                Debug.LogWarning($"{ReceiverName}: HandleResponseData invalid shape");
+                return;
             }
+
+            if (data[0] != DataKey)
+            {
+                return;
+            }
+
+            string payloadJson = data[1];
+            Debug.Log($"{ReceiverName}: Response payload len={payloadJson?.Length ?? 0}");
+
+            if (!TryLoadDispatchPayload(payloadJson))
+            {
+                // 兼容旧格式：payload 就是 _player_dispatch_state 的 json
+                Debug.Log($"{ReceiverName}: Payload is legacy format, load state only");
+                dispatchManager._player_dispatch_state.load_dispatch_info_from_json(payloadJson);
+            }
+
+            dispatchManager.dispatch_tick();
+
+            Debug.Log($"{ReceiverName}: Dispatch data loaded. bags={DescribeBags(dispatchManager.dispatch_Bags)}");
         }
         catch (System.Exception ex)
         {
             Debug.LogError($"{ReceiverName}: Failed to parse response data - {ex.Message}");
         }
+    }
+
+    private bool TryLoadDispatchPayload(string payloadJson)
+    {
+        if (string.IsNullOrEmpty(payloadJson) || dispatchManager == null || dispatchManager._player_dispatch_state == null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var payload = Serialization_Provider.DeserializeObject<DispatchSavePayload>(payloadJson);
+            if (payload == null || string.IsNullOrEmpty(payload.dispatchStateJson))
+            {
+                return false;
+            }
+
+            dispatchManager._player_dispatch_state.load_dispatch_info_from_json(payload.dispatchStateJson);
+
+            if (payload.dispatchBags != null && payload.dispatchBags.Count > 0)
+            {
+                // 深拷贝每一项，防止 JSON 里意外的共享引用或后续 list 操作污染原数据。
+                var cloned = new List<DispatchBagInfo>(payload.dispatchBags.Count);
+                foreach (var src in payload.dispatchBags)
+                {
+                    cloned.Add(src == null
+                        ? new DispatchBagInfo()
+                        : new DispatchBagInfo
+                        {
+                            foodName = src.foodName,
+                            snackName = src.snackName,
+                            tapeName = src.tapeName,
+                            isPacked = src.isPacked
+                        });
+                }
+                dispatchManager.dispatch_Bags = cloned;
+                EnsureDispatchBagsCount(dispatchManager.dispatch_Bags, ExpectedBagCount);
+            }
+
+            return true;
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogWarning($"{ReceiverName}: TryLoadDispatchPayload fallback, reason={ex.Message}");
+            return false;
+        }
+    }
+
+    private static void EnsureDispatchBagsCount(List<DispatchBagInfo> bags, int expectedCount)
+    {
+        if (bags == null) return;
+
+        while (bags.Count < expectedCount)
+        {
+            bags.Add(new DispatchBagInfo());
+        }
+
+        if (bags.Count > expectedCount)
+        {
+            bags.RemoveRange(expectedCount, bags.Count - expectedCount);
+        }
+    }
+
+    private static string DescribeBags(List<DispatchBagInfo> bags)
+    {
+        if (bags == null) return "null";
+        var parts = new List<string>(bags.Count);
+        for (int i = 0; i < bags.Count; i++)
+        {
+            var b = bags[i];
+            if (b == null)
+            {
+                parts.Add($"[{i}] null");
+                continue;
+            }
+            parts.Add($"[{i}] packed={b.isPacked} food={b.foodName} snack={b.snackName} tape={b.tapeName}");
+        }
+        return string.Join(" | ", parts);
     }
 
     #endregion
@@ -244,19 +418,16 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
 
     #region Public Methods
 
-    // 提供外部调用的方法来更新调度信息
     public void RequestUpdateDispatchInfo()
     {
         UpdateDispatchInfoFromServer();
     }
 
-    // 提供外部调用的方法来上传调度信息
     public void RequestUploadDispatchInfo()
     {
         UploadDispatchInfoToServer();
     }
 
-    // 提供外部调用的方法来清空之前的调度
     public void RequestClearPreviousDispatch()
     {
         OnClearPreviousDispatch();

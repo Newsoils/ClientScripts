@@ -111,7 +111,7 @@ public class PhotoManager : SingletonMono<PhotoManager>
         yield return new WaitForEndOfFrame();
 
         string photoPath = Path.Combine(Application.persistentDataPath, $"{fileName}");
-        Dispatch_Manager._instance._dispatch_photo_path_list.Add(photoPath);
+        Global_Photo_Manager.Instance.AddDispatchPhoto(photoPath, fileName);
 
         yield return null;
 

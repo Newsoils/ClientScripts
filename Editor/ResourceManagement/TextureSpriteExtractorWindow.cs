@@ -5,8 +5,16 @@ using System.Linq;
 
 public class TextureSpriteExtractorWindow : EditorWindow
 {
-    private string inputFolder = "Assets";
-    private string outputFolder = "Assets/ExtractedSprites";
+    [System.Serializable]
+    public class TextureSpritePathSetting
+    {
+        public string inputFolder = "Assets";
+        public string outputFolder = "Assets/ExtractedSprites";
+    }
+
+    private const string PREFS_KEY = "TextureSpriteExtractorWindow.PathSetting";
+
+    private TextureSpritePathSetting pathData = new TextureSpritePathSetting();
 
     [MenuItem("Tools/Sprite/Extract Sprites From Texture")]
     public static void Open()
@@ -14,15 +22,31 @@ public class TextureSpriteExtractorWindow : EditorWindow
         GetWindow<TextureSpriteExtractorWindow>("Sprite Extractor");
     }
 
+    private void OnEnable()
+    {
+        LoadData();
+    }
+
     private void OnGUI()
     {
         GUILayout.Label("Extract Sprites From Texture2D", EditorStyles.boldLabel);
         EditorGUILayout.Space();
 
-        DrawFolderField("Input Folder", ref inputFolder);
-        DrawFolderField("Output Folder", ref outputFolder);
+        EditorGUI.BeginChangeCheck();
+        pathData.inputFolder = EditorFolderPathField.Draw("Input Folder", pathData.inputFolder);
+        pathData.outputFolder = EditorFolderPathField.Draw("Output Folder", pathData.outputFolder);
+        if (EditorGUI.EndChangeCheck())
+        {
+            SaveData();
+        }
 
         EditorGUILayout.Space();
+
+        if (GUILayout.Button("Save Settings"))
+        {
+            SaveData();
+            ShowNotification(new GUIContent("Settings saved"));
+        }
 
         if (GUILayout.Button("Extract Sprites", GUILayout.Height(30)))
         {
@@ -30,47 +54,37 @@ public class TextureSpriteExtractorWindow : EditorWindow
         }
     }
 
-    private void DrawFolderField(string label, ref string path)
+    private void LoadData()
     {
-        EditorGUILayout.BeginHorizontal();
-        EditorGUILayout.LabelField(label, GUILayout.Width(90));
-        path = EditorGUILayout.TextField(path);
-        if (GUILayout.Button("...", GUILayout.Width(30)))
-        {
-            string selected = EditorUtility.OpenFolderPanel(label, "Assets", "");
-            if (!string.IsNullOrEmpty(selected))
-            {
-                if (selected.StartsWith(Application.dataPath))
-                {
-                    path = "Assets" + selected.Substring(Application.dataPath.Length);
-                }
-                else
-                {
-                    EditorUtility.DisplayDialog(
-                        "Invalid Folder",
-                        "Please select a folder inside Assets.",
-                        "OK");
-                }
-            }
-        }
-        EditorGUILayout.EndHorizontal();
+        if (!EditorPrefs.HasKey(PREFS_KEY))
+            return;
+
+        string json = EditorPrefs.GetString(PREFS_KEY);
+        JsonUtility.FromJsonOverwrite(json, pathData);
+    }
+
+    private void SaveData()
+    {
+        EditorPrefs.SetString(PREFS_KEY, JsonUtility.ToJson(pathData));
     }
 
     private void ExtractSprites()
     {
-        if (!AssetDatabase.IsValidFolder(inputFolder))
+        if (string.IsNullOrEmpty(pathData.inputFolder) || !AssetDatabase.IsValidFolder(pathData.inputFolder))
         {
-            Debug.LogError("Input folder is invalid: " + inputFolder);
+            Debug.LogError("Input folder is invalid: " + pathData.inputFolder);
             return;
         }
 
-        if (!AssetDatabase.IsValidFolder(outputFolder))
+        if (string.IsNullOrEmpty(pathData.outputFolder))
         {
-            Directory.CreateDirectory(outputFolder);
-            AssetDatabase.Refresh();
+            Debug.LogError("Output folder is empty.");
+            return;
         }
 
-        string[] textureGuids = AssetDatabase.FindAssets("t:Texture2D", new[] { inputFolder });
+        EditorFolderPathField.EnsureFolderExists(pathData.outputFolder);
+
+        string[] textureGuids = AssetDatabase.FindAssets("t:Texture2D", new[] { pathData.inputFolder });
 
         int extractedCount = 0;
 
@@ -86,7 +100,7 @@ public class TextureSpriteExtractorWindow : EditorWindow
             foreach (Sprite sprite in sprites)
             {
                 string spritePath = Path.Combine(
-                    outputFolder,
+                    pathData.outputFolder,
                     sprite.name + ".asset"
                 ).Replace("\\", "/");
 

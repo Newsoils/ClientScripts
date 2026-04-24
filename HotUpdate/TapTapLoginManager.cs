@@ -37,7 +37,7 @@ public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
         TapTapComplianceOption complianceOption = new TapTapComplianceOption
         {
             showSwitchAccount = true,  // 是否显示切换账号按钮
-            useAgeRange = false  // 游戏是否需要获取真实年龄段信息
+            useAgeRange = true  // 游戏是否需要获取真实年龄段信息
         };
         // 其他模块配置项
         TapTapSdkBaseOptions[] otherOptions = new TapTapSdkBaseOptions[]

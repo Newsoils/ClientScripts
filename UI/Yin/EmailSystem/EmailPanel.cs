@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using CLIP.Project_Mouse.Client_Event_Systems;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.LYC.UI;
@@ -13,11 +12,10 @@ namespace CLIP.Project_Mouse.NewFrame.UI
     public class EmailPanel : UIPanelBase
     {
         [Header("UI")]
-        public GameObject emailCanvas;
+        public GameObject obj;
         public GameObject allEmailPanel;
         public GameObject emailDetailPanel;
         public GameObject awardPanel;
-        public GameObject awardBackground;
 
         public Button getAllRewardsButton;
 
@@ -35,16 +33,6 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         public GameObject awardUnitPrefab;
         public int waitPhotoCount = 0;
 
-        [Header("Event System")]
-        public General_Interaction_Event_Hub_SO generalInteractionEventHub;
-
-        public override void Awake()
-        {
-            base.Awake();
-
-            DontDestroyOnLoad(this.gameObject);
-        }
-
         private void Start()
         {
             Email_And_Announcement_Manager.instance._on_refresh_mail.AddListener(InitAllEmail);
@@ -53,7 +41,6 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         public override void OnDestroy()
         {
             base.OnDestroy();
-
             Email_And_Announcement_Manager.instance._on_refresh_mail.RemoveListener(InitAllEmail);
         }
 
@@ -63,7 +50,7 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         // 打开邮箱面板
         public override void OpenPanel(params object[] data)
         {
-            emailCanvas.SetActive(true);
+            obj.SetActive(true);
             allEmailPanel.SetActive(true);
             emailDetailPanel.SetActive(false);
             awardPanel.SetActive(false);
@@ -80,7 +67,7 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         // 关闭邮箱面板
         public override void ClosePanel()
         {
-            emailCanvas.SetActive(false);
+            obj.SetActive(false);
         }
 
         #endregion
@@ -160,14 +147,12 @@ namespace CLIP.Project_Mouse.NewFrame.UI
             Email_And_Announcement_Manager.instance.on_read_mail(mailId);
             ReceiveAwards(toReceive);
             UploadAfterOpenGifts();
-            generalInteractionEventHub._invoke_on_refresh_gift();
         }
 
         // 显示奖励面板
         public void ReceiveAwards(List<Mail_Record> mailRecords)
         {
             awardPanel.SetActive(true);
-            awardBackground.SetActive(true);
             var itemDb = Global_Inventory_Manager.GameItem_DB;
 
             var allAwards = new List<item_in_mail>();

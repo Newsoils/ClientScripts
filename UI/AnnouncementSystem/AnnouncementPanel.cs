@@ -13,6 +13,7 @@ namespace CLIP.Project_Mouse.NewFrame.UI
     {
         [Header("UI")]
         public GameObject announcementCanvas;
+        public GameObject background;
         public GameObject announcementPanel;
         public GameObject announcementDetailPanel;
 
@@ -103,11 +104,13 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         public override void ClosePanel()
         {
             announcementCanvas.SetActive(false);
+            background.SetActive(false);
         }
 
         public override void OpenPanel(params object[] data)
         {
             announcementCanvas.SetActive(true);
+            background.SetActive(true);
             announcementPanel.SetActive(true);
             announcementDetailPanel.SetActive(false);
 

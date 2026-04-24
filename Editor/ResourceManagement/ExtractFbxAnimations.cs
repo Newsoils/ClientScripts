@@ -2,20 +2,95 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 
-public class ExtractFbxAnimations
+public class ExtractFbxAnimations : EditorWindow
 {
-    private const string DefaultFolder = "Assets/Art/Animation";
+    [System.Serializable]
+    public class FbxAnimationPathSetting
+    {
+        public string inputFolder = "Assets/Art/Animation";
+        public string outputFolder = "Assets/Art/Animation";
+    }
+
+    private const string PREFS_KEY = "ExtractFbxAnimations.PathSetting";
+
+    private FbxAnimationPathSetting pathData = new FbxAnimationPathSetting();
 
     [MenuItem("Tools/Animation/Extract FBX Animations")]
-    public static void Extract()
+    public static void Open()
     {
-        string[] fbxGuids = AssetDatabase.FindAssets("t:Model", new[] { DefaultFolder });
+        GetWindow<ExtractFbxAnimations>("FBX Animations");
+    }
+
+    private void OnEnable()
+    {
+        LoadData();
+    }
+
+    private void OnGUI()
+    {
+        GUILayout.Label("Extract FBX Animations", EditorStyles.boldLabel);
+        EditorGUILayout.Space();
+
+        EditorGUI.BeginChangeCheck();
+        pathData.inputFolder = EditorFolderPathField.Draw("Input Folder", pathData.inputFolder);
+        pathData.outputFolder = EditorFolderPathField.Draw("Output Folder", pathData.outputFolder);
+        if (EditorGUI.EndChangeCheck())
+        {
+            SaveData();
+        }
+
+        EditorGUILayout.Space();
+
+        if (GUILayout.Button("Save Settings"))
+        {
+            SaveData();
+            ShowNotification(new GUIContent("Settings saved"));
+        }
+
+        if (GUILayout.Button("Extract Animations", GUILayout.Height(30)))
+        {
+            Extract();
+        }
+    }
+
+    private void LoadData()
+    {
+        if (!EditorPrefs.HasKey(PREFS_KEY))
+            return;
+
+        string json = EditorPrefs.GetString(PREFS_KEY);
+        JsonUtility.FromJsonOverwrite(json, pathData);
+    }
+
+    private void SaveData()
+    {
+        EditorPrefs.SetString(PREFS_KEY, JsonUtility.ToJson(pathData));
+    }
+
+    private void Extract()
+    {
+        if (string.IsNullOrEmpty(pathData.inputFolder) || !AssetDatabase.IsValidFolder(pathData.inputFolder))
+        {
+            Debug.LogError("Input folder is invalid: " + pathData.inputFolder);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(pathData.outputFolder))
+        {
+            Debug.LogError("Output folder is empty.");
+            return;
+        }
+
+        EditorFolderPathField.EnsureFolderExists(pathData.outputFolder);
+
+        string[] fbxGuids = AssetDatabase.FindAssets("t:Model", new[] { pathData.inputFolder });
+
+        int extractedCount = 0;
 
         foreach (string guid in fbxGuids)
         {
             string fbxPath = AssetDatabase.GUIDToAssetPath(guid);
 
-            // 只处理 fbx
             if (!fbxPath.EndsWith(".fbx"))
                 continue;
 
@@ -28,32 +103,29 @@ public class ExtractFbxAnimations
                 if (clip == null)
                     continue;
 
-                // Unity 内置的预览动画不要
                 if (clip.name.StartsWith("__preview__"))
                     continue;
 
-                string folder = Path.GetDirectoryName(fbxPath);
                 string fbxName = Path.GetFileNameWithoutExtension(fbxPath);
-                string animPath = Path.Combine(folder, fbxName + ".anim").Replace("\\", "/");
+                string animPath = Path.Combine(pathData.outputFolder, fbxName + ".anim").Replace("\\", "/");
 
-                // 已存在则跳过，避免覆盖
                 if (File.Exists(animPath))
                 {
                     Debug.Log($"[Skip] Animation already exists: {animPath}");
                     continue;
                 }
 
-                // 复制动画
                 AnimationClip newClip = Object.Instantiate(clip);
                 newClip.name = fbxName;
 
                 AssetDatabase.CreateAsset(newClip, animPath);
+                extractedCount++;
                 Debug.Log($"[Create] {animPath}");
             }
         }
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("FBX animation extraction finished.");
+        Debug.Log($"FBX animation extraction finished. Total created: {extractedCount}");
     }
 }

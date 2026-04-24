@@ -85,7 +85,7 @@ namespace CLIP
                 // 初始化头像列表
                 public void InitIconItemView()
                 {
-                    int needCount = Global_Game_Manager._instance._avatar_icon_list.Count;
+                    int needCount = Global_Game_Manager.Instance._avatar_icon_list.Count;
                     int childCount = iconRoot.childCount;
 
                     for (int i = 0; i < needCount; i++)
@@ -101,7 +101,7 @@ namespace CLIP
                         }
                         itemObj.SetActive(true);
                         PersonalIconUnit item = itemObj.GetComponent<PersonalIconUnit>();
-                        item.InitUnit(this, Global_Game_Manager._instance._avatar_icon_list[i]);
+                        item.InitUnit(this, Global_Game_Manager.Instance._avatar_icon_list[i]);
                     }
 
                     for (int i = needCount; i < childCount; i++)
@@ -113,7 +113,7 @@ namespace CLIP
                 // 初始化边框列表
                 public void InitIconFrameItemView()
                 {
-                    int needCount = Global_Game_Manager._instance._avatar_icon_frame_list.Count;
+                    int needCount = Global_Game_Manager.Instance._avatar_icon_frame_list.Count;
                     int childCount = iconRoot.childCount;
 
                     for (int i = 0; i < needCount; i++)
@@ -129,7 +129,7 @@ namespace CLIP
                         }
                         itemObj.SetActive(true);
                         PersonalIconUnit item = itemObj.GetComponent<PersonalIconUnit>();
-                        item.InitUnit(this, Global_Game_Manager._instance._avatar_icon_frame_list[i]);
+                        item.InitUnit(this, Global_Game_Manager.Instance._avatar_icon_frame_list[i]);
                     }
 
                     for (int i = needCount; i < childCount; i++)

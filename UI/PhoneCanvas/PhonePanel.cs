@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.NewFrame.UI;
 using CLIP.Project_Mouse.UI;
 using UnityEngine;
@@ -8,7 +9,6 @@ using UnityEngine.UI;
 
 public class PhonePanel : UIPanelBase
 {
-
     public Button btn_Exit;
 
     public Button BackToRoomButton;
@@ -21,9 +21,13 @@ public class PhonePanel : UIPanelBase
     public Button PhotoButton;
     public Button ShopButton;
 
+    /// <summary>
+    /// 回收箱入口。回收箱专属图标尚未出图，
+    /// 暂时复用 <c>IllustrateButton</c> 的 Image 作为占位。
+    /// </summary>
+    public Button RecycleBinButton;
+
     public Transform root;
-
-
 
     public override void Awake()
     {
@@ -37,14 +41,13 @@ public class PhonePanel : UIPanelBase
 
         ChangeClothButton.onClick.AddListener(
             () =>
-            ClosePhone(() => UIManager.Instance.OpenPanel<ChangeClothPanel>())
+            ClosePhone(() => UIManager.Instance.OpenPanel<ClothPanel>())
             );
         BackToRoomButton.onClick.AddListener(BackToRoom);
 
         PersonalBriefButton.onClick.AddListener(
             () =>
             {
-                //PersonalBriefCanvasInteractManager.Instance.OpenPersonalBrief(); 
                 ClosePhone(() =>
                UIManager.Instance.GetPanel<PersonalBriefPanel>()?.OpenPanel());
             });
@@ -60,32 +63,35 @@ public class PhonePanel : UIPanelBase
         IllustrateButton.onClick.AddListener(
             () =>
             {
-                //IllustrateInteractManager.Instance.OpenIllustrate();
                 ClosePhone(() =>
                 UIManager.Instance.OpenPanel<IllustratePanel>());
             });
         EmailButton.onClick.AddListener(
             () =>
             {
-                //EmailCanvasInteracterManager.Instance.OpenEmailCanvas();
                 ClosePhone(() =>
                 UIManager.Instance.OpenPanel<EmailPanel>());
             }
             );
         PhotoButton.onClick.AddListener(() =>
         {
-            //  DispatchPhotoPanel.Instance.OpenDispatchPhotoCanvas();
-            //  });
             ClosePhone(() => UIManager.Instance.OpenPanel<DispatchPhotoPanel>());
         });
 
         ShopButton.onClick.AddListener(
             () =>
             {
-                //ShoppingCanvasInteractManager.Instance.OpenShop();
                 ClosePhone(() => UIManager.Instance.OpenPanel<ShoppingPanel>());
             });
 
+        if (RecycleBinButton != null)
+        {
+            RecycleBinButton.onClick.AddListener(
+                () =>
+                {
+                    ClosePhone(() => UIManager.Instance.OpenPanel<RecyclePanel>());
+                });
+        }
     }
 
     public override void OnDestroy()
@@ -103,6 +109,7 @@ public class PhonePanel : UIPanelBase
         EmailButton.onClick.RemoveAllListeners();
         PhotoButton.onClick.RemoveAllListeners();
         ShopButton.onClick.RemoveAllListeners();
+        if (RecycleBinButton != null) RecycleBinButton.onClick.RemoveAllListeners();
     }
 
 
@@ -144,7 +151,7 @@ public class PhonePanel : UIPanelBase
         }
         else
         {
-            ClosePhone(() => SceneLoadHelper.Load_MainScene());
+            ClosePhone(() => SceneLoadingHelper.Load_MainScene());
             MainPanel.OpenMainFuncP();
         }
     }
@@ -157,7 +164,7 @@ public class PhonePanel : UIPanelBase
         }
         else
         {
-            ClosePhone(() => SceneLoadHelper.Load_DispatchScene());
+            ClosePhone(() => SceneLoadingHelper.Load_DispatchScene());
             MainPanel.CloseMainFuncP();
         }
     }

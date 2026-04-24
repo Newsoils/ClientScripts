@@ -133,7 +133,7 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         {
             // 已展示的成就
             displayedAchievementInfo.Clear();
-            var pinnedList = Global_Game_Manager._instance._player_brief.achievements_pinned;
+            var pinnedList = Global_Game_Manager.Instance._player_brief.achievements_pinned;
             if (pinnedList != null)
             {
                 for (int i = 0; i < 4; i++)

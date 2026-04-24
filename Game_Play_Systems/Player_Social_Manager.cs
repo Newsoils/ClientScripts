@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Kernel.Social;
 using UnityEngine;
 using UnityEngine.Events;
@@ -104,9 +105,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
 #endif
                 }
             }
+            _on_refresh_present_view.AddListener(ReceivePresent);
+        }
+        private void OnDestroy()
+        {
+            _on_refresh_present_view.RemoveListener(ReceivePresent);
         }
 
-     
+
         #region Event Triggers       
 
         public void on_try_find_friend(string _friend_id)
@@ -297,6 +303,20 @@ namespace CLIP.Project_Mouse.Game_Play_System
             _next_visit_room_friend_name = "";
         }
 
+
+        public void ReceivePresent()
+        {
+            var presents = _current_social_info._present_records;
+
+            List<(string,int)> items = new List<(string,int)>();
+            foreach (var presentRecord in presents)
+            {
+                items.Add((presentRecord._msg_good_item_name, 1));
+            }
+            Global_Inventory_Manager.Change_Items_Count(items, "present");
+            EvtDsp.TriggerEvt(EvtNames.ReloadPlacementData);
+            EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
+        }
 
     }
 }

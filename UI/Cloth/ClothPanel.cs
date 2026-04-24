@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -32,6 +31,8 @@ public class ClothPanel : UIPanelBase
 
     public TMP_InputField searchInputField;
 
+    public Button exitButton;
+
     // 记录当前的一级菜单状态
     private Cloth_First_Category _currentFirst = Cloth_First_Category.None;
     private Cloth_Second_Category _currentSecond = Cloth_Second_Category.None;
@@ -47,13 +48,11 @@ public class ClothPanel : UIPanelBase
         secondLabels = secondCategoryParent.GetComponentsInChildren<ClothSecondLabel>();
         InitDropdown();
 
-
         ConfirmModification.onClick.AddListener(CloseChangeCloth);
 
         btn_Search.onClick.AddListener(() => OpenSearchPanel());
         btn_Close.onClick.AddListener(ClosePanel);
         BtnCloseSearch.onClick.AddListener(CloseSearchPanel);
-        //ConfirmModification.onClick.AddListener(ClosePanel);
 
         searchInputField.onValueChanged.AddListener(value =>
         {
@@ -78,6 +77,9 @@ public class ClothPanel : UIPanelBase
             currentCoroutine = StartCoroutine(DebouncedValidate(filterString));
             //RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
         });
+
+        exitButton.onClick.AddListener(ClosePanel);
+
     }
 
 
@@ -89,21 +91,34 @@ public class ClothPanel : UIPanelBase
         ConfirmModification.onClick.RemoveAllListeners();
 
         searchInputField.onSubmit.RemoveAllListeners();
+        exitButton.onClick.RemoveListener(ClosePanel);
     }
     public override void ClosePanel()
     {
         mScroller.ClearData();
         obj.SetActive(false);
         EvtDsp.TriggerEvt(EvtNames.OnClothPanelClose);
+
+        MainPanel.OpenMainFuncP();
+
+        // 恢复 MainPanel 所有 UI 的正常显示
+        UIManager.Instance.GetPanel<MainPanel>().ShowAll();
     }
 
     public override void OpenPanel(params object[] data)
     {
         obj.SetActive(true);
+
+        MainPanel.CloseMainFuncP();
+
+        // 显示上方状态栏 TopPanel，并使其优先级为最高
+        UIManager.Instance.GetPanel<MainPanel>().ShowTopPanelOnly();
+
         mScroller.ReloadData();
         ResetAllLabels();
         RefreshByFirstCategory(Cloth_First_Category.None);
         EvtDsp.TriggerEvt(EvtNames.OnClothPanelOpen);
+
     }
 
 
@@ -122,9 +137,9 @@ public class ClothPanel : UIPanelBase
 
     public void CloseChangeCloth()
     {
-        Character_Cloth_Manager.Instance.Sync_Main_Character_Cloth();
-        Character_Cloth_Manager.Instance.Upload_Main_Characer_Cloth_Info();
-        UIManager.Instance.GetPanel<ChangeClothPanel>().ClosePanel();
+        CharacterClothesManager.Instance.SyncClothes(CharacterType.Target, CharacterType.Main);
+        CharacterClothesManager.Instance.SaveClothesData();
+        ClosePanel();
     }
 
     private void UpdateSecondCategoryUI()
@@ -251,7 +266,6 @@ public class ClothPanel : UIPanelBase
         btn_Search.gameObject.SetActive(false);
         PanelSecondLevelMenuPanel.SetActive(false);
     }
-
 
 
     public void CloseSearchPanel()

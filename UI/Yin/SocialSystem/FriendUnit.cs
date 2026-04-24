@@ -7,7 +7,6 @@ using UnityEngine.UI;
 
 namespace CLIP.Project_Mouse.UI
 {
-
     public class FriendUnit : MonoBehaviour
     {
         [HideInInspector]

@@ -16,7 +16,7 @@
 //                {
 //                    PlantingInteractManager.Instance.CloseGhost();
 //                    //PlantingInteractManager.Instance.uI_Control_Warehouse_Panel.DeselectItem();
-//                    Planting_System_Manager._instance.on_deselect_pot();
+//                    Planting_System_Manager.Instance.on_deselect_pot();
 //                }
 
 //                public void ExitState(PlantingInteractManager manager)

@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using CLIP.Project_Mouse.Game_Play_System.Indoor_Room_System;
 using CLIP.Project_Mouse.Kernel;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -74,6 +73,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
             Vector3 position = rootTf.InverseTransformPoint(character.transform.position);
             Quaternion rotation = character.transform.rotation;
             interactPositionSO.AddPositionInfo(furnitureName, interactName, position, rotation);
+            // 否则仅改内存，退出 Play / 保存工程时 .asset 不落盘，SVN 也看不到变更
+            EditorUtility.SetDirty(interactPositionSO);
+            AssetDatabase.SaveAssets();
         }
         public void LoadInteractPositionInfo()
         {

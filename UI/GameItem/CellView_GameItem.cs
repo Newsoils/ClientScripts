@@ -93,7 +93,7 @@ public class CellView_GameItem : MonoBehaviour
         SetDetailClickEvent(() =>
         {
             var item = Global_Inventory_Manager.GetItem(id);
-            ItemDescriptionPanel.Instance.OpenPanel(item);
+            UIManager.Instance.OpenPanel<ItemDescriptionPanel>(item);
         });
     }
     private void OnDisable()
