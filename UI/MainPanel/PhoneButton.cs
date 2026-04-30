@@ -47,6 +47,7 @@ public class PhoneButton : SingletonMono<PhoneButton>
         yield return PlayAnimation(animator1, "ClosePhone", "ClosePhone");
         phoneButton.gameObject.SetActive(true);
         animator1.gameObject.SetActive(false);
+        //EvtDsp.TriggerEvt(EvtNames.ClosePlantPop);
         onComplete?.Invoke();
 
     }

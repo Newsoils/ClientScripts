@@ -55,7 +55,11 @@ public class Dispatch_Procedure_Controller : MonoBehaviour
 
     public void RefreshModel(int bagIndex)
     {
-        var current_info = Dispatch_Manager._instance.dispatch_Bags[bagIndex];
+        var current_info = Dispatch_Manager._instance.GetBagForModelPreview(bagIndex);
+        if (current_info == null)
+        {
+            return;
+        }
         if(current_info.foodName == null)
         {
             ClearAllChildren(foodRoot);

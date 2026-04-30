@@ -1,9 +1,6 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
+using CLIP.Framework_Core.Serialization;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Game_Play_System;
 using Newtonsoft.Json;
@@ -13,26 +10,34 @@ namespace CLIP.Project_Mouse.LYC.TaskSystem
 {
     public class TaskMgr : MonoBehaviour
     {
-        // 所有任务动态数据
-        private Dictionary<int, Task_RuntimeData> TaskRuntimeDatas;
+        public static TaskMgr Instance { get; private set; }
 
-        // 静态数据：所有任务相关数据，从 Json 数据中加载得到
-        // Dictionary<taskId, TaskModel>
-        private Dictionary<int, TaskModel> AllTaskDatas;
-
-        private string taskDataPath = "Json/project_mouse_lyc_tb_task";
+        private Dictionary<int, Task_RuntimeData> _taskRuntimeDatas = new();
+        private Dictionary<int, TaskModel> _allTaskModels = new();
+        private const string TaskDataPath = "Json/project_mouse_lyc_tb_task";
 
         private void Awake()
         {
-            Init();
+            Instance = this;
+            LoadAllTaskModels();
+            RestoreTaskData();
+            CreateAllTasks();
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
         }
 
         private void Start()
         {
-            foreach (var c in TaskRuntimeDatas.Values)
+            foreach (var t in _taskRuntimeDatas.Values)
             {
-                c.AcceptTask();
+                if (!t.IsAccept)
+                    t.AcceptTask();
             }
+            NotifyClaimableChanged();
         }
 
         private void OnEnable()
@@ -45,127 +50,134 @@ namespace CLIP.Project_Mouse.LYC.TaskSystem
         {
             EventCenter.Unsubscribe<ClickConfirmButtonEvent>(OnGetRewards);
             EvtDsp.RemoveEvt<int, int>("MultipleOperations", OnReceiveOperation);
+            SaveTaskData();
         }
 
-
-        #region 内部方法
-
-        // ========== TaskPanelController 初始化相关 ==========
-
-        // 初始化
-        private void Init()
+        private void OnApplicationQuit()
         {
-            // 加载所有任务数据
-            LoadAllTaskDatas();
-            CreateAllTasks();
-
+            SaveTaskData();
         }
 
-        // 加载所有的任务数据
-        private void LoadAllTaskDatas()
+        public void TriggerEvent(int taskId, int triggerTimes)
         {
-            AllTaskDatas = new Dictionary<int, TaskModel>();
+            if (_taskRuntimeDatas.TryGetValue(taskId, out var task))
+                task.AddOperationTimes(triggerTimes);
+        }
 
-            TextAsset jsonFile = Resources.Load<TextAsset>(taskDataPath);
-            List<TaskModel> taskDatas = JsonConvert.DeserializeObject<List<TaskModel>>(jsonFile.text);
+        public void RemoveTask(int taskId)
+        {
+            if (!_taskRuntimeDatas.TryGetValue(taskId, out var task))
+                return;
 
-            foreach (TaskModel task in taskDatas)
+            task.DestroyTaskDatas();
+            _taskRuntimeDatas.Remove(taskId);
+            NotifyClaimableChanged();
+        }
+
+        public bool HasClaimableReward()
+        {
+            foreach (var t in _taskRuntimeDatas.Values)
             {
-                AllTaskDatas[task.taskId] = task;
+                if (t.CanGetReward && !t.IsFinish)
+                    return true;
             }
-
+            return false;
         }
 
-        // 创建所有任务
+        private void LoadAllTaskModels()
+        {
+            var jsonFile = Resources.Load<TextAsset>(TaskDataPath);
+            var taskModels = JsonConvert.DeserializeObject<List<TaskModel>>(jsonFile.text);
+            foreach (var task in taskModels)
+                _allTaskModels[task.taskId] = task;
+        }
+
+        private void RestoreTaskData()
+        {
+            var savedData = TaskSaveDataExtensions.Load();
+            if (savedData != null)
+                _savedTaskDict = savedData.tasks.Count > 0
+                    ? new Dictionary<int, TaskRuntimeSaveData>(savedData.tasks.Count)
+                    : null;
+            if (_savedTaskDict != null)
+            {
+                foreach (var t in savedData.tasks)
+                    _savedTaskDict[t.taskId] = t;
+                Debug.Log($"任务数据加载成功，共 {savedData.tasks.Count} 个");
+            }
+        }
+
         private void CreateAllTasks()
         {
-            TaskRuntimeDatas = new Dictionary<int, Task_RuntimeData>();
-            foreach (TaskModel task in AllTaskDatas.Values)
+            foreach (var model in _allTaskModels.Values)
             {
-                // 得到对应的完成任务的条件（保持和 TaskModel 同样的数据）
-                ICondition condition = new MultipleOperationsCondition(Enum_ConditionType.MultipleOperations,
-                    task.desc, task.targetCount);
-                // 创建动态数据
-                Task_RuntimeData newTask = new Task_RuntimeData(task.Rewards, condition);
-                // 利用动态数据添加任务单元 TaskUnitView
-                UIManager.Instance.GetPanel<TaskPanel>().DoCreateTaskUnitView(task, newTask, task.Rewards);
-                // 添加到 TaskRuntimeDatas 中管理 
-                TaskRuntimeDatas.Add(task.taskId, newTask);
+                var condition = new MultipleOperationsCondition(
+                    Enum_ConditionType.MultipleOperations, model.desc, model.targetCount);
+                var runtime = new Task_RuntimeData(model.Rewards, condition);
+                _taskRuntimeDatas.Add(model.taskId, runtime);
+
+                bool isAlreadyFinished = _savedTaskDict != null
+                    && _savedTaskDict.TryGetValue(model.taskId, out var saved)
+                    && saved.isFinish;
+
+                var panel = UIManager.Instance.GetPanel<TaskPanel>();
+                panel.CreateTaskUnit(model, runtime, isAlreadyFinished);
+
+                if (_savedTaskDict != null && _savedTaskDict.TryGetValue(model.taskId, out saved))
+                {
+                    runtime.AcceptTask();
+                    saved.ApplyTo(runtime);
+                }
             }
-
         }
 
-
-
-        // ========== 事件 handlers ==========
-
-        // 事件 handler：这里实现一个处理收获奖励（确认）的处理方法，是为了之后显现奖励面板的需求
-        private void ShowRewardPanel(PlayerRewardData rewardData)
+        private void SaveTaskData()
         {
-            // 这里实现奖励面板的显示
-            Debug.Log("奖励面板显示");
-            Debug.Log($"收获奖励：经验值 {rewardData.ex_value}");
+            if (_taskRuntimeDatas.Count == 0)
+                return;
 
-            List<(string, int)> itemCount = rewardData.ItemRewards.Select
-                (x => (Global_Inventory_Manager.GameItem_DB.Find(y => y.item_id == x.itemId).name, x.amount)).ToList();
-
-            EvtDsp.ReturnEvt<List<(string, int)>, bool>(EvtNames.Show_Reward, itemCount);
+            var saveData = new TaskSaveData();
+            foreach (var pair in _taskRuntimeDatas)
+            {
+                if (!_allTaskModels.TryGetValue(pair.Key, out var model))
+                    continue;
+                saveData.tasks.Add(TaskRuntimeSaveData.From(model, pair.Value));
+            }
+            TaskSaveDataExtensions.Save(saveData);
         }
 
-        // 事件 handler：发放奖励到玩家背包
+        private void OnReceiveOperation(int taskId, int triggerTimes)
+        {
+            if (_taskRuntimeDatas.TryGetValue(taskId, out var task))
+            {
+                task.AddOperationTimes(triggerTimes);
+                NotifyClaimableChanged();
+            }
+        }
+
         private void OnGetRewards(ClickConfirmButtonEvent evt)
         {
-            // 检测是否成功拿到奖励
-            if (!evt.taskInstance.TryGetRewards(out PlayerRewardData rewardData))
+            if (!evt.taskInstance.TryGetRewards(out var rewardData))
             {
                 Debug.Log("当前不可以领取奖励");
                 return;
             }
 
-            // 要先保证面板显示
-            ShowRewardPanel(rewardData);
-
-            Debug.Log("成功领取奖励，奖励已经发放到玩家仓库中");
-            // 真正分发奖励，就是将奖励数据真正加入到玩家数据中
             RewardDistributor.DistributePlayerRewards(rewardData);
-            // 完成任务，并且失活确认按钮以防止重复点击，取消事件订阅
             evt.taskInstance.FinishTask();
+            NotifyClaimableChanged();
 
+            Debug.Log($"奖励面板显示，收获奖励：经验值 {rewardData.ex_value}");
+            var itemCount = rewardData.ItemRewards.ConvertAll(
+                x => (Global_Inventory_Manager.GameItem_DB.Find(y => y.item_id == x.itemId).name, x.amount));
+            EvtDsp.ReturnEvt<List<(string, int)>, bool>(EvtNames.Show_Reward, itemCount);
         }
 
-        // 事件 handler：收到任务相关的操作
-        private void OnReceiveOperation(int taskId, int operationTimes)
+        private static void NotifyClaimableChanged()
         {
-            TaskRuntimeDatas[taskId].AddOperationTimes(operationTimes);
+            EvtDsp.TriggerEvt(EvtNames.Task_ClaimableChanged);
         }
 
-
-        // ========== 其他 ==========
-
-        #endregion
-
-
-        #region 公开方法
-
-        // 触发任务达成相关事件（比如：ClickConfirmButtonEvent）
-        // 使用方法：依照 eventName 进行匹配，要触发什么事件，就写上对应事件的名字
-        public void TriggerEvent(int taskId, int triggerTimes)
-        {
-            //EventCenter.Publish<MultipleOperationsEvent>(new MultipleOperationsEvent(eventName, triggerTimes));
-            EvtDsp.TriggerEvt<int, int>("MultipleOperations", taskId, triggerTimes);
-        }
-
-        // 移除任务（按任务 id）
-        public void RemoveTask(int id)
-        {
-            TaskRuntimeDatas[id].DestroyTaskDatas();
-            TaskRuntimeDatas.Remove(id);
-        }
-
-
-
-        #endregion
-
-
+        private Dictionary<int, TaskRuntimeSaveData> _savedTaskDict;
     }
 }

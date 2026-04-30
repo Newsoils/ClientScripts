@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEditor;
+using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 
 
@@ -21,6 +22,20 @@ namespace CLIP.Project_Mouse.Custom_Tool
 
             GUILayout.Space(8);
             GUILayout.Label("Dispatch Manager Tools", EditorStyles.boldLabel);
+
+            using (new EditorGUI.DisabledScope(!Application.isPlaying))
+            {
+                if (GUILayout.Button("立刻出门"))
+                {
+                    if (!Application.isPlaying)
+                        return;
+                    if (_instance._player_dispatch_state.player_state != "On_Dispatch")
+                        return;
+                    _instance.force_dispatch_start();
+
+
+                }
+            }
 
             if (GUILayout.Button("Clear Previous Dispatch"))
             {

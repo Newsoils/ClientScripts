@@ -27,6 +27,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         /// 当前扫描的层
         /// </summary>
         private GridLayerTag _curGridTag;
+        private GridLayerType _lastLayerType = GridLayerType.None;
 
         private List<string> _lastPreviewGirdViews = new List<string>();
 
@@ -118,6 +119,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 _curPosition = alignPos;
                 _curGridTag = gridLayerTag;
                 _curGPosition = gPos;
+
+                // 切换墙层时，自动将墙面家具对齐到新墙的默认朝向
+                if (_lastLayerType != GridLayerType.None && _lastLayerType != gridLayerTag.gridLayerType)
+                {
+                    _selected.SnapToWallDefaultRotation(gridLayerTag.gridLayerType, animate:false);
+                }
+                _lastLayerType = gridLayerTag.gridLayerType;
+
                 _selected.transform.position = _curPosition;
 
                 var (x, y) = _selected.GetCurSize();
@@ -128,6 +137,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
                 var uids = RoomSystem.currentRoom.GridState.GetGridUids(_curGridTag.LayerUID, occupiedPositions);
                 EvtDsp.TriggerEvt<List<string>, MGridState?>(EvtNames.Update_GridView_Preview_Occupy, uids, isVaild ? MGridState.Highlight : MGridState.Occupied);
+
                 _lastPreviewGirdViews = uids;
                 EvtDsp.TriggerEvt(EvtNames.Move_Placement_Panel, _selected.transform.position);
                 Debug.Log("拖动中，尝试移动家具");

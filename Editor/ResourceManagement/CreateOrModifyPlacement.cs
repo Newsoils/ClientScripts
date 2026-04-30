@@ -251,6 +251,7 @@ public class CreateOrModifyPlacement : EditorWindow
                 GameObject newPrefabRoot = new GameObject(meshName);
                 var placement = newPrefabRoot.AddComponent<PlacementRuntime>();
 
+
                 Transform rootT = GetOrCreateChild(newPrefabRoot.transform, "Root");
                 Transform meshContainer = GetOrCreateChild(rootT, "Mesh");
                 Transform colliderContainer = GetOrCreateChild(rootT, "Collider");
@@ -276,6 +277,10 @@ public class CreateOrModifyPlacement : EditorWindow
                 navMeshObs.size = box.size;
                 navMeshObs.center = box.center;
                 navMeshObs.carving = true; // 开启挖空，确保导航网格正确更新
+
+                placement.gridData.length = intSize.x;
+                placement.gridData.width = intSize.y;
+                placement.gridData.height = intSize.z;
 
                 // 7. 处理 Pivot (Root 偏移)
                 rootT.localPosition = new Vector3(meshSize.x / 2f, 0, meshSize.z / 2f);

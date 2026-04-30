@@ -79,6 +79,7 @@ namespace CLIP.NewSoil
             CreateOrFindSystem<UIManager>(root);
             CreateOrFindSystem<ObjectPool>(root);
             CreateOrFindSystem<SceneLoadingHelper>(root);
+            //CreateOrFindSystem<PersistentObjectManager>(root);
 
             // 初始化 AssetManager
             AssetLoader.Instance.Init();
@@ -102,23 +103,13 @@ namespace CLIP.NewSoil
             CreateOrFindSystem<CharacterClothesManager>(root);
             CreateOrFindSystem<CharacterHandHeldController>(root);
 
-
-            // -------------------------------
-            // 2️⃣ 初始化非Mono系统
-            // -------------------------------
-
-            //目前非Mono系统都是都是Singleton，会自行创建并注册到SingletonManager,不需要在这里启动
-            //InitNonMonoSystems(new string[]
-            //{
-            //    //nameof(DataManager),
-            //    //nameof(GridManager),
-            //    // ↑ 自由增加需要自动初始化的非Mono单例
-            //});
+            // 初始化持久化对象管理器（在进入 MainScene 后）
+            CreateOrFindSystem<PersistentObjectManager>(root);
+            PersistentObjectManager.Instance.Initialize();
 
 
             Debug.Log("<color=green>=== [GameBootstrap] Done ===</color>");
         }
-
 
 
         private static async Task ShowHealthNotice()

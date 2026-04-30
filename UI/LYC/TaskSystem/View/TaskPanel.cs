@@ -1,6 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using System;
+using CLIP.Framework_Core.Event;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,30 +7,26 @@ namespace CLIP.Project_Mouse.LYC.TaskSystem
 {
     public class TaskPanel : UIPanelBase
     {
-        // 任务单元预制体
-        [SerializeField] public TaskUnitView taskUnitPrefab;
+        [SerializeField] private TaskUnitView _taskUnitPrefab;
+        [SerializeField] private Transform _taskUnitRoot;
+        [SerializeField] private GameObject obj;
+        [SerializeField] private Button _exitButton;
 
-        [SerializeField] 
-        public Transform taskUnitRoot;
-        public GameObject obj;
-        public Button exitButton;
-
-        public void Start()
+        public  void Start()
         {
-            exitButton.onClick.AddListener(ClosePanel);
+            _exitButton.onClick.AddListener(ClosePanel);
             ClosePanel();
         }
 
         public override void OnDestroy()
         {
             base.OnDestroy();
-            exitButton.onClick.RemoveAllListeners();
+            _exitButton.onClick.RemoveAllListeners();
         }
 
         public override void OpenPanel(params object[] data)
         {
             obj.SetActive(true);
-
         }
 
         public override void ClosePanel()
@@ -41,44 +36,31 @@ namespace CLIP.Project_Mouse.LYC.TaskSystem
 
         public override void UpdatePanel(params object[] data)
         {
-
         }
 
-
-
-        // 创建单个任务单元 DoCreateTaskUnitView
-        public async void DoCreateTaskUnitView(TaskModel taskData, Task_RuntimeData taskInstance, List<RewardData> rewards)
+        public async void CreateTaskUnit(TaskModel model, Task_RuntimeData runtime, bool isAlreadyFinished)
         {
-            // 实例化一个 taskUnitPrefab
-            TaskUnitView taskUnitView = Instantiate(taskUnitPrefab, taskUnitRoot);
+            var view = UnityEngine.Object.Instantiate(_taskUnitPrefab, _taskUnitRoot);
+            view.descriptionText.text = model.desc;
+            view.finishedText.text = "可领取";
+            view.gameObject.SetActive(true);
 
-            // 直接利用 Task_RuntimeData 的数据对 taskUnitView 进行创建
-            // 1. 添加奖励文字
-            taskUnitView.descriptionText.text = taskData.desc;
-            // 2. 为 taskInstance 绑定对应的 taskUnitView 的方法
-            //taskInstance.SetTaskUnitView(taskUnitView);
-            taskInstance.OnProgressChange += taskUnitView.UpdateView;
-            taskInstance.OnTaskFinished += taskUnitView.SetAsFinished;
-            taskInstance.OnTaskDestroy += taskUnitView.SelfDestroy;
+            runtime.OnProgressChange += view.UpdateProgress;
+            runtime.OnTaskFinished += view.SetAsFinished;
+            runtime.OnTaskDestroy += () => UnityEngine.Object.Destroy(view.gameObject);
+            view.ConfirmButton.onClick.AddListener(() =>
+                EventCenter.Publish(new ClickConfirmButtonEvent(runtime)));
 
-            taskUnitView.finishedText.text = "可领取";
-            // 3. 设置 taskUnitView 回调
-            taskUnitView.confirmButton.onClick.AddListener(() => {
+            await view.SetRewardIcons(model.RewardNames);
 
-                EventCenter.Publish(new ClickConfirmButtonEvent(taskInstance));
-            });
-
-            taskUnitView.gameObject.SetActive(true);
-
-            // 4. 最后再添加奖励图标，防止前面的逻辑延误执行
-            await taskUnitView.SetRewardIcons(taskData.RewardNames);
-
-            Debug.Log("创建了一个任务单元");
+            if (isAlreadyFinished)
+            {
+                view.SetAsFinished();
+            }
+            else
+            {
+                view.UpdateProgress(runtime.Condition.Progress);
+            }
         }
-
-
-
     }
-
-
 }

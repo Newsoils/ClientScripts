@@ -7,6 +7,7 @@ public class Placement_First_Label : MonoBehaviour
     [Header("分类配置")]
     public Placement_First_Category firstCategory = Placement_First_Category.None;
 
+    public bool isFavorite = false;
     public Image icon;
     public Sprite normal;
     public Sprite Selected;
@@ -35,7 +36,7 @@ public class Placement_First_Label : MonoBehaviour
             isSelected = true;
             if(icon!=null&& Selected!=null) icon.sprite = Selected;
             //icon.color = Color.blue;
-            placement_Panel.RefreshByFirstCategory(firstCategory);
+            placement_Panel.RefreshByFirstCategory(firstCategory,isFavorite);
             placement_Panel.Set_FirstLabel_SelectedState(this);
         }
         else
@@ -44,7 +45,7 @@ public class Placement_First_Label : MonoBehaviour
             //更新一下所有的一级标签（包括自己）
             isSelected = false;
             if (icon != null && Selected != null) icon.sprite = normal;
-            placement_Panel.RefreshByFirstCategory(Placement_First_Category.None);
+            placement_Panel.RefreshByFirstCategory(Placement_First_Category.None, isFavorite);
         }
     }
 

@@ -23,7 +23,6 @@ public class GridObject : MonoBehaviour
     private GameObject currentBorder;
     private bool borderVisible;
 
-
     public void Init(string name, int id, GridData gridData, Room_Placing_Type placingType)
     {
         data.name = name;
@@ -51,10 +50,71 @@ public class GridObject : MonoBehaviour
         int next = (current + 1) % 4;
         data.rotation = (Placement_Rotation)next;
 
-        float angle = (int)data.rotation * 90f;
+        float baseAngle = 0f;
+        if (placingType == Room_Placing_Type.Wall_Furniture && room != null && room.TryGetLayerTag(data.gridLayerUID, out var gridLayerTag))
+        {
+            baseAngle = gridLayerTag.gridLayerType switch
+            {
+                GridLayerType.Wall_E => 90f,
+                GridLayerType.Wall_S => 180f,
+                GridLayerType.Wall_W => 270f,
+                _ => 0f
+            };
+        }
+
+        float angle = baseAngle + (int)data.rotation * 90f;
         Vector3 endValue = new Vector3(0, angle, 0);
         Root.transform.DORotate(endValue, 0.3f);
         // 如果将来需要处理子物体或特殊逻辑，可在此扩展
+    }
+
+    /// <summary>
+    /// 计算墙面家具在指定 GridLayerType 下的默认旋转枚举值（不改变当前旋转枚举）
+    /// </summary>
+    public static Placement_Rotation CalculateWallDefaultRotation(GridLayerType layerType)
+    {
+        return layerType switch
+        {
+            GridLayerType.Wall_E => Placement_Rotation.Deg90,
+            GridLayerType.Wall_S => Placement_Rotation.Deg180,
+            GridLayerType.Wall_W => Placement_Rotation.Deg270,
+            _ => Placement_Rotation.Deg0
+        };
+    }
+
+    /// <summary>
+    /// 根据当前所在的墙层，自动将旋转对齐到该墙的默认朝向（立即生效，无动画）。
+    /// 仅对墙面家具有效。如果旋转已经是对应墙的默认朝向则不操作。
+    /// </summary>
+    /// <param name="gridLayerType">当前墙层类型</param>
+    /// <param name="animate">是否播放动画</param>
+    public void SnapToWallDefaultRotation(GridLayerType gridLayerType, bool animate = false)
+    {
+        if (placingType != Room_Placing_Type.Wall_Furniture)
+            return;
+
+        var targetRotation = CalculateWallDefaultRotation(gridLayerType);
+        if (data.rotation == targetRotation)
+            return;
+
+
+        float baseAngle = gridLayerType switch
+        {
+            GridLayerType.Wall_E => 90f,
+            GridLayerType.Wall_S => 180f,
+            GridLayerType.Wall_W => 270f,
+            _ => 0f
+        };
+        float angle = baseAngle + (int)data.rotation * 90f;
+        Vector3 endValue = new Vector3(0, angle, 0);
+
+        if (animate)
+            Root.transform.DORotate(endValue, 0.3f);
+        else
+            Root.localRotation = Quaternion.Euler(endValue);
+
+        data.rotation = targetRotation;
+
     }
 
     public virtual void Rotate90Back()
@@ -73,6 +133,11 @@ public class GridObject : MonoBehaviour
 
     public (int length, int width) GetCurSize()
     {
+        if (placingType == Room_Placing_Type.Wall_Furniture)
+        {
+            return (gridData.length, gridData.height);
+        }
+
         bool swap = data.rotation == Placement_Rotation.Deg90 || data.rotation == Placement_Rotation.Deg270;
         return swap
             ? (gridData.width, gridData.length)   // 交换长宽
@@ -86,6 +151,11 @@ public class GridObject : MonoBehaviour
     /// <returns></returns>
     public (int length, int width) GetRotated90Size()
     {
+        if (placingType == Room_Placing_Type.Wall_Furniture)
+        {
+            return (gridData.length, gridData.height);
+        }
+
         int current = (int)data.rotation;
         int next = (current + 1) % 4;
         var nextR = (Placement_Rotation)next;
@@ -101,6 +171,11 @@ public class GridObject : MonoBehaviour
     /// <returns></returns>
     public (int length, int width) GetRotatedSize(Placement_Rotation rotation)
     {
+        if (placingType == Room_Placing_Type.Wall_Furniture)
+        {
+            return (gridData.length, gridData.height);
+        }
+
         bool swap = rotation == Placement_Rotation.Deg90 || rotation == Placement_Rotation.Deg270;
         return swap
             ? (gridData.width, gridData.length)   // 交换长宽
@@ -109,19 +184,47 @@ public class GridObject : MonoBehaviour
 
     public void ApplyPositon(Room room)
     {
-        Vector3 position = room.GetGridOrigin(data.gridLayerUID).position + new Vector3(data.position.x, 0, data.position.y);
+        this.room = room;
+        room.TryGetLayerTag(data.gridLayerUID,out var gridLayerTag);
 
-        transform.position = position;
+        GridUtility.CalucateGridPosition(gridLayerTag, data.position, out var worldPos);
+
+        if (gridLayerTag != null)
+        {
+            switch (gridLayerTag.gridLayerType)
+            {
+                case GridLayerType.Wall_S:
+                case GridLayerType.Wall_N:
+                    worldPos.z = gridLayerTag.girdOrginalPoint.position.z - gridData.width;
+                    break;
+                case GridLayerType.Wall_W:
+                case GridLayerType.Wall_E:
+                    worldPos.x = gridLayerTag.girdOrginalPoint.position.x - gridData.width;
+                    break;
+            }
+        }
+
+        transform.position = worldPos;
     }
     public void ApplyRotation()
     {
         // 根据枚举值设置模型的本地旋转
-        float angle = (int)data.rotation * 90f;
+        //float baseAngle = 0f;
+        //if (placingType == Room_Placing_Type.Wall_Furniture && room != null && room.TryGetLayerTag(data.gridLayerUID, out var gridLayerTag))
+        //{
+        //    baseAngle = gridLayerTag.gridLayerType switch
+        //    {
+        //        GridLayerType.Wall_E => 90f,
+        //        GridLayerType.Wall_S => 180f,
+        //        GridLayerType.Wall_W => 270f,
+        //        _ => 0f
+        //    };
+        //}
+
+        float angle =  (int)data.rotation * 90f;
         Root.localRotation = Quaternion.Euler(0, angle, 0);
         // 如果有边界框等需要同步旋转，也在这里处理
     }
-
-
 
 
     //========================
@@ -170,6 +273,7 @@ public class GridObject : MonoBehaviour
     }
 
 }
+[Serializable]
 public class GridData
 {
     public int length, width, height;

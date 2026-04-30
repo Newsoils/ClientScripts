@@ -1,9 +1,7 @@
 // 屏蔽词管理器
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using System.IO;
-using System.Text.RegularExpressions;
 
 
 namespace CLIP
@@ -28,9 +26,13 @@ namespace CLIP
                 private HashSet<string> sensitiveWords = new HashSet<string>();
 
                 [Header("配置")]
-                [SerializeField] private TextAsset defaultWordList; // 默认屏蔽词文件
-                [SerializeField] private string customWordFilePath = "SensitiveWords.txt";
-                [SerializeField] private char replacementChar = '*'; // 替换字符
+                [Tooltip("可在 Inspector 额外挂词库（小），主词库见 Resources 下资源")]
+                [SerializeField] private TextAsset defaultWordList;
+                [Tooltip("Resources 内路径，无扩展名，如 Assets/Resources/SensitiveWords.txt 填 \"SensitiveWords\"")]
+                [SerializeField] private string resourceWordListPath = "SensitiveWords";
+                [Tooltip("运行时通过 Add 追加的词写入 persistentDataPath，可读写")]
+                [SerializeField] private string userOverrideWordsFileName = "SensitiveWords_user.txt";
+                [SerializeField] private char replacementChar = '*';
 
                 [Header("匹配模式")]
                 [SerializeField] private bool ignoreCase = true;
@@ -72,42 +74,45 @@ namespace CLIP
 
                 private void LoadDefaultWords()
                 {
-                    if (defaultWordList != null)
+                    if (defaultWordList == null) return;
+                    AddWordsFromLineText(defaultWordList.text, skipNumberSignComments: false);
+                }
+
+                /// <summary> 主词库 + 可读写区：Resources（全平台可加载）+ persistentDataPath 用户追加。 </summary>
+                private void LoadCustomWords()
+                {
+                    if (!string.IsNullOrEmpty(resourceWordListPath))
                     {
-                        string[] words = defaultWordList.text.Split('\n');
-                        foreach (string word in words)
-                        {
-                            string trimmed = word.Trim();
-                            if (!string.IsNullOrEmpty(trimmed))
-                            {
-                                sensitiveWords.Add(trimmed);
-                            }
-                        }
+                        var res = Resources.Load<TextAsset>(resourceWordListPath);
+                        if (res == null)
+                            Debug.LogError($"[SensitiveWordManager] 未在 Resources 找到词库: \"{resourceWordListPath}\" (相对 Resources，无 .txt 后缀)。");
+                        else
+                            AddWordsFromLineText(res.text, skipNumberSignComments: true);
+                    }
+
+                    string userPath = Path.Combine(Application.persistentDataPath, userOverrideWordsFileName);
+                    if (!File.Exists(userPath)) return;
+                    try
+                    {
+                        string text = File.ReadAllText(userPath);
+                        AddWordsFromLineText(text, skipNumberSignComments: true);
+                    }
+                    catch (System.Exception e)
+                    {
+                        Debug.LogWarning($"[SensitiveWordManager] 读用户词库失败: {e.Message}");
                     }
                 }
 
-                private void LoadCustomWords()
+                private void AddWordsFromLineText(string text, bool skipNumberSignComments)
                 {
-                    string path = Path.Combine(Application.streamingAssetsPath, customWordFilePath);
-
-                    if (File.Exists(path))
+                    if (string.IsNullOrEmpty(text)) return;
+                    var lines = text.Split('\n');
+                    foreach (string line in lines)
                     {
-                        try
-                        {
-                            string[] words = File.ReadAllLines(path);
-                            foreach (string word in words)
-                            {
-                                string trimmed = word.Trim();
-                                if (!string.IsNullOrEmpty(trimmed) && !trimmed.StartsWith("#")) // # 开头的为注释
-                                {
-                                    sensitiveWords.Add(trimmed);
-                                }
-                            }
-                        }
-                        catch (System.Exception e)
-                        {
-                            Debug.LogWarning($"加载自定义屏蔽词失败: {e.Message}");
-                        }
+                        string trimmed = line.Trim();
+                        if (string.IsNullOrEmpty(trimmed)) continue;
+                        if (skipNumberSignComments && trimmed.StartsWith("#")) continue;
+                        sensitiveWords.Add(trimmed);
                     }
                 }
 
@@ -292,36 +297,24 @@ namespace CLIP
 
                 private void SaveCustomWord(string word)
                 {
-                    string path = Path.Combine(Application.streamingAssetsPath, customWordFilePath);
+                    string path = Path.Combine(Application.persistentDataPath, userOverrideWordsFileName);
                     string directory = Path.GetDirectoryName(path);
-
-                    if (!Directory.Exists(directory))
-                    {
+                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                         Directory.CreateDirectory(directory);
-                    }
-
                     File.AppendAllText(path, word + "\n");
                 }
 
                 private void RemoveCustomWord(string word)
                 {
-                    string path = Path.Combine(Application.streamingAssetsPath, customWordFilePath);
-
-                    if (File.Exists(path))
+                    string path = Path.Combine(Application.persistentDataPath, userOverrideWordsFileName);
+                    if (!File.Exists(path)) return;
+                    var lines = File.ReadAllLines(path);
+                    var newLines = new List<string>();
+                    foreach (string line in lines)
                     {
-                        var lines = File.ReadAllLines(path);
-                        var newLines = new List<string>();
-
-                        foreach (string line in lines)
-                        {
-                            if (line.Trim() != word)
-                            {
-                                newLines.Add(line);
-                            }
-                        }
-
-                        File.WriteAllLines(path, newLines.ToArray());
+                        if (line.Trim() != word) newLines.Add(line);
                     }
+                    File.WriteAllLines(path, newLines.ToArray());
                 }
 
                 // 获取所有屏蔽词

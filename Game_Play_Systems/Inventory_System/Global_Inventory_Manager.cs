@@ -216,11 +216,13 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public void Set_Favorite(string item_Name,bool isFrvorite)
         {
             _inventory.Set_Favorite(item_Name, isFrvorite);
+            Send_inventory_to_server();
         }
 
         public void Set_Favorite(int item_Id, bool isFrvorite)
         {
             _inventory.Set_Favorite(item_Id, isFrvorite);
+            Send_inventory_to_server();
         }
 
 

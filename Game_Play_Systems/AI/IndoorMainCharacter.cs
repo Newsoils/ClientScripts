@@ -53,17 +53,15 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             EvtDsp.AddEvt(EvtNames.Dispatch_On_Start, OnDispatchStart);
             EvtDsp.AddEvt(EvtNames.Dispatch_On_End, OnDispatchEnd);
+            EvtDsp.AddEvt(EvtNames.Dispatch_VisualsSync, ApplyDispatchVisualsFromManagerState);
             EvtDsp.AddEvt<Room>(EvtNames.SwitchRoom, SwitchRendererState);
 
             EvtDsp.AddEvt(EvtNames.ReSetMainCharacterRenderer, SwitchRendererState);
 
             EvtDsp.AddEvt<bool>(EvtNames.SetMainCharacterState, SetRendererEnable);
 
-            if (Dispatch_Manager._instance._player_dispatch_state.player_state == "On_Dispatch")
-            {
-                gameObject.SetActive(false);
-            }
             _instance = this;
+            ApplyDispatchVisualsFromManagerState();
             if (isFirstOpen)
             {
                 WrapPosition();
@@ -84,6 +82,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             EvtDsp.RemoveEvt(EvtNames.ReSetMainCharacterRenderer,SwitchRendererState);
             EvtDsp.RemoveEvt(EvtNames.Dispatch_On_Start, OnDispatchStart);
             EvtDsp.RemoveEvt(EvtNames.Dispatch_On_End, OnDispatchEnd);
+            EvtDsp.RemoveEvt(EvtNames.Dispatch_VisualsSync, ApplyDispatchVisualsFromManagerState);
             EvtDsp.RemoveEvt<Room>(EvtNames.SwitchRoom, SwitchRendererState);
             EvtDsp.RemoveEvt<bool>(EvtNames.SetMainCharacterState, SetRendererEnable);
         }
@@ -522,13 +521,21 @@ namespace CLIP.Project_Mouse.Game_Play_System
         #endregion
 
         #region 派遣
+        private void ApplyDispatchVisualsFromManagerState()
+        {
+            if (Dispatch_Manager._instance._player_dispatch_state.player_state == "On_Dispatch")
+                gameObject.SetActive(false);
+            else
+                gameObject.SetActive(true);
+        }
+
         private void OnDispatchStart()
         {
-            gameObject.SetActive(false);
+            ApplyDispatchVisualsFromManagerState();
         }
         private void OnDispatchEnd()
         {
-            gameObject.SetActive(true);
+            ApplyDispatchVisualsFromManagerState();
         }
         private void InitDispatchState()
         {

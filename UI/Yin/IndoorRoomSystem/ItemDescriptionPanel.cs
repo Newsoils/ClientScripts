@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity.Asset;
+using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
 using TMPro;
 using UnityEngine;
@@ -49,6 +50,9 @@ namespace CLIP.Project_Mouse.UI
         public override void OnDestroy()
         {
             base.OnDestroy();
+
+            btnExit.onClick.RemoveAllListeners();
+            btnFavor.onClick.RemoveAllListeners();
             EvtDsp.RemoveEvt<Game_Item_In_Inventory>(EvtNames.ShowItemDetail, OpenPanel);
         }
 
@@ -70,7 +74,6 @@ namespace CLIP.Project_Mouse.UI
 
         public void OpenPanel(Game_Item_Info itemInfo)
         {
-           
             panelObj.SetActive(true);
             if (itemInfo.res_url != null && itemInfo.res_url.Length != 0)
             {
@@ -136,7 +139,7 @@ namespace CLIP.Project_Mouse.UI
         }
         private void BtnSetFavor()
         {
-            item.is_favorite = !item.is_favorite;
+            Global_Inventory_Manager._instance.Set_Favorite(item.item_id, !item.is_favorite);
             favor.sprite = favors[((int)item.item_info.rarity - 1) * 2 + (item.is_favorite ? 1 : 0)];
         }
     }

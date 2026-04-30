@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CLIP.Framework_Unity.Asset;
@@ -10,149 +9,69 @@ namespace CLIP.Project_Mouse.LYC.TaskSystem
 {
     public class TaskUnitView : MonoBehaviour
     {
-        [SerializeField] public TMP_Text descriptionText;
+        [SerializeField] private TMP_Text _descriptionText;
+        [SerializeField] private Transform _rewardField;
+        [SerializeField] private Image _mainSlider;
+        [SerializeField] private Image _leftSlider;
+        [SerializeField] private Image _rightSlider;
+        [SerializeField] private Button _confirmButton;
+        [SerializeField] private Image _buttonImage;
+        [SerializeField] private Image _rewardIconPrefab;
+        [SerializeField] private Sprite _greenSprite;
+        [SerializeField] private Sprite _whiteSprite;
+        [SerializeField] private TMP_Text _notFinishText;
+        [SerializeField] private TMP_Text _finishedText;
+        [SerializeField] private Image _transparentMask;
 
-        [SerializeField] public Transform rewardField;
+        public Button ConfirmButton => _confirmButton;
+        public TMP_Text descriptionText => _descriptionText;
+        public TMP_Text finishedText => _finishedText;
 
-        [SerializeField] public List<Image> RewardsIcons;
-
-        //[SerializeField] public Slider taskProgressSlider;
-        [SerializeField] public Image mainSlider;
-
-        [SerializeField] public Image leftSlider;
-
-        [SerializeField] public Image rightSlider;
-
-        [SerializeField] public Button confirmButton;
-
-        [SerializeField] public Image buttonImage;
-
-        [SerializeField] public Image rewardIconPrefab;
-
-        [SerializeField] public Sprite greenSprite;
-
-        [SerializeField] public Sprite whiteSprite;
-
-        [SerializeField] public TMP_Text notFinishText;
-
-        [SerializeField] public TMP_Text finishedText;
-
-        [SerializeField] public Image transparentMask;
-
-
-        // 添加单个奖励图标
-        public async Task AddRewardIcon(string iconName)
+        private void Start()
         {
-            if (RewardsIcons == null)
-            {
-                RewardsIcons = new List<Image>();
-            }
-            Image newIcon = Instantiate(rewardIconPrefab, rewardField);
-            var iconSprite = await GameAssets.Instance.LoadAsycByKey<Sprite>(iconName);
-            newIcon.transform.Find("ItemImage").GetComponent<Image>().sprite = iconSprite;
-
-            RewardsIcons.Add(newIcon);
+            _transparentMask.gameObject.SetActive(false);
         }
 
-        // 添加多个奖励图标
-        public async Task AddRewardIcons(List<string> IconNames)
+        public async Task SetRewardIcons(List<string> iconNames)
         {
-            if (RewardsIcons == null)
-            {
-                RewardsIcons = new List<Image>();
-            }
-            foreach (string iconName in IconNames)
-            {
-                Image newIcon = Instantiate(rewardIconPrefab, rewardField);
-                var iconSprite = await GameAssets.Instance.LoadAsycByKey<Sprite>(iconName);
-                newIcon.transform.Find("ItemImage").GetComponent<Image>().sprite = iconSprite;
+            foreach (Transform child in _rewardField)
+                Destroy(child.gameObject);
 
-                RewardsIcons.Add(newIcon);
+            foreach (var iconName in iconNames)
+            {
+                var icon = Instantiate(_rewardIconPrefab, _rewardField);
+                var sprite = await GameAssets.Instance.LoadAsycByKey<Sprite>(iconName);
+                icon.transform.Find("ItemImage").GetComponent<Image>().sprite = sprite;
             }
         }
 
-        // 添加多个奖励图标
-        public async Task SetRewardIcons(List<string> IconNames)
+        public void UpdateProgress(float progress)
         {
-            ClearRewardIcons();
-            foreach (string iconName in IconNames)
+            _mainSlider.fillAmount = progress;
+
+            bool hasProgress = progress > 0;
+            _leftSlider.gameObject.SetActive(hasProgress);
+            _rightSlider.gameObject.SetActive(hasProgress);
+
+            if (progress >= 1f)
             {
-                Image newIcon = Instantiate(rewardIconPrefab, rewardField);
-                var iconSprite = await GameAssets.Instance.LoadAsycByKey<Sprite>(iconName);
-                if(iconSprite == null)
-                {
-                    Debug.LogWarning("图标资源加载失败");
-                }
-                newIcon.transform.Find("ItemImage").GetComponent<Image>().sprite = iconSprite;
-
-                RewardsIcons.Add(newIcon);
-            }
-        }
-
-
-        // 更新任务完成进度的显示
-        public void UpdateView(float percentageOfProgress)
-        {
-            this.mainSlider.fillAmount = percentageOfProgress;
-
-            // 进度条是否显示为 零进度（不显示任何进度条状态）
-            if (percentageOfProgress == 0)
-            {
-                leftSlider.gameObject.SetActive(false);
-                rightSlider.gameObject.SetActive(false);
+                _buttonImage.sprite = _greenSprite;
+                _notFinishText.gameObject.SetActive(false);
+                _finishedText.gameObject.SetActive(true);
             }
             else
             {
-                leftSlider.gameObject.SetActive(true);
-                rightSlider.gameObject.SetActive(true);
-            }
-
-            // 按键是否表示为绿色可交互状态
-            if (percentageOfProgress == 1)
-            {
-                buttonImage.sprite = greenSprite;
-                notFinishText.gameObject.SetActive(false);
-                finishedText.gameObject.SetActive(true);
-            }
-            else
-            {
-                buttonImage.sprite = whiteSprite;
+                _buttonImage.sprite = _whiteSprite;
             }
         }
 
-        // 事件 handler：设置为已完成状态
         public void SetAsFinished()
         {
-            confirmButton.interactable = false;
-            buttonImage.sprite = whiteSprite;
-            
-            transparentMask.gameObject.SetActive(true);
-            finishedText.text = "已领取";
-
-            descriptionText.color = Color.gray;
+            _confirmButton.interactable = false;
+            _buttonImage.sprite = _whiteSprite;
+            _transparentMask.gameObject.SetActive(true);
+            _finishedText.text = "已领取";
+            _descriptionText.color = Color.gray;
         }
-
-        // 事件 handler：自我销毁
-        public void SelfDestroy()
-        {
-            Destroy(gameObject);
-        }
-
-
-        #region 内部方法
-
-        private void ClearRewardIcons()
-        {
-            if (RewardsIcons != null)
-            {
-                foreach (Image image in RewardsIcons)
-                {
-                    Destroy(image);
-                }
-            }
-            RewardsIcons = new List<Image>();
-        }
-
-        #endregion
     }
 }

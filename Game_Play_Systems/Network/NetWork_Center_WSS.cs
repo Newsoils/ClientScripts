@@ -42,14 +42,20 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         [Header("Event")]
         public float _on_connection_close_delay = 5f;
-        public UnityEvent _evt_on_connection_closed;
+        public UnityEvent _evt_on_connection_closed = new UnityEvent();
 
         [Header("Reconnect_Settings")]
-        private int _max_reconnect_attempts = 20;
-        public float _reconnect_interval = 1.5f;
+        [SerializeField] private int _max_reconnect_attempts = 20;
+        [SerializeField] private int _max_reconnect_attempts_after_login = 3;
+        [SerializeField] public float _reconnect_interval = 1.5f;
         private int _current_reconnect_attempts = 0;
         private bool _is_connecting = false;
         private Coroutine _reconnect_coroutine;
+
+        [Header("Resume_Relogin_Settings")]
+        [SerializeField] private float _resume_relogin_debounce_seconds = 2.0f;
+        private float _last_resume_relogin_time = -999f;
+        private Coroutine _resume_relogin_coroutine;
         void Awake()
         {
             if (instance == null)
@@ -98,6 +104,70 @@ namespace CLIP.Project_Mouse.Game_Play_System
             EvtDsp.RemoveEvt(EvtNames.Network_Disconnect, BackToLogin);
         }
 
+        private void OnApplicationPause(bool pauseStatus)
+        {
+            if (!pauseStatus)
+            {
+                TryResumeReloginIfNeeded("OnApplicationPause(false)");
+            }
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (hasFocus)
+            {
+                TryResumeReloginIfNeeded("OnApplicationFocus(true)");
+            }
+        }
+
+        private void TryResumeReloginIfNeeded(string source)
+        {
+            // 仅：登录成功进入主界面后（主界面静置/退后台/锁屏回来）才触发隐式重登 + TryLogin + 数据刷新
+            if (!_connect_to_player_server) return;
+            if (!SceneLoadHelper.IsMainScene) return;
+
+            var now = Time.unscaledTime;
+            if (now - _last_resume_relogin_time < _resume_relogin_debounce_seconds) return;
+            _last_resume_relogin_time = now;
+
+            if (_resume_relogin_coroutine != null)
+            {
+                StopCoroutine(_resume_relogin_coroutine);
+                _resume_relogin_coroutine = null;
+            }
+
+            Debug.Log($"Resume relogin triggered by {source}");
+            _resume_relogin_coroutine = StartCoroutine(ResumeReloginFlow());
+        }
+
+        private IEnumerator ResumeReloginFlow()
+        {
+            // 1) 确保 WebSocket 已连接（如果断了，先后台重连）
+            if (!_is_connected)
+            {
+                TryReconnectAfterLoginCoroutine();
+            }
+
+            var connectTimeoutAt = Time.unscaledTime + 8.0f;
+            while (!_is_connected && Time.unscaledTime < connectTimeoutAt)
+            {
+                yield return null;
+            }
+
+            if (!_is_connected)
+            {
+                // 连接未恢复时不继续触发 SDK/登录，避免一连串失败弹窗；失败提示由网络层现有逻辑处理
+                yield break;
+            }
+
+            // 2) 后台隐式重新登录 SDK，并重新向服务器发送 TryLogin
+            // 通过事件解耦触发 TapTap 隐式重登（避免直接类型引用导致编译依赖问题）
+            EvtDsp.TriggerEvt(EvtNames.Resume_Silent_Relogin);
+
+            // 兜底：如果没有 TapTap 管理器或隐式重登失败，仍尝试本地缓存账号重登
+            EvtDsp.TriggerEvt(EvtNames.Resume_TryLogin_From_Cache);
+        }
+
 
         public void init_wss()
         {
@@ -107,38 +177,69 @@ namespace CLIP.Project_Mouse.Game_Play_System
         }
         private void SetupWsCallbacks()
         {
+            // 重要：回调里捕获当前 ws，避免旧 ws 的回调影响新连接的状态
+            var boundWs = ws;
+
             ws.OnOpen += () =>
             {
+                if (!ReferenceEquals(boundWs, ws)) return;
                 Debug.Log("ws_open");
                 _is_connected = true;
+                _current_reconnect_attempts = 0;
             };
 
-            ws.OnMessage += on_message;
+            ws.OnMessage += (bytes) =>
+            {
+                if (!ReferenceEquals(boundWs, ws)) return;
+                on_message(bytes);
+            };
 
             ws.OnError += (e) =>
             {
+                if (!ReferenceEquals(boundWs, ws)) return;
                 Debug.Log("ws.OnError()_msg_=" + e);
-                EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "服务器连接失败，请检查网络设置！", null);
-                //TryReconnect();
-                //TryReconnectCoroutine();
+                HandleWsFailure(isCloseEvent: false, detail: e);
             };
 
             ws.OnClose += (e) =>
             {
+                if (!ReferenceEquals(boundWs, ws)) return;
                 if (_is_connected)
                 {
                     _is_connected = false;
                     Debug.Log("ws.OnClose()_Close_Code_=_" + e);
-                    _evt_on_connection_closed.Invoke();
+                    HandleWsFailure(isCloseEvent: true, detail: e.ToString());
                 }
             };
+        }
+
+        private void HandleWsFailure(bool isCloseEvent, string detail)
+        {
+            // 登录进入主界面后：后台尝试重连，失败 3 次后再触发原有“服务器连接失败”逻辑
+            if (_connect_to_player_server)
+            {
+                Debug.LogWarning($"WSS {(isCloseEvent ? "OnClose" : "OnError")} after login: {detail}");
+                TryReconnectAfterLoginCoroutine();
+                return;
+            }
+
+            // 未登录阶段：保持原有行为（立即提示连接失败）
+            Debug.LogWarning($"WSS {(isCloseEvent ? "OnClose" : "OnError")} before login: {detail}");
+            TriggerOriginalServerConnectionFailed();
+        }
+
+        private void TriggerOriginalServerConnectionFailed()
+        {
+            EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "服务器连接失败，请检查网络设置！", null);
         }
 
         private void OnDisconnected()
         {
             Debug.LogError("已断联");
             StartCoroutine(_on_connection_closed_co());
-            TryReconnectCoroutine();
+            // 这里依旧保留事件链：如果是登录后断联，会走 3 次后台重连；否则走原来的重连逻辑
+            if (_connect_to_player_server) TryReconnectAfterLoginCoroutine();
+            else TryReconnectCoroutine();
         }
 
         public IEnumerator _on_connection_closed_co()
@@ -163,16 +264,36 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public void TryReconnectCoroutine()
         {
             StopReconnectAttempts();
-            _reconnect_coroutine = StartCoroutine(AttemptReconnectLoop());
+            _reconnect_coroutine = StartCoroutine(AttemptReconnectLoop(_max_reconnect_attempts, showSuccessPrompt: true, onFinalFail: () =>
+            {
+                EvtDsp.TriggerEvt<string, Action>(
+                    EvtNames.ShowPrompt,
+                    $"连接失败（已重试{_max_reconnect_attempts}次），请检查网络后重试！",
+                    () => TryReconnectCoroutine()
+                );
+            }));
         }
 
-        private IEnumerator AttemptReconnectLoop()
+        private void TryReconnectAfterLoginCoroutine()
         {
+            StopReconnectAttempts();
+            _reconnect_coroutine = StartCoroutine(AttemptReconnectLoop(_max_reconnect_attempts_after_login, showSuccessPrompt: false, onFinalFail: TriggerOriginalServerConnectionFailed));
+        }
+
+        private IEnumerator AttemptReconnectLoop(int maxAttempts, bool showSuccessPrompt, Action onFinalFail)
+        {
+            if (_is_connecting) yield break;
+
             _is_connecting = true;
-            while (_current_reconnect_attempts < _max_reconnect_attempts)
+            _current_reconnect_attempts = 0;
+
+            while (_current_reconnect_attempts < maxAttempts)
             {
                 _current_reconnect_attempts++;
-                Debug.Log($"正在尝试连接... ({_current_reconnect_attempts}/{_max_reconnect_attempts})"); 
+                Debug.Log($"正在尝试连接... ({_current_reconnect_attempts}/{maxAttempts})");
+
+                // 等待旧连接完全关闭，避免 Close/Connect 并发导致状态错乱
+                yield return CloseWsCoroutine();
 
                 ws = new WebSocket(url);
                 SetupWsCallbacks();
@@ -189,27 +310,23 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     _is_connecting = false;
                     _current_reconnect_attempts = 0;
 
-                    EvtDsp.TriggerEvt<string, Action>(
-                    EvtNames.ShowPrompt,
-                    "重连成功，请尝试登录",null
-                );
+                    if (showSuccessPrompt)
+                    {
+                        EvtDsp.TriggerEvt<string, Action>(
+                            EvtNames.ShowPrompt,
+                            "重连成功，请尝试登录", null
+                        );
+                    }
 
-                    Debug.Log( "Connected!");
+                    Debug.Log("Connected!");
                     yield break;
                 }
 
-                if (_current_reconnect_attempts >= _max_reconnect_attempts)
-                {
-                    _is_connecting = false;
-                    Debug.Log("连接失败，是否重试？");
-                    EvtDsp.TriggerEvt<string, Action>(
-                        EvtNames.ShowPrompt,
-                        $"连接失败（已重试{_max_reconnect_attempts}次），请检查网络后重试！",
-                        () => TryReconnectCoroutine()
-                    );
-                    yield break;
-                }
             }
+
+            _is_connecting = false;
+            Debug.Log($"连接失败（已重试{maxAttempts}次）");
+            onFinalFail?.Invoke();
         }
 
         private void StopReconnectAttempts()
@@ -219,6 +336,31 @@ namespace CLIP.Project_Mouse.Game_Play_System
             {
                 StopCoroutine(_reconnect_coroutine);
                 _reconnect_coroutine = null;
+            }
+            _is_connecting = false;
+        }
+
+        private IEnumerator CloseWsCoroutine()
+        {
+            if (ws == null) yield break;
+
+            Task closeTask = null;
+            try
+            {
+                if (ws.State == WebSocketState.Open || ws.State == WebSocketState.Connecting)
+                {
+                    closeTask = ws.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"CloseWsCoroutine exception: {ex.Message}");
+                yield break;
+            }
+
+            if (closeTask != null)
+            {
+                while (!closeTask.IsCompleted) yield return null;
             }
         }
       
@@ -319,7 +461,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
  
         public async void close_wss()
         {
-            await ws.Close();
+            if (ws != null) await ws.Close();
         }
 
         public void after_send(bool _flag)

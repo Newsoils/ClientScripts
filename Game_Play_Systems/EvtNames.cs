@@ -28,6 +28,8 @@ public static class EvtNames
     public static string Stop_Chat_Coroutine = "Stop_Chat_Coroutine";
 
     public static string Reconnect = "Reconnect";
+    public static string Resume_Silent_Relogin = "Resume_Silent_Relogin";
+    public static string Resume_TryLogin_From_Cache = "Resume_TryLogin_From_Cache";
 
     #region //UI
     //---------------------------------------------------------------------------------------------
@@ -59,9 +61,14 @@ public static class EvtNames
     public static string Set_MainPanel_All_Active = "Set_MainPanel_All_Active";
     public static string Show_TopPanel_Close_Other = "Show_TopPanel_Close_Other";
 
+    /// <summary>任务系统：是否存在「可领取」任务状态变化（用于主界面任务按钮红点）。</summary>
+    public static string Task_ClaimableChanged = "Task_ClaimableChanged";
+
     //派遣 DispatchUI
     public static string Dispatch_On_Start = "Dispatch_On_Start";
     public static string Dispatch_On_End = "Dispatch_On_End";
+    /// <summary>服端拉取/清除派遣后，仅把展示层与 player_state 对齐；勿当作 Dispatch_On_End 用（后者会触发回家拍照等）。</summary>
+    public static string Dispatch_VisualsSync = "Dispatch_VisualsSync";
 
     public static string Dispatch_Text_Notice = "Dispatch_Text_Notice";
     public static string Dispatch_Text_Clear = "Dispatch_Text_Clear";
@@ -195,6 +202,8 @@ public static class EvtNames
 
     //场景 Loading 进度条
     public static string SceneLoading_Open = "SceneLoading_Open";
+    /// <summary>遮罩完全不透明后发出；SceneLoadingHelper 收到后再开始 LoadSceneAsync。</summary>
+    public static string SceneLoading_MaskReady = "SceneLoading_MaskReady";
     public static string SceneLoading_Progress = "SceneLoading_Progress";
     public static string SceneLoading_Close = "SceneLoading_Close";
 }

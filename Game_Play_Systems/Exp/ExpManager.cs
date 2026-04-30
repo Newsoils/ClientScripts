@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
+using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -142,6 +143,26 @@ namespace CLIP
                     curLevel = res[0];
                     curExp = res[1];
                     EvtDsp.TriggerEvt(EvtNames.RefreshUI);
+                }
+
+                /// <summary>
+                /// [临时] 商店购买或杂志抽卡获得「房间放置物」时，按件数每件 +5 亲密度经验。
+                /// </summary>
+                public static void TempAddExpForRoomPlacementGains(IEnumerable<(string itemName, int delta)> changes)
+                {
+                    if (changes == null || instance == null)
+                        return;
+                    int total = 0;
+                    foreach (var (itemName, delta) in changes)
+                    {
+                        if (delta <= 0)
+                            continue;
+                        var info = Global_Inventory_Manager.GetItemInfo(itemName);
+                        if (info != null && info.type == Item_Type.Room_Placement)
+                            total += 5 * delta;
+                    }
+                    if (total > 0)
+                        instance.AddExp(total);
                 }
 
 #if UNITY_EDITOR

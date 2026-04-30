@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Project_Mouse.NewFrame.UI;
 using CLIP.Project_Mouse.UI;
 using EnhancedUI.EnhancedScroller;
@@ -76,6 +77,17 @@ public class ScrollerController_DispatchItem : MonoBehaviour, IEnhancedScrollerD
         scroller.ReloadData();
     }
 
+    /// <summary>
+    /// 当前已选中的物品类型（食物 / 零食）下刷新列表，用于背包槽变更后更新占用显示。
+    /// </summary>
+    public void ReloadCurrentIfLoaded()
+    {
+        if (hasLoadedType)
+        {
+            ReloadData(currentType);
+        }
+    }
+
 
     public EnhancedScrollerCellView GetCellView(EnhancedScroller scroller, int dataIndex, int cellIndex)
     {
@@ -86,10 +98,63 @@ public class ScrollerController_DispatchItem : MonoBehaviour, IEnhancedScrollerD
         // pass in a reference to our data set with the offset for this cell
         cellView.SetData(data);
 
-        cellView.SetClickEvent(()=> UIManager.Instance.GetPanel<DispatchPanel>().SetDispatchItem(currentType, data.name));
+        var panel = UIManager.Instance != null ? UIManager.Instance.GetPanel<DispatchPanel>() : null;
+        var mgr = Dispatch_Manager._instance;
+        if (panel != null && mgr != null && mgr.dispatch_Bags != null && panel.CurrentBagIndex >= 0
+            && panel.CurrentBagIndex < mgr.dispatch_Bags.Count)
+        {
+            var bagsView = panel.GetBagsViewForWarehouse();
+            var curBag = bagsView[panel.CurrentBagIndex];
+            var state = DispatchWarehouseVisual.GetCellState(data.count, currentType, data.name, curBag, bagsView);
+            int displayCount = DispatchWarehouseVisual.GetDisplayCount(data.count, currentType, data.name, bagsView);
+            cellView.ApplyDispatchWarehouseVisual(state, displayCount);
+            cellView.SetClickEvent(() => OnDispatchWarehouseCellClicked(data));
+        }
+        else
+        {
+            cellView.ApplyDispatchWarehouseVisual(DispatchWarehouseCellState.Normal, data.count);
+            cellView.SetClickEvent(() => UIManager.Instance.GetPanel<DispatchPanel>().SetDispatchItem(currentType, data.name));
+        }
 
         // return the cell to the scroller
         return cellView;
+    }
+
+    private void OnDispatchWarehouseCellClicked(ScrollData_GameItem data)
+    {
+        var panel = UIManager.Instance.GetPanel<DispatchPanel>();
+        var mgr = Dispatch_Manager._instance;
+        if (panel == null || mgr == null || mgr.dispatch_Bags == null)
+        {
+            panel?.SetDispatchItem(currentType, data.name);
+            return;
+        }
+
+        int bi = panel.CurrentBagIndex;
+        if (bi < 0 || bi >= mgr.dispatch_Bags.Count)
+        {
+            panel.SetDispatchItem(currentType, data.name);
+            return;
+        }
+
+        var bagsView = panel.GetBagsViewForWarehouse();
+        var curBag = bagsView[bi];
+        var state = DispatchWarehouseVisual.GetCellState(data.count, currentType, data.name, curBag, bagsView);
+
+        // 占用态 = 当前背包已选该物品；再点同一格 → 收回槽位（不写真实库存）。
+        if (state == DispatchWarehouseCellState.OccupiedByCurrentBag)
+        {
+            panel.ClearDispatchSlot(currentType);
+        }
+        else if (state == DispatchWarehouseCellState.InUseElsewhere)
+        {
+            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "库存不足，该物品已在其他背包中使用");
+            return;
+        }
+        else
+        {
+            panel.SetDispatchItem(currentType, data.name);
+        }
     }
     public void JumpToShop()
     {

@@ -242,6 +242,13 @@ public class GridUtility
         return result;
     }
 
+    /// <summary>
+    /// 计算占地位置
+    /// </summary>
+    /// <param name="x"></param>
+    /// <param name="y"></param>
+    /// <param name="pos"></param>
+    /// <returns></returns>
     public static HashSet<Int2> CalculateOccpiedPos(int x, int y, Int2 pos)
     {
         HashSet<Int2> occupiedPositions = new HashSet<Int2>();
@@ -256,42 +263,48 @@ public class GridUtility
         return occupiedPositions;
     }
 
-    public static Int2 CalculateGridLayerPosition(string gridLayerUid, Vector3 postion)
-    {
-        if (RoomSystem.currentRoom == null) return Int2.zero;
-        if (RoomSystem.currentRoom.TryGetLayerTag(gridLayerUid, out var gridLayerTag))
-        {
-            return CalculateGridLayerPosition(gridLayerTag, postion);
-        }
-        return Int2.zero;
-    }
+    /// <summary>
+    /// 根据Int2的位置计算三维空间的位置
+    /// </summary>
+    /// <param name="gridLayerTag"></param>
+    /// <param name="position"></param>
+    /// <param name="pos"></param>
 
-    public static Int2 CalculateGridLayerPosition(GridLayerTag gridLayerTag, Vector3 postion)
+    public static void CalucateGridPosition(GridLayerTag gridLayerTag,Int2 position,out Vector3 pos)
     {
-        Int2 res = Int2.zero;
+        var zeroPos = gridLayerTag.girdOrginalPoint.position;
+        pos = Vector3.zero;
 
-        Vector3 relativePostion = postion - gridLayerTag.girdOrginalPoint.position;
         switch (gridLayerTag.gridLayerType)
         {
             case GridLayerType.Floor:
             case GridLayerType.Ceiling:
             case GridLayerType.Surface:
-                res = new Int2((int)relativePostion.x, (int)relativePostion.z);
+                pos = new Vector3(position.x, 0, position.y) + zeroPos;
                 break;
             case GridLayerType.Wall_S:
             case GridLayerType.Wall_N:
-                res = new Int2((int)relativePostion.x, (int)relativePostion.y);
+                pos = new Vector3(position.x, position.y, 0) + zeroPos;
+                break;
+            case GridLayerType.Wall_E:
+                // 网格坐标 x 向东为正，但世界 Z 轴向西为正，抵消轴向差异
+                pos = new Vector3(0, position.y, -position.x) + zeroPos;
                 break;
             case GridLayerType.Wall_W:
-            case GridLayerType.Wall_E:
-                res = new Int2((int)relativePostion.z, (int)relativePostion.y);
+                pos = new Vector3(0, position.y, position.x) + zeroPos;
                 break;
-
         }
-        return res;
-
     }
 
+
+
+    /// <summary>
+    /// 根据三维空间坐标中的实际位置，计算
+    /// </summary>
+    /// <param name="gridLayerTag"></param>
+    /// <param name="postion"></param>
+    /// <param name="alignPos"></param>
+    /// <param name="gridPostion"></param>
     public static void CalculateGridPosition(GridLayerTag gridLayerTag, Vector3 postion, out Vector3 alignPos, out Int2 gridPostion)
     {
         alignPos = postion;
@@ -315,15 +328,20 @@ public class GridUtility
                 alignPos = new Vector3(x, y, postion.z) + new Vector3(zeroPos.x, zeroPos.y, 0);
                 gridPostion = new Int2(x, y);
                 break;
-            case GridLayerType.Wall_W:
             case GridLayerType.Wall_E:
+                // relativePostion.z 为负（Z 轴朝东，原点偏西），取负后得正数网格坐标
                 z = Mathf.FloorToInt(relativePostion.z);
                 y = Mathf.FloorToInt(relativePostion.y);
-                alignPos = new Vector3(postion.x, y, z) + new Vector3(0,zeroPos.y, zeroPos.z); ;
+                alignPos = new Vector3(postion.x, y, z) + new Vector3(0, zeroPos.y, zeroPos.z);
+                gridPostion = new Int2(-z, y);
+                break;
+            case GridLayerType.Wall_W:
+                z = Mathf.FloorToInt(relativePostion.z);
+                y = Mathf.FloorToInt(relativePostion.y);
+                alignPos = new Vector3(postion.x, y, z) + new Vector3(0, zeroPos.y, zeroPos.z);
                 gridPostion = new Int2(z, y);
                 break;
         }
-
     }
 
 
@@ -364,8 +382,10 @@ public class GridUtility
             case GridLayerType.Wall_N:
                 res = gridLayerTag.girdOrginalPoint.position + new Vector3(gridPos.x, gridPos.y, 0);
                 break;
-            case GridLayerType.Wall_W:
             case GridLayerType.Wall_E:
+                res = gridLayerTag.girdOrginalPoint.position + new Vector3(0, gridPos.y, -gridPos.x);
+                break;
+            case GridLayerType.Wall_W:
                 res = gridLayerTag.girdOrginalPoint.position + new Vector3(0, gridPos.y, gridPos.x);
                 break;
         }

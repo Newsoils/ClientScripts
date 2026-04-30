@@ -252,6 +252,7 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
         dispatchManager._player_dispatch_state.last_friend_event_name = "";
 
         UploadDispatchInfoToServer();
+        Dispatch_Manager.NotifyDispatchVisualsFromState();
     }
 
     #endregion
@@ -313,6 +314,8 @@ public class Dispatch_Receiver : SingletonMono<Dispatch_Receiver>, IMsg_Receiver
             }
 
             dispatchManager.dispatch_tick();
+
+            Dispatch_Manager.NotifyDispatchVisualsFromState();
 
             Debug.Log($"{ReceiverName}: Dispatch data loaded. bags={DescribeBags(dispatchManager.dispatch_Bags)}");
         }

@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
@@ -58,18 +57,48 @@ public class FertilizePlantMode : IEditMode
 
     public async Task TapToFertilize(Vector2 screenPos)
     {
-        var pot = RaycastPot(screenPos);
-        if (pot != null)
+        try
         {
-            Plant plant = PlantManager.Instance.GetPlantByPot(pot);
-            if(plant != null && !plant.data.isFertilize)
+            var pot = RaycastPot(screenPos);
+            if (pot != null)
             {
-                await PlantManager.Instance.FertilizePlant(plant, curFertilizerName);
-                EvtDsp.TriggerEvt(EvtNames.ShowFertilizerPop);
-            }
+                Plant plant = PlantManager.Instance.GetPlantByPot(pot);
+                if (plant != null && !plant.data.isFertilize)
+                {
+                    var fertItem = Global_Inventory_Manager.GetItem(curFertilizerName);
+                    int fertCount = fertItem != null ? fertItem._item_count : 0;
+                    if (fertCount <= 0)
+                    {
+                        EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "肥料数量不足");
+                        EditManager.Instance.ExitCurrentMode();
+                        return;
+                    }
 
+                    await PlantManager.Instance.FertilizePlant(plant, curFertilizerName);
+
+                    if (plant.data.isFertilize)
+                    {
+                        Global_Inventory_Manager.Change_Items_Count(
+                            new List<(string, int)> { (curFertilizerName, -1) }, "施肥");
+                        EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
+
+                        var fertAfter = Global_Inventory_Manager.GetItem(curFertilizerName);
+                        int fertCountAfter = fertAfter != null ? fertAfter._item_count : 0;
+                        if (fertCountAfter <= 0)
+                        {
+                            EditManager.Instance.ExitCurrentMode();
+                            return;
+                        }
+                    }
+
+                    EvtDsp.TriggerEvt(EvtNames.ShowFertilizerPop);
+                }
+            }
         }
-        canInteract = true;
+        finally
+        {
+            canInteract = true;
+        }
     }
     private Pot RaycastPot(Vector2 screenPos)
     {

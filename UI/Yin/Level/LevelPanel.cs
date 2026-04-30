@@ -36,8 +36,9 @@ namespace CLIP
                     btnExit.onClick.AddListener(ClosePanel);
                     EvtDsp.AddEvt(EvtNames.On_Get_Exp, Refresh);
                 }
-                private void OnDestroy()
+                public override void OnDestroy()
                 {
+                    base.OnDestroy();
                     EvtDsp.RemoveEvt(EvtNames.On_Get_Exp, Refresh);
                 }
 

@@ -77,7 +77,7 @@ public class SecondCellView_CD : MonoBehaviour
             return;
         }
 
-        var info = dispatchMgr.dispatch_Bags[bagIndex];
+        var info = panel != null ? panel.GetPreviewBagInfo(bagIndex) : dispatchMgr.dispatch_Bags[bagIndex];
         bool isSelected = info != null
                           && !string.IsNullOrEmpty(info.tapeName)
                           && info.tapeName == _currentDataName;

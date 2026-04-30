@@ -57,6 +57,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
         private List<Renderer> doorRenderers = new List<Renderer>();
         private List<Renderer> floorRenderers = new List<Renderer>();
 
+        public Dictionary<string,Hide_Wall> wallsMap = new Dictionary<string, Hide_Wall>();  
+
         void Start()
         {
             ClearRenders();
@@ -80,9 +82,20 @@ namespace CLIP.Project_Mouse.Game_Play_System
             doorRenderers = new List<Renderer>(DoorRoot?.GetComponentsInChildren<Renderer>());
             floorRenderers = new List<Renderer>(FloorRoot?.GetComponentsInChildren<Renderer>());
             lights = new List<Light>(GetComponentsInChildren<Light>());
+
+            var walls = new List<Hide_Wall>(WallRoot?.GetComponentsInChildren<Hide_Wall>());
+
+            foreach(var wall in walls)
+            {
+                if (!this.wallsMap.ContainsKey(wall.UID))
+                {
+                    this.wallsMap.Add(wall.UID, wall);
+                }
+            }
+
         }
 
-  
+
         public void Init(RoomData data)
         {
             roomData = data;
@@ -120,6 +133,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
             return null;
         }
+
         public Transform GetGridOrigin(string layerUID)
         {
             if (TryGetLayerTag(layerUID, out var tag))
@@ -128,7 +142,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
             return null;
         }
-
 
         public void AddGridLayer()
         {
@@ -139,6 +152,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
 
         }
+
+
         #region 家具
         public void AddPlacementToRoom(PlacementRuntime placement, string gridLayerUId)
         {
@@ -158,6 +173,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
             {
                 gridLayerPlacementDic.Add(gridLayerUId, new List<PlacementRuntime>() { placement });
             }
+
+            BindPlacementWallVisibility(placement, gridLayerUId);
         }
 
         public void AddOtherPlacementToRoomData(PlacementData placementData)
@@ -178,6 +195,29 @@ namespace CLIP.Project_Mouse.Game_Play_System
             if (gridLayerPlacementDic.TryGetValue(gridLayerUId, out var placements))
             {
                 if (placements != null) placements.Remove(placement);
+            }
+
+            UnbindPlacementWallVisibility(placement, gridLayerUId);
+        }
+
+        public void BindPlacementWallVisibility(PlacementRuntime placement, string gridLayerUId)
+        {
+            if (placement == null || string.IsNullOrEmpty(gridLayerUId)) return;
+
+            if (wallsMap.TryGetValue(gridLayerUId, out var hideWall))
+            {
+                hideWall.OnVisableChange -= placement.SetRenderState;
+                hideWall.OnVisableChange += placement.SetRenderState;
+            }
+        }
+
+        public void UnbindPlacementWallVisibility(PlacementRuntime placement, string gridLayerUId)
+        {
+            if (placement == null || string.IsNullOrEmpty(gridLayerUId)) return;
+
+            if (wallsMap.TryGetValue(gridLayerUId, out var hideWall))
+            {
+                hideWall.OnVisableChange -= placement.SetRenderState;
             }
         }
 
@@ -204,9 +244,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
             roomData.potDatas.Add(pot.data);
             potsDic[pot.data.UID] = pot;
 
-            if(gridLayerPotDic.TryGetValue(gridLayerUId, out var pots))
+            if (gridLayerPotDic.TryGetValue(gridLayerUId, out var pots))
             {
-                if(pots == null)
+                if (pots == null)
                 {
                     pots = new List<Pot>();
                     gridLayerPotDic[gridLayerUId] = pots;
@@ -222,14 +262,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             roomData.potDatas.Remove(pot.data);
             potsDic.Remove(pot.data.UID);
-            if(gridLayerPotDic.TryGetValue(gridLayerUId, out var pots))
+            if (gridLayerPotDic.TryGetValue(gridLayerUId, out var pots))
             {
-                if(pots != null) pots.Remove(pot);
+                if (pots != null) pots.Remove(pot);
             }
         }
         public void ClearAllPots()
         {
-            foreach(var pot in potsDic.Values)
+            foreach (var pot in potsDic.Values)
             {
                 if (pot != null)
                 {
@@ -304,11 +344,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     light.enabled = value;
                 }
             }
-            foreach(var placement in placementsDic.Values)
+            foreach (var placement in placementsDic.Values)
             {
                 placement.SetRenderState(value);
             }
-            foreach(var pot in potsDic.Values)
+            foreach (var pot in potsDic.Values)
             {
                 pot.SetRenderState(value);
             }
@@ -401,13 +441,13 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void RestoreSpecialDecoration(Placement_Second_Category category, int placementId, string resUrl)
         {
-            GameAssets.LoadAsyncByPath<Material>(resUrl).ContinueWith(mat =>
-            {
-                if (mat != null)
-                {
-                    //SetSpecialDecoration(category, mat, placementId);
-                }
-            });
+            _ = GameAssets.LoadAsyncByPath<Material>(resUrl, (mat) =>
+             {
+                 if (mat != null)
+                 {
+                     SetSpecialDecoration(category, mat, placementId);
+                 }
+             });
         }
 
         #endregion
@@ -430,16 +470,16 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public Vector3 GetRandomPosition(GridLayerType gridLayerType)
         {
-           Int2 randomPos = Int2.zero;
-           if (GridState.TryGetLayers(gridLayerType,out var gridLayers))
+            Int2 randomPos = Int2.zero;
+            if (GridState.TryGetLayers(gridLayerType, out var gridLayers))
             {
-                if(gridLayers.Count>0)
+                if (gridLayers.Count > 0)
                 {
                     var gridLayer = gridLayers[0];
                     randomPos = gridLayer.GetRandomPosition();
 
                     var origin = GetGridOrigin(gridLayer.uid);
-                    if(origin !=null)
+                    if (origin != null)
                     {
                         return origin.position + new Vector3(randomPos.x, 0, randomPos.y);
                     }
@@ -451,7 +491,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public bool Is_FloorPosition_InRoom(Vector3 pos)
         {
             var orginal = GetGridOrigin(GridLayerType.Floor);
-            if(orginal!=null)
+            if (orginal != null)
             {
                 var relativePos = pos - orginal.position;
 

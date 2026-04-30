@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using CLIP.Project_Mouse;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Project_Mouse.UI;
 using EnhancedUI.EnhancedScroller;
 using TMPro;
@@ -17,6 +18,20 @@ public class CellView_DispatchItem : EnhancedScrollerCellView
     public Image gameItem_Icon;
     public TMP_Text gameItem_Count;
     public Button detailButton;
+    public Image mask;
+    [Tooltip("可选。绑定后「使用中」态会显示文案。")]
+    public TMP_Text inUseHintText;
+
+    private Color _maskOccupiedColor = new Color(0f, 0f, 0f, 0.63529414f);
+    private static readonly Color MaskInUseColor = new Color(0.55f, 0.55f, 0.55f, 0.85f);
+
+    private void Awake()
+    {
+        if (mask != null)
+        {
+            _maskOccupiedColor = mask.color;
+        }
+    }
 
     // 在管理这些 CellView 的地方存储 List<Sprite>，在这里也可以
     // 然后添加该 CellView 与稀有度相关的 UI 组件的引用
@@ -62,6 +77,37 @@ public class CellView_DispatchItem : EnhancedScrollerCellView
             var item = Global_Inventory_Manager.GetItem(id);
             UIManager.Instance.OpenPanel<ItemDescriptionPanel>(item);
         });
+    }
+
+    public void ApplyDispatchWarehouseVisual(DispatchWarehouseCellState state, int displayCount)
+    {
+        gameItem_Count.text = displayCount.ToString();
+
+        bool showOccupiedMask = state == DispatchWarehouseCellState.OccupiedByCurrentBag;
+        bool showInUse = state == DispatchWarehouseCellState.InUseElsewhere;
+
+        if (mask != null)
+        {
+            mask.gameObject.SetActive(showOccupiedMask || showInUse);
+            if (mask.gameObject.activeSelf)
+            {
+                mask.color = showInUse ? MaskInUseColor : _maskOccupiedColor;
+            }
+
+            // 遮罩在 Button 之上时必须关闭 RaycastTarget，否则占用/使用中态点不到格子，无法收回或弹提示。
+            mask.raycastTarget = false;
+        }
+
+        if (inUseHintText != null)
+        {
+            inUseHintText.gameObject.SetActive(showInUse);
+            if (showInUse)
+            {
+                inUseHintText.text = "使用中";
+            }
+
+            inUseHintText.raycastTarget = false;
+        }
     }
 
     public void SetClickEvent(Action action)

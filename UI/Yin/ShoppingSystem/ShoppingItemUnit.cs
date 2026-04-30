@@ -46,7 +46,7 @@ namespace CLIP
                 public Sprite cannotBuy;
                 [Tooltip("用于切换精灵的 Image；留空则用 buyButton 上的 Image")]
                 public Image buyButtonImage;
-                [Tooltip("与 LimitMagazine 一致：仅当背包中该物品数量 > 0 时可买。日常商店保持 false")]
+                [Tooltip("限购用字段；单件购买态见 ComputeCanPurchase：服装+磁带(唱片) 背包已有时不可再买")]
                 public bool useLimitMagazineBuyRule;
                 [Tooltip("购买按钮上的 TMP 文本；不指定则在 buyButton 子节点上查找")]
                 public TMP_Text buyButtonText;
@@ -87,13 +87,12 @@ namespace CLIP
                 {
                     if (itemInShop.sell_price < 0)
                         return false;
-                    
 
-                    if (true)
+                    if (itemInShop.type == ENUM.Item_Type.Cloth || itemInShop.type == ENUM.Item_Type.Tape)
                     {
                         var info = Global_Inventory_Manager.GetItem(itemInShop.name);
                         if (info == null) return true;
-                        if (info.item_info.type == ENUM.Item_Type.Cloth && info._item_count > 0) return false;
+                        if (info._item_count > 0) return false;
                     }
 
                     return true;
@@ -145,6 +144,8 @@ namespace CLIP
                 }
                 public void OnClick()
                 {
+                    if (!ComputeCanPurchase())
+                        return;
                     int price = itemInShop.sell_price;
                     List<(string, int)> items = new List<(string, int)> { (itemInShop.name, 1) };
                     string message = $"是否要花费{price}{itemInShop.currency_unit}购买{itemInShop.name}物品";
@@ -157,6 +158,7 @@ namespace CLIP
                             {
                                 PromptMessage.Instance.ShowUpPrompt("购买成功");
                                 Global_Inventory_Manager.Change_Items_Count(items, "商店购买");
+                                ExpManager.TempAddExpForRoomPlacementGains(items);
                                 EvtDsp.TriggerEvt(EvtNames.RefreshUI);
 
                                 if (itemInShop.type == Project_Mouse.ENUM.Item_Type.Food)

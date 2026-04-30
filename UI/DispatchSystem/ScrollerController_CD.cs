@@ -231,7 +231,8 @@ public class ScrollerController_CD : MonoBehaviour, IEnhancedScrollerDelegate
 
     public int GetNumberOfCells(EnhancedScroller scroller)
     {
-        return gameItemDataList.Count;
+        if (gameItemDataList.Count == 0) return 0;
+        return Mathf.CeilToInt((float)gameItemDataList.Count / numberOfCellsPerRow);
     }
 
     /// <summary>

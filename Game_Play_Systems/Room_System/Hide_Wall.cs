@@ -1,9 +1,12 @@
+using System;
 using UnityEngine;
 
 namespace CLIP.Project_Mouse.Scene_View_Control
 {
     public class Hide_Wall : MonoBehaviour
     {
+        public string UID;
+
         public Vector3 _wall_front;
         public float _disappear_value = -0.8f;
         public bool _force_hide = false;
@@ -11,7 +14,6 @@ namespace CLIP.Project_Mouse.Scene_View_Control
         public float _fade_start_dot_ = 0.12f;
         public float _fade_end_dot = 0f;
 
-        //public Transform _camera_root;
         public Camera _camera;
 
         private Renderer _renderer;
@@ -19,6 +21,8 @@ namespace CLIP.Project_Mouse.Scene_View_Control
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private float _baseAlpha = 1f;
+
+        public Action<bool> OnVisableChange;
 
         void Start()
         {
@@ -81,7 +85,10 @@ namespace CLIP.Project_Mouse.Scene_View_Control
         void SetVisible(bool visible)
         {
             if (_renderer != null && _renderer.enabled != visible)
+            {
                 _renderer.enabled = visible;
+                OnVisableChange?.Invoke(visible);
+            }
         }
 
         private void UpdateAlpha(float dot)

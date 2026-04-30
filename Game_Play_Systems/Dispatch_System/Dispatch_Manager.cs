@@ -4,6 +4,7 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Core.LYC.TaskSystem;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.ENUM;
+using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel.Dispatch;
 using UnityEngine;
 using UnityEngine.Events;
@@ -51,12 +52,55 @@ namespace CLIP
                     private int bags_count = 3;
                     public List<DispatchBagInfo> dispatch_Bags;
 
+                    /// <summary>选包 UI 正在编辑的槽下标；-1 表示未在编辑。</summary>
+                    private int _dispatchModelPreviewBagIndex = -1;
+                    /// <summary>与 <see cref="_dispatchModelPreviewBagIndex"/> 对应的草稿（与 UI 侧 <c>curBagInfo</c> 同引用，随点选更新）。</summary>
+                    private DispatchBagInfo _dispatchModelPreviewBag;
+
+                    /// <summary>3D 模型 / 非 UI 层取「当前显示用」背包：编辑中则返回草稿，否则已存槽位。</summary>
+                    public DispatchBagInfo GetBagForModelPreview(int index)
+                    {
+                        if (index == _dispatchModelPreviewBagIndex && _dispatchModelPreviewBag != null)
+                        {
+                            return _dispatchModelPreviewBag;
+                        }
+                        if (dispatch_Bags == null || index < 0 || index >= dispatch_Bags.Count)
+                        {
+                            return null;
+                        }
+                        return dispatch_Bags[index];
+                    }
+
+                    public void SetDispatchModelPreview(int bagIndex, DispatchBagInfo draft)
+                    {
+                        _dispatchModelPreviewBagIndex = bagIndex;
+                        _dispatchModelPreviewBag = draft;
+                    }
+
+                    public void ClearDispatchModelPreview()
+                    {
+                        _dispatchModelPreviewBagIndex = -1;
+                        _dispatchModelPreviewBag = null;
+                    }
+
                     public static bool IsDispatching
                     {
                         get
                         {
-                            return _instance._player_dispatch_state.player_state == "On_Dispatch";
+                            return _instance != null
+                                && _instance._player_dispatch_state != null
+                                && _instance._player_dispatch_state.player_state == "On_Dispatch";
                         }
+                    }
+
+                    /// <summary>
+                    /// 服端 JSON 覆盖、清除派遣等改写了 <c>player_state</c> 后调用：只同步主角/小地图等展示，不触发 <c>Dispatch_On_End</c>（避免误触回家拍照流程）。
+                    /// </summary>
+                    public static void NotifyDispatchVisualsFromState()
+                    {
+                        if (_instance == null || _instance._player_dispatch_state == null)
+                            return;
+                        EvtDsp.TriggerEvt(EvtNames.Dispatch_VisualsSync);
                     }
 
                     /// <summary>
@@ -315,6 +359,7 @@ namespace CLIP
 
                     public void On_Start_Dispatch()
                     {
+                        ApplyDispatchDepartConsumePreparedBag();
                         _player_dispatch_state.on_start_dispatch();
                         upload_dispatch_info_to_server();
 
@@ -337,6 +382,8 @@ namespace CLIP
                     {
                         hasShowReward = false;
 
+                        ClearDispatchCarriedSlotNamesAfterTrip();
+
                         List<(string, int)> rewardItems = new List<(string, int)> { ("鱼币", reward.Item1), ("亲密度", reward.Item2) };
                         Global_Inventory_Manager.Change_Items_Count(rewardItems);
                         rewardItems.Add((reward.Item3, 1));
@@ -357,6 +404,92 @@ namespace CLIP
                             + _player_dispatch_state.last_reward_info + "_\n", "Dispatch_Manager");
                         // 通知监听者派遣结束
                         _on_finishing_dispatch.Invoke();
+                    }
+
+                    /// <summary>
+                    /// 派遣出发前：按 1→2→3 号背包找首个「任一格有物」的背包，将槽位写入 <see cref="single_dispatch_info"/>，
+                    /// 扣除便当/幸运小物库存（CD 不扣），清空该背包；随后 <see cref="player_dispatch_state.on_start_dispatch"/> 会对仍为空的槽位随机补齐。
+                    /// </summary>
+                    private void ApplyDispatchDepartConsumePreparedBag()
+                    {
+                        var cur = _player_dispatch_state._current_dispatch_info;
+                        if (cur == null)
+                        {
+                            return;
+                        }
+
+                        if (dispatch_Bags == null || dispatch_Bags.Count == 0)
+                        {
+                            cur.carried_food_name = null;
+                            cur.carried_snack_name = null;
+                            cur.carried_tape_name = null;
+                            return;
+                        }
+
+                        int idx = -1;
+                        for (int i = 0; i < dispatch_Bags.Count; i++)
+                        {
+                            var b = dispatch_Bags[i];
+                            if (b == null)
+                            {
+                                continue;
+                            }
+
+                            if (!string.IsNullOrEmpty(b.foodName) || !string.IsNullOrEmpty(b.snackName)
+                                || !string.IsNullOrEmpty(b.tapeName))
+                            {
+                                idx = i;
+                                break;
+                            }
+                        }
+
+                        if (idx < 0)
+                        {
+                            cur.carried_food_name = null;
+                            cur.carried_snack_name = null;
+                            cur.carried_tape_name = null;
+                            return;
+                        }
+
+                        var bag = dispatch_Bags[idx];
+                        cur.carried_food_name = string.IsNullOrEmpty(bag.foodName) ? null : bag.foodName;
+                        cur.carried_snack_name = string.IsNullOrEmpty(bag.snackName) ? null : bag.snackName;
+                        cur.carried_tape_name = string.IsNullOrEmpty(bag.tapeName) ? null : bag.tapeName;
+
+                        var changes = new List<(string, int)>();
+                        if (!string.IsNullOrEmpty(bag.foodName))
+                        {
+                            changes.Add((bag.foodName, -1));
+                        }
+
+                        if (!string.IsNullOrEmpty(bag.snackName))
+                        {
+                            changes.Add((bag.snackName, -1));
+                        }
+
+                        if (changes.Count > 0)
+                        {
+                            Global_Inventory_Manager.Change_Items_Count(changes, "派遣出发");
+                        }
+
+                        bag.foodName = null;
+                        bag.snackName = null;
+                        bag.tapeName = null;
+                        bag.isPacked = false;
+                    }
+
+                    /// <summary>回家后将本次携带名清空，避免持久化状态里残留；奖励已写入 last_reward_*。</summary>
+                    private void ClearDispatchCarriedSlotNamesAfterTrip()
+                    {
+                        if (_player_dispatch_state._current_dispatch_info == null)
+                        {
+                            return;
+                        }
+
+                        var c = _player_dispatch_state._current_dispatch_info;
+                        c.carried_food_name = null;
+                        c.carried_snack_name = null;
+                        c.carried_tape_name = null;
                     }
 
                     #region 获取派遣携带物相关信息

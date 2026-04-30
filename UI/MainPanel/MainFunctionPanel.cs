@@ -4,7 +4,6 @@ using UnityEngine.UI;
 using CLIP.Project_Mouse.LYC.TaskSystem;
 using CLIP.Project_Mouse.NewFrame.UI;
 using CLIP.Project_Mouse.Game_Play_System;
-using System.Collections.Generic;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Framework_Core.Event;
 using TMPro;
@@ -26,6 +25,19 @@ public class MainFunctionPanel : MonoBehaviour
     public TMP_Text TicketNum;
     public GameObject TicketConfirmObj;
     public Button TicketConfimButton;
+
+    [Tooltip("可选。任务按钮上的红点 Image，在 prefab 里挂好组件并拖 `未读红点` 素材；不绑则不做红点显隐。")]
+    [SerializeField]
+    Image taskClaimableRedDot;
+
+    private void RefreshTaskClaimableRedDot()
+    {
+        if (taskClaimableRedDot == null)
+            return;
+        var mgr = TaskMgr.Instance;
+        bool show = mgr != null && mgr.HasClaimableReward();
+        taskClaimableRedDot.gameObject.SetActive(show);
+    }
 
     public void Start()
     {
@@ -80,6 +92,8 @@ public class MainFunctionPanel : MonoBehaviour
         });
         RefreshTicketNum();
         EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshTicketNum);
+        EvtDsp.AddEvt(EvtNames.Task_ClaimableChanged, RefreshTaskClaimableRedDot);
+        RefreshTaskClaimableRedDot();
     }
 
     public void OnDestroy()
@@ -91,6 +105,7 @@ public class MainFunctionPanel : MonoBehaviour
         TicketButton.onClick.RemoveAllListeners();
         TicketConfimButton.onClick.RemoveAllListeners();
         EvtDsp.RemoveEvt(EvtNames.RefreshUI, RefreshTicketNum);
+        EvtDsp.RemoveEvt(EvtNames.Task_ClaimableChanged, RefreshTaskClaimableRedDot);
     }
     public void SetRight(bool value)
     {

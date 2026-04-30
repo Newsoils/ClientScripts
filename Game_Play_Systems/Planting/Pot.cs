@@ -11,9 +11,12 @@ public class Pot : GridObject, IClick
     public Transform plantRoot;
     public PotData info;
     public List<Renderer> renderers = new();
-    private void Start()
+    private List<Collider> colliders = new();
+
+    private void Awake()
     {
-        renderers = GetComponentsInChildren<Renderer>().ToList();
+        renderers = GetComponentsInChildren<Renderer>(true).ToList();
+        colliders = GetComponentsInChildren<Collider>(true).ToList();
     }
     public void Init(PotData info)
     {
@@ -30,6 +33,8 @@ public class Pot : GridObject, IClick
     {
         foreach (var r in renderers)
             if (r) r.enabled = visible;
+        foreach (var c in colliders)
+            if (c) c.enabled = visible;
         Plant plant = PlantManager.Instance.GetPlantByPot(this);
         if (plant != null)
         {
@@ -38,12 +43,12 @@ public class Pot : GridObject, IClick
     }
     public bool OnClick(Vector3 position)
     {
-        if(EditManager.Instance.isNoneState)
-        {
-            EvtDsp.TriggerEvt<Pot>(EvtNames.ShowPotState, this);
-            return true;
-        }
-        return false;
+        if (!EditManager.Instance.isNoneState)
+            return false;
+        if (RoomSystem.currentRoom == null || !RoomSystem.currentRoom.potsDic.ContainsKey(UId))
+            return false;
+        EvtDsp.TriggerEvt<Pot>(EvtNames.ShowPotState, this);
+        return true;
     }
     public bool CheckPlant(PlantData plant)
     {

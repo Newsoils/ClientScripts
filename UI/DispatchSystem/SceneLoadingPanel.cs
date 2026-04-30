@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using CLIP.Framework_Core.Event;
@@ -7,7 +8,7 @@ namespace CLIP.Project_Mouse.UI
 {
     /// <summary>
     /// 场景加载进度条面板，完全通过 EvtDsp 事件驱动，不被任何外部持有引用。
-    /// 订阅：SceneLoading_Open / SceneLoading_Progress / SceneLoading_Close
+    /// 订阅：SceneLoading_Open / SceneLoading_MaskReady（发出）/ SceneLoading_Progress / SceneLoading_Close
     /// </summary>
     public class SceneLoadingPanel : UIPanelBase
     {
@@ -28,6 +29,8 @@ namespace CLIP.Project_Mouse.UI
         private float _targetProgress = 0f;
         private float _displayProgress = 0f;
         private bool _isFadingOut = false;
+
+        private Coroutine _fadeInRoutine;
 
         private Action _onOpenHandler;
         private Action _onCloseHandler;
@@ -100,7 +103,20 @@ namespace CLIP.Project_Mouse.UI
             _targetProgress = 0f;
             _displayProgress = 0f;
             if (progressSlider != null) progressSlider.value = 0f;
-            StartCoroutine(FadeInCoroutine());
+
+            if (_fadeInRoutine != null)
+            {
+                StopCoroutine(_fadeInRoutine);
+                _fadeInRoutine = null;
+            }
+
+            if (canvasGroup == null)
+            {
+                EvtDsp.TriggerEvt(EvtNames.SceneLoading_MaskReady);
+                return;
+            }
+
+            _fadeInRoutine = StartCoroutine(FadeInAndNotifyMaskReady());
         }
 
         private void OnSceneLoadingProgress(float progress)
@@ -128,9 +144,9 @@ namespace CLIP.Project_Mouse.UI
             progressSlider.value = _displayProgress;
         }
 
-        private System.Collections.IEnumerator FadeInCoroutine()
+        /// <summary>遮罩渐入至完全不透明后通知 SceneLoadingHelper 可切场景。</summary>
+        private IEnumerator FadeInAndNotifyMaskReady()
         {
-            if (canvasGroup == null) yield break;
             float elapsed = 0f;
             float startAlpha = canvasGroup.alpha;
             while (elapsed < fadeInDuration)
@@ -139,12 +155,15 @@ namespace CLIP.Project_Mouse.UI
                 canvasGroup.alpha = Mathf.Lerp(startAlpha, 1f, elapsed / fadeInDuration);
                 yield return null;
             }
+
             canvasGroup.alpha = 1f;
+            _fadeInRoutine = null;
+            EvtDsp.TriggerEvt(EvtNames.SceneLoading_MaskReady);
         }
 
         private System.Collections.IEnumerator FadeOutCoroutine()
         {
-            yield return new WaitForSeconds(1f); // 等待一段时间，确保玩家能看到满格的进度条
+            yield return new WaitForSeconds(2f); // 等待一段时间，确保玩家能看到满格的进度条
             if (canvasGroup == null)
             {
                 obj.SetActive(false);

@@ -49,8 +49,30 @@ namespace CLIP.Project_Mouse.UI
         [Header("面板")]
         public GameObject clothesPanel;
         public GameObject furniturePanel;
+
+        [Header("许愿薄荷")]
+        public Button btnBuyColorMint;
+        public TMP_Text txtColorMintCount;
+
         [Header("抽卡")]
         private int currentPool;
+
+        private const string ColorMintItemName = "许愿薄荷";
+
+        /// <summary>用罐罐补足许愿薄荷时的单价（枚），读表 sell_price，缺省 60。</summary>
+        private static int GetColorMintPriceInCans()
+        {
+            var info = Global_Inventory_Manager.GetItemInfo(ColorMintItemName);
+            return info != null && info.sell_price > 0 ? info.sell_price : 60;
+        }
+
+        private static int GetMintCostForPullCount(int pullCount) => pullCount;
+
+        private static int GetColorMintHeld()
+        {
+            var inv = Global_Inventory_Manager.GetItem(ColorMintItemName);
+            return inv == null ? 0 : inv._item_count;
+        }
 
         private void Start()
         {
@@ -102,12 +124,53 @@ namespace CLIP.Project_Mouse.UI
             btnGachaOne.onClick.AddListener(GachaOneBtn);
             btnGachaFive.onClick.AddListener(GachaFiveBtn);
             btnBuyAllItem.onClick.AddListener(BuyAllItems);
-            EvtDsp.AddEvt(EvtNames.RefreshUI, CheckBuyAllItemState);
-            CheckBuyAllItemState();
+            btnBuyColorMint.onClick.AddListener(OnBuyColorMintClicked);
+            EvtDsp.AddEvt(EvtNames.RefreshUI, OnRefreshUi);
+            OnRefreshUi();
         }
         private void OnDestroy()
         {
-            EvtDsp.RemoveEvt(EvtNames.RefreshUI, CheckBuyAllItemState);
+            EvtDsp.RemoveEvt(EvtNames.RefreshUI, OnRefreshUi);
+        }
+
+        private void OnRefreshUi()
+        {
+            CheckBuyAllItemState();
+            RefreshColorMintCountDisplay();
+        }
+
+        private void RefreshColorMintCountDisplay()
+        {
+            txtColorMintCount.text = GetColorMintHeld().ToString();
+        }
+
+        private void OnBuyColorMintClicked()
+        {
+            int price = GetColorMintPriceInCans();
+            PromptMessage.Instance.ShowPrompt($"是否花费{price}罐罐购买1枚许愿薄荷？", () => _ = BuyOneColorMintWithCansAsync());
+        }
+
+        private async Task BuyOneColorMintWithCansAsync()
+        {
+            int price = GetColorMintPriceInCans();
+            Action<string> onPay = (string data) =>
+            {
+                if (data == "success")
+                {
+                    Global_Inventory_Manager.Change_Items_Count(new List<(string, int)> { (ColorMintItemName, 1) }, "罐罐购买许愿薄荷");
+                    PromptMessage.Instance.ShowUpPrompt("购买成功");
+                    EvtDsp.TriggerEvt(EvtNames.RefreshUI);
+                }
+                else if (data == "罐罐不足")
+                {
+                    PromptMessage.Instance.ShowPrompt("罐罐数量不足，是否前往充值页面？", () => PayPanel.Instance.OpenPanel());
+                }
+                else if (!string.IsNullOrEmpty(data))
+                {
+                    PromptMessage.Instance.ShowUpPrompt(data);
+                }
+            };
+            await MoneyManager.Instance.ChangeCurrency("罐罐", -price, "购买许愿薄荷", onPay);
         }
         private void BuyAllItems()
         {
@@ -136,6 +199,7 @@ namespace CLIP.Project_Mouse.UI
                     {
                         PromptMessage.Instance.ShowUpPrompt("购买成功");
                         Global_Inventory_Manager.Change_Items_Count(items, "商店购买");
+                        ExpManager.TempAddExpForRoomPlacementGains(items);
                         EvtDsp.TriggerEvt(EvtNames.RefreshUI);
                     }
                     else
@@ -241,50 +305,72 @@ namespace CLIP.Project_Mouse.UI
         }
         private void GachaOneBtn()
         {
-            _ = GachaOneAsync();
+            TryStartGacha(1);
         }
+
         private void GachaFiveBtn()
         {
-            _ = GachaFiveAsync();
+            TryStartGacha(5);
         }
-        private async Task GachaOneAsync()
+
+        private void TryStartGacha(int pullCount)
         {
-            Action<string> action = new Action<string>((string data) =>
+            int mintCost = GetMintCostForPullCount(pullCount);
+            int haveMint = GetColorMintHeld();
+            string pullLabel = pullCount == 1 ? "单" : "五";
+
+            if (haveMint >= mintCost)
             {
-                if (data == "罐罐不足")
+                PromptMessage.Instance.ShowPrompt($"是否花费{mintCost}枚许愿薄荷进行{pullLabel}次许愿？", () => CompleteGachaConsumingMint(pullCount, mintCost));
+                return;
+            }
+
+            int shortfall = mintCost - haveMint;
+            int cansPerMint = GetColorMintPriceInCans();
+            int cansNeeded = shortfall * cansPerMint;
+
+            PromptMessage.Instance.ShowPrompt(
+                $"许愿薄荷不足，是否花费{cansNeeded}罐罐购买{shortfall}枚许愿薄荷并进行{pullLabel}次许愿？",
+                () => _ = BuyMintWithCansThenGachaAsync(pullCount, mintCost, shortfall, cansNeeded));
+        }
+
+        private async Task BuyMintWithCansThenGachaAsync(int pullCount, int mintCost, int shortfall, int cansNeeded)
+        {
+            Action<string> onPay = (string data) =>
+            {
+                if (data == "success")
+                {
+                    Global_Inventory_Manager.Change_Items_Count(new List<(string, int)> { (ColorMintItemName, shortfall) }, "罐罐购买许愿薄荷");
+                    CompleteGachaConsumingMint(pullCount, mintCost);
+                }
+                else if (data == "罐罐不足")
+                {
+                    PromptMessage.Instance.ShowPrompt("罐罐数量不足，是否前往充值页面？", () => PayPanel.Instance.OpenPanel());
+                }
+                else if (!string.IsNullOrEmpty(data))
                 {
                     PromptMessage.Instance.ShowUpPrompt(data);
                 }
-                if (data == "success")
-                {
-                    List<int> item = GachaManager.Instance.Gacha_Multi_Pull(currentPool, 1);
-                    List<(string, int)> itemNames = item.Select(x => (Global_Inventory_Manager.GetItemInfo(x).name, 1)).ToList();
-
-                    UIManager.Instance.OpenPanel<RewardPanel>(itemNames);
-                    Global_Inventory_Manager.Change_Items_Count(itemNames);
-                }
-            });
-            await MoneyManager.Instance.ChangeCurrency("罐罐", -100, "抽奖", action);
-            //action.Invoke("success");
+            };
+            await MoneyManager.Instance.ChangeCurrency("罐罐", -cansNeeded, "购买许愿薄荷", onPay);
         }
-        private async Task GachaFiveAsync()
-        {
-            Action<string> action = new Action<string>((string data) =>
-            {
-                if (data == "罐罐不足")
-                {
-                    PromptMessage.Instance.ShowUpPrompt(data);
-                }
-                if (data == "success")
-                {
-                    List<int> item = GachaManager.Instance.Gacha_Multi_Pull(currentPool, 5);
-                    List<(string, int)> itemNames = item.Select(x => (Global_Inventory_Manager.GetItemInfo(x).name, 1)).ToList();
 
-                    UIManager.Instance.OpenPanel<RewardPanel>(itemNames);
-                    Global_Inventory_Manager.Change_Items_Count(itemNames);
-                }
-            });
-            await MoneyManager.Instance.ChangeCurrency("罐罐", -350, "抽奖", action);
+        private void CompleteGachaConsumingMint(int pullCount, int mintCost)
+        {
+            if (GetColorMintHeld() < mintCost)
+            {
+                PromptMessage.Instance.ShowUpPrompt("许愿薄荷数量不足");
+                return;
+            }
+
+            Global_Inventory_Manager.Change_Items_Count(new List<(string, int)> { (ColorMintItemName, -mintCost) }, "许愿");
+            List<int> item = GachaManager.Instance.Gacha_Multi_Pull(currentPool, pullCount);
+            List<(string, int)> itemNames = item.Select(x => (Global_Inventory_Manager.GetItemInfo(x).name, 1)).ToList();
+
+            UIManager.Instance.OpenPanel<RewardPanel>(itemNames);
+            Global_Inventory_Manager.Change_Items_Count(itemNames, "许愿");
+            ExpManager.TempAddExpForRoomPlacementGains(itemNames);
+            EvtDsp.TriggerEvt(EvtNames.RefreshUI);
         }
         #endregion
 
@@ -356,6 +442,7 @@ namespace CLIP.Project_Mouse.UI
             panelObj.SetActive(true);
             UIManager.Instance.GetPanel<ShoppingPanel>().InitCharacterCloth();
             curBtn = btnFirstClothes;
+            RefreshColorMintCountDisplay();
         }
         public void ClosePanel()
         {

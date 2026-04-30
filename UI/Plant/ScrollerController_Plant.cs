@@ -195,6 +195,13 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
         }
         if(_fertilizerItemList.Find(x => x.item_name == data.name) != null)
         {
+            var fertItem = Global_Inventory_Manager.GetItem(data.name);
+            int fertCount = fertItem != null ? fertItem._item_count : 0;
+            if (fertCount <= 0)
+            {
+                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "肥料数量不足");
+                return;
+            }
             EditManager.Instance.SetMode(new FertilizePlantMode(data.name));
         }
         if(_plantItemList.Find(x => x.item_name == data.name) != null)

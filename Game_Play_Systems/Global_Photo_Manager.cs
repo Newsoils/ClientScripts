@@ -75,8 +75,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         void Start()
         {
-            roomPhotoRT = new RenderTexture(Screen.width, Screen.height, 32);
-            roomPhotoRT.name = "RoomPhotoRT";
+            roomPhotoRT = RenderTextureCompatUtility.CreateCompatible(Screen.width, Screen.height, 24, true, "RoomPhotoRT");
+            dispatchPhotoRT = RenderTextureCompatUtility.EnsureCompatible(dispatchPhotoRT, "DispatchPhotoRT");
+            defaultPhotoRT = RenderTextureCompatUtility.EnsureCompatible(defaultPhotoRT, "DefaultPhotoRT");
 
             if (dispatchPhotoRT == null)
             {
@@ -446,11 +447,32 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             var sceneName = _dispatch_config.map_info_list[mapIndex - 1].map_Scene_Name;
 
-            PM_RM.load_scene_async(sceneName, (loadedScene) =>
-            {
-                var loadedCharacter = GameAssets.Instance.mainCharacter_Dispatch;
-                StartCoroutine(CaptureDispatchPhotoCo(photoInfo, loadedCharacter, saveDirectoryOverride));
-            });
+            StartCoroutine(BeginCaptureDispatchPhotoCo(sceneName, photoInfo, saveDirectoryOverride));
+        }
+
+        /// <summary>与 <see cref="SceneLoadingHelper"/> 一致：遮罩完全不透明后再 LoadScene，避免先看到子场景再过场。</summary>
+        private IEnumerator BeginCaptureDispatchPhotoCo(string sceneName, Photo_Info photoInfo, string saveDirectoryOverride)
+        {
+            bool maskReady = false;
+            void OnMaskReady() => maskReady = true;
+            EvtDsp.AddEvt(EvtNames.SceneLoading_MaskReady, OnMaskReady);
+            EvtDsp.TriggerEvt(EvtNames.SceneLoading_Open);
+
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!maskReady && Time.realtimeSinceStartup < deadline)
+                yield return null;
+
+            EvtDsp.RemoveEvt(EvtNames.SceneLoading_MaskReady, OnMaskReady);
+            if (!maskReady)
+                Debug.LogWarning("[Global_Photo_Manager] SceneLoading_MaskReady 超时，仍加载拍照子场景。");
+
+            bool sceneReady = false;
+            PM_RM.load_scene_async(sceneName, _ => { sceneReady = true; });
+            while (!sceneReady)
+                yield return null;
+
+            var loadedCharacter = GameAssets.Instance.mainCharacter_Dispatch;
+            yield return StartCoroutine(CaptureDispatchPhotoCo(photoInfo, loadedCharacter, saveDirectoryOverride));
         }
 
         private IEnumerator CaptureDispatchPhotoCo(Photo_Info photoInfo, GameObject loadedCharacter, string saveDirectoryOverride = null)
@@ -592,6 +614,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
 
             yield return null;
+
+            EvtDsp.TriggerEvt(EvtNames.SceneLoading_Close);
 
             string fileName = $"{photoInfo.photo_name}_{photoInfo.camera_id}_{System.DateTime.Now:yyyyMMdd_HHmmss}.png";
 

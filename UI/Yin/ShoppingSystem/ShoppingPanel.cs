@@ -49,6 +49,9 @@ namespace CLIP.Project_Mouse.NewFrame.UI
 
         private void Start()
         {
+            characterRT = RenderTextureCompatUtility.EnsureCompatible(characterRT, "ShoppingCharacterRT");
+            furnitureRT = RenderTextureCompatUtility.EnsureCompatible(furnitureRT, "ShoppingFurnitureRT");
+
             dailyMagazineObj = dailyMagazinePanel.gameObject;
             limitMagazineObj = limitMagazineUI.gameObject;
 

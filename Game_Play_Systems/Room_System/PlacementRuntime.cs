@@ -1,16 +1,8 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Emit;
-using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
-using CLIP.Framework_Unity.Asset;
-using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Scene_View_Control;
-using DG.Tweening;
-using Unity.Mathematics;
-
 using UnityEngine;
 
 namespace CLIP.Project_Mouse.Game_Play_System
@@ -31,6 +23,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         [Header("Render")]
         public List<Renderer> renderers = new();
+        private List<Collider> colliders = new();
         public Material normalMat;
 
 
@@ -40,7 +33,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
         private void Start()
         {
             //borderGenerator = GetComponentInChildren<PlacementBorderGenerator>();
-            renderers = GetComponentsInChildren<Renderer>().ToList();
+            renderers = GetComponentsInChildren<Renderer>(true).ToList();
+            colliders = GetComponentsInChildren<Collider>(true).ToList();
             Root = transform.Find("Root");
 
             ApplyRotation();
@@ -70,16 +64,21 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
         }
 
-
-
         //========================
         // Render Control
         //========================
 
         public void SetRenderState(bool visible)
         {
+            if (renderers.Count == 0)
+                renderers = GetComponentsInChildren<Renderer>(true).ToList();
+            if (colliders.Count == 0)
+                colliders = GetComponentsInChildren<Collider>(true).ToList();
+
             foreach (var r in renderers)
                 if (r) r.enabled = visible;
+            foreach (var c in colliders)
+                if (c) c.enabled = visible;
 
             foreach (var sub in subPlacements)
                 sub.SetRenderState(visible);

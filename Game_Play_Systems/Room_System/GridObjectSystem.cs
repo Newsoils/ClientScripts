@@ -12,7 +12,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
     public class GridObjectSystem : SingletonMono<GridObjectSystem>
     {
         public Placement_SO Placement_SO;
-
         public static Dictionary<int, Room_Placement_Info> InfoIdDic => Instance.Placement_SO.placementDic;
         public static Dictionary<string, Room_Placement_Info> InfoNameDic => Instance.Placement_SO.placementNameDic;
 
@@ -156,6 +155,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             {
                 room.AddPotToRoom(pot, gridLayerUId);
             }
+            obj.room = room;
             Global_Home_Room_Manager._instance.re_bake_navmesh();
         }
 
@@ -185,10 +185,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
             obj.ApplyPositon(room);
             obj.ApplyRotation();
+            obj.room = room;
         }
     
 
-        public static bool TryMoveObject(GridObject obj, Room room, string gridLayerUId, Int2 newPos, Int2 originalPosition)
+        public static bool TryMoveObject(GridObject obj, Room room, string gridLayerUId, Int2 newPos, string originalLayerUid, Int2 originalPosition)
         {
             //更新家具位置
             obj.data.position = newPos;
@@ -205,11 +206,62 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
                 //清除旧位置的占据数据，并刷新表现层
                 HashSet<Int2> originalPositions = CalculateOccpiedPos(obj, originalPosition);
-                var originalUids = room.GridState.SetOccupied(gridLayerUId, originalPositions, false);
+                var originalUids = room.GridState.SetOccupied(originalLayerUid, originalPositions, false);
                 EvtDsp.TriggerEvt<List<string>, MGridState>(EvtNames.Update_GridView_Occupy, originalUids, MGridState.Normal);
+
+                if (originalLayerUid != gridLayerUId)
+                {
+                    SyncMovedObjectLayerCache(obj, room, originalLayerUid, gridLayerUId);
+                }
+
                 Global_Home_Room_Manager._instance.re_bake_navmesh();
             }
              return canOccupy;
+        }
+
+        private static void SyncMovedObjectLayerCache(GridObject obj, Room room, string originalLayerUid, string newLayerUid)
+        {
+            if (obj is PlacementRuntime placement)
+            {
+                room.UnbindPlacementWallVisibility(placement, originalLayerUid);
+
+                if (room.gridLayerPlacementDic.TryGetValue(originalLayerUid, out var oldPlacements))
+                {
+                    oldPlacements?.Remove(placement);
+                }
+
+                if (!room.gridLayerPlacementDic.TryGetValue(newLayerUid, out var newPlacements) || newPlacements == null)
+                {
+                    newPlacements = new List<PlacementRuntime>();
+                    room.gridLayerPlacementDic[newLayerUid] = newPlacements;
+                }
+
+                if (!newPlacements.Contains(placement))
+                {
+                    newPlacements.Add(placement);
+                }
+
+                room.BindPlacementWallVisibility(placement, newLayerUid);
+            }
+
+            if (obj is Pot pot)
+            {
+                if (room.gridLayerPotDic.TryGetValue(originalLayerUid, out var oldPots))
+                {
+                    oldPots?.Remove(pot);
+                }
+
+                if (!room.gridLayerPotDic.TryGetValue(newLayerUid, out var newPots) || newPots == null)
+                {
+                    newPots = new List<Pot>();
+                    room.gridLayerPotDic[newLayerUid] = newPots;
+                }
+
+                if (!newPots.Contains(pot))
+                {
+                    newPots.Add(pot);
+                }
+            }
         }
 
         public static HashSet<Int2> CalculateOccpiedPos(GridObject placement, Int2 pos)
@@ -225,11 +277,17 @@ namespace CLIP.Project_Mouse.Game_Play_System
             return GridUtility.CalculateOccpiedPos(x, y, pos);
         }
 
-        public static void DeleteGridObject(GridObject obj, Room room, string gridLayerUId, Int2 pos)
+        public static bool DeleteGridObject(GridObject obj, Room room, string gridLayerUId, Int2 pos)
         {
-            if (obj == null || room == null || pos == null)
+            if (obj == null || room == null)
             {
                 Log.Error("有数据为空，删除placement失败");
+                return false;
+            }
+            if (obj is Pot potBlocked && PlantManager.Instance != null && PlantManager.Instance.GetPlantByPot(potBlocked) != null)
+            {
+                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "花盆里有植物时不能删除花盆，请先收获或铲除植物");
+                return false;
             }
             HashSet<Int2> occupiedPositions = CalculateOccpiedPos(obj, pos);
             obj.data.position = Int2.zero;
@@ -256,6 +314,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             Destroy(obj.gameObject);
             Global_Home_Room_Manager._instance.re_bake_navmesh();
+            return true;
         }
 
         public static void RotatePlacement()

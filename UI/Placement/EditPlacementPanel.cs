@@ -47,8 +47,8 @@ namespace CLIP.Project_Mouse.UI
         {
             if (curGridObject != null && RoomSystem.currentRoom != null)
             {
-                GridObjectSystem.DeleteGridObject(curGridObject, RoomSystem.currentRoom, curGridLayerUid, curGridObject.data.position);
-                //EditManager.Instance.ExitCurrentMode();
+                if (!GridObjectSystem.DeleteGridObject(curGridObject, RoomSystem.currentRoom, curGridLayerUid, curGridObject.data.position))
+                    return;
                 ClosePanel();
             }
             else
@@ -90,11 +90,23 @@ namespace CLIP.Project_Mouse.UI
                 //SetPanelPosition(new Vector3(pos.x, hitpos.y + height, pos.y));
 
                 SetPanelPosition(pos);
+                RefreshDeleteButtonState();
             }
             catch (Exception e)
             {
                 Log.Error(e.Message); 
             }
+        }
+
+        /// <summary>盆内有植物时不可删盆（用于隐藏删除钮与底层校验）。</summary>
+        private static bool IsPotDeleteBlocked(GridObject obj) =>
+            obj is Pot pot && PlantManager.Instance.GetPlantByPot(pot) != null;
+
+        /// <summary>盆内有植物时隐藏删除按钮（关掉），非盆或空盆照常显示。</summary>
+        private void RefreshDeleteButtonState()
+        {
+            bool showDelete = curGridObject == null || !IsPotDeleteBlocked(curGridObject);
+            BTN_Delete.gameObject.SetActive(showDelete);
         }
 
 
@@ -134,6 +146,8 @@ namespace CLIP.Project_Mouse.UI
             pos.y = Mathf.Clamp(pos.y, min.y, max.y);
 
             panelRoot.anchoredPosition = pos;
+            if (curGridObject != null)
+                RefreshDeleteButtonState();
         }
 
 

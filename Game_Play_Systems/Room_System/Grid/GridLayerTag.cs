@@ -1,7 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
 using CLIP.Project_Mouse.ENUM;
-using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
 
 /// <summary>
@@ -10,7 +7,6 @@ using UnityEngine;
 public class GridLayerTag : MonoBehaviour
 {
     public int LayerID;          // 使用场景内自增ID，便于阅读
-    //public string LayerName;
     public string LayerUID;     // 使用GUID，绝对唯一
 
     public RoomType roomType;
@@ -34,8 +30,10 @@ public class GridLayerTag : MonoBehaviour
                 placementPos = new Vector2(postionOnPlane.x, postionOnPlane.y);
                 break;
             case GridLayerType.Wall_W:
-            case GridLayerType.Wall_E:
                 placementPos = new Vector2(postionOnPlane.z, postionOnPlane.y);
+                break;
+            case GridLayerType.Wall_E:
+                placementPos = new Vector2(-postionOnPlane.z, postionOnPlane.y);
                 break;
         }
 

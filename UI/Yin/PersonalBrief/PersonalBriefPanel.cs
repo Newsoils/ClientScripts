@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
@@ -114,9 +115,10 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         {
             canchange = false;
 
+            // MainPanel：OnPerseonBriefOpen → ShowTopPanelOnly（关主功能条、隐藏种植侧按钮等）
+            EvtDsp.TriggerEvt(EvtNames.OnPerseonBriefOpen);
             obj.SetActive(true);
             InitPersonalBrief();
-            MainPanel.CloseMainFuncP();
             MainPanel.SetPhoneBTNEnable(false);
         }
 
@@ -135,14 +137,16 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         public override void ClosePanel()
         {
             obj.SetActive(false);
-            MainPanel.OpenMainFuncP();
-            MainPanel.SetPhoneBTNEnable(true);
             Global_Game_Manager.Instance._player_brief._brief_photo_selected = photoInfoList;
             Global_Game_Manager.Instance._player_brief._icon_info = currentIcon;
             Global_Game_Manager.Instance._player_brief._icon_frame_info = currentIconFrame;
             Global_Game_Manager.Instance._player_brief.achievements_pinned = achievementRecordList;
             Global_Game_Manager.Instance.on_upload_player_brief_to_server();
             // 上传相册照片到服务器
+
+            MainPanel.SetPhoneBTNEnable(true);
+            // MainPanel 已注册：OnPerseonBriefClose → ShowAll（含按房间 SwitchPlantMode / 恢复 MainFunction 右侧显隐）
+            EvtDsp.TriggerEvt(EvtNames.OnPerseonBriefClose);
         }
 
         #endregion

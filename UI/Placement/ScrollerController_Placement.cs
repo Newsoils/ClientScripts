@@ -51,7 +51,7 @@ public class ScrollerController_Placement : ScrollerController_GameItem<ScrollDa
     /// <param name="isAscending"></param>
     public void RefreshPanel(Placement_First_Category first_Category = Placement_First_Category.None,
         Placement_Second_Category second_Category = Placement_Second_Category.None,
-        string filterStr = "", InventorySortType sortType = InventorySortType.Rarity, bool isAscending = false)
+        string filterStr = "", InventorySortType sortType = InventorySortType.Rarity,bool isfavorive = false, bool isAscending = false)
     {
         //清理UI数据
         ClearData();
@@ -114,6 +114,12 @@ public class ScrollerController_Placement : ScrollerController_GameItem<ScrollDa
 
         // 6. 排序（此时 showData 已经是过滤后的结果）
         showData.SortByType(sortType, isAscending);
+
+        //如果是最爱分类，筛选下分类
+        if(isfavorive)
+        {
+            showData = showData.Where(i => i.is_favorite).ToList();
+        }
 
         // 7. 填充显示数据
         foreach (var item in showData)

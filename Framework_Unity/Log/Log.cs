@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Text;
 using UnityEngine;
 
 namespace CLIP.Framework_Unity
@@ -17,35 +15,23 @@ namespace CLIP.Framework_Unity
             Custom
         }
 
-        // 日志文件路径
-        private static string logFilePath;
-        //private static StreamWriter fileWriter;
-
         // 启动初始化
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Initialize()
         {
             Application.logMessageReceived += HandleUnityLog;
 
-            string logDir = Path.Combine(Application.persistentDataPath, "Logs");
-            if (!Directory.Exists(logDir)) Directory.CreateDirectory(logDir);
-
-            string time = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-            logFilePath = Path.Combine(logDir, $"log_{time}.txt");
-
-            //fileWriter = new StreamWriter(logFilePath, true, Encoding.UTF8)
-            //{
-            //    AutoFlush = true
-            //};
-
-            //Info($"<color=#00FF7F>[LogSystem] Initialized at {logFilePath}</color>");
             Info($"<color=#00FF7F>[LogSystem] Initialized </color>");
+            if (RollingDiskLog.Enable)
+            {
+                RollingDiskLog.EnsureInitialized();
+                RollingDiskLog.AppendLine(
+                    $"[LogSystem] Unity log mirror on, max {RollingDiskLog.MaxFileSizeBytes / (1024 * 1024)}MB → {RollingDiskLog.FilePath}");
+            }
         }
 
         private static void HandleUnityLog(string condition, string stackTrace, LogType type)
         {
-            //if (fileWriter == null) return;
-
             string prefix = type switch
             {
                 LogType.Error => "[ERROR]",
@@ -57,7 +43,7 @@ namespace CLIP.Framework_Unity
             };
 
             string logEntry = $"{DateTime.Now:HH:mm:ss} {prefix} {condition}\n{stackTrace}";
-            //fileWriter.WriteLine(logEntry);
+            RollingDiskLog.AppendLine(RemoveRichText(logEntry));
         }
 
         public static void Info(string msg) => Write(msg, LogLevel.Info);
@@ -122,10 +108,6 @@ namespace CLIP.Framework_Unity
                     break;
             }
 
-            // 文件输出去掉颜色标签
-            string plainText = RemoveRichText(formatted);
-            //fileWriter?.WriteLine($"{DateTime.Now:HH:mm:ss} [{level}] {plainText}");
-
             // 通知 UI
             LogEvent?.Invoke(level, formatted);
         }
@@ -141,8 +123,7 @@ namespace CLIP.Framework_Unity
         public static void Shutdown()
         {
             Application.logMessageReceived -= HandleUnityLog;
-            //fileWriter?.Close();
-            //fileWriter = null;
+            RollingDiskLog.Shutdown();
         }
     }
 }

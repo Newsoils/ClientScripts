@@ -51,6 +51,7 @@ public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
         DontDestroyOnLoad(this.gameObject);
 
         EvtDsp.AddEvt(EvtNames.Reconnect, Login);
+        EvtDsp.AddEvt(EvtNames.Resume_Silent_Relogin, SilentReloginAndTryLogin);
     }
 
     protected override void OnDestroy()
@@ -59,6 +60,7 @@ public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
         TapTapLogin.Instance.Logout();
 
         EvtDsp.RemoveEvt(EvtNames.Reconnect, Login);
+        EvtDsp.RemoveEvt(EvtNames.Resume_Silent_Relogin, SilentReloginAndTryLogin);
     }
 
     public void Login()
@@ -66,6 +68,38 @@ public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
         Debug.Log("登录！");
         _ = LoginAsync();
     }
+
+    /// <summary>
+    /// 主界面从后台/锁屏恢复时使用：尽量复用已有会话，不弹 UI，成功后重新向服务器发送 TryLogin。
+    /// </summary>
+    public async void SilentReloginAndTryLogin()
+    {
+        try
+        {
+            // 尽量复用已有账号会话（不主动拉起登录 UI）
+            TapTapAccount account = await TapTapLogin.Instance.GetCurrentTapAccount();
+            if (account != null)
+            {
+                unionId = account.unionId;
+                TapTapCompliance.Startup(unionId);
+                Login_Manager.Instance.TryLoginForResume(unionId, "123456");
+                return;
+            }
+
+            // 如果拿不到会话，再走一次登录流程（可能会弹 UI，具体取决于 SDK）
+            await LoginAsync();
+
+            if (!string.IsNullOrEmpty(unionId))
+            {
+                Login_Manager.Instance.TryLoginForResume(unionId, "123456");
+            }
+        }
+        catch (Exception exception)
+        {
+            Debug.Log($"SilentReloginAndTryLogin failed: {exception}");
+        }
+    }
+
     private async Task LoginAsync()
     {
         try

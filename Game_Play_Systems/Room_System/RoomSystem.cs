@@ -14,7 +14,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
     {
         public Room_SO Room_SO;
 
-        // RoomData system implementation goes here
         public Dictionary<string, RoomData> roomDataDic = new Dictionary<string, RoomData>();
         public Dictionary<string, RoomData> roomDataNameDic = new Dictionary<string, RoomData>();
 
@@ -32,10 +31,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public bool canSwitchRoom = true;
 
-        string testMsg = "{\"rooms\":[{\"roomType\":2,\"roomName\":\"浴室\",\"roomUID\":\"291fa79b-74f9-46f0-a11f-7cf8526cace9\",\"placementDatas\":[]}," +
-            "{\"roomType\":0,\"roomName\":\"卧室\",\"roomUID\":\"5df5ff7a-008c-4639-a850-085615c8fa49\",\"placementDatas\":[]},{\"roomType\":1," +
-            "\"roomName\":\"客厅\",\"roomUID\":\"09a813bb-da54-4987-a5ee-7b579fcd789a\",\"placementDatas\":[{\"UID\":\"f19a603b-015b-4743-937c-47c0b876fd20\"," +
-            "\"name\":\"原木简易床\",\"placementId\":10070,\"position\":{\"x\":2,\"y\":8},\"rotation\":\"Deg0\",\"gridLayerUID\":\"7ee20510-310b-4d76-bbd0-32be9f8acc86\",\"subInstanceIds\":[]}]}]}";
+        string testMsg = "{\"rooms\":[{\"roomType\":2,\"roomName\":\"娴村\",\"roomUID\":\"291fa79b-74f9-46f0-a11f-7cf8526cace9\",\"placementDatas\":[]}," +
+            "{\"roomType\":0,\"roomName\":\"鍗у\",\"roomUID\":\"5df5ff7a-008c-4639-a850-085615c8fa49\",\"placementDatas\":[]},{\"roomType\":1," +
+            "\"roomName\":\"瀹㈠巺\",\"roomUID\":\"09a813bb-da54-4987-a5ee-7b579fcd789a\",\"placementDatas\":[{\"UID\":\"f19a603b-015b-4743-937c-47c0b876fd20\"," +
+            "\"name\":\"鍘熸湪绠€鏄撳簥\",\"placementId\":10070,\"position\":{\"x\":2,\"y\":8},\"rotation\":\"Deg0\",\"gridLayerUID\":\"7ee20510-310b-4d76-bbd0-32be9f8acc86\",\"subInstanceIds\":[]}]}]}";
 
         void Start()
         {
@@ -49,7 +48,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 Debug.Log("Room_SO assigned,RoomSystem Init RoomStart");
             }
 
-            //从配置中读取房间数据
             foreach (var room in Room_SO.roomConfigs)
             {
                 RoomData roomData = new RoomData(room.RoomType, room.RoomName);
@@ -57,17 +55,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 roomDataNameDic[roomData.roomName] = roomData;
             }
 
-            //读取网格大小数据
             GenerateGridData();
-
             BindRoomMonos();
-
-            //var roomSaveData = Serialization_Provider.DeserializeObject<RoomSaveData>(testMsg);
-            //if (roomSaveData != null)
-            //{
-            //    if (roomSaveData != null) ResetStateFromData(roomSaveData);
-            //}
-
             SwitchRoom(RoomType.LivingRoom);
         }
 
@@ -82,7 +71,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
         }
 
-
         private void BindRoomMonos()
         {
             rooms = GetComponentsInChildren<Room>(true).ToList();
@@ -95,12 +83,12 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     continue;
                 }
 
-                // 类型校验（非常重要）
                 if (room.RoomType != data.roomType)
                 {
                     Log.Error($"[RoomSystem] Room type mismatch: {room.RoomName}");
                     continue;
                 }
+
                 room.Init(data);
                 roomDic[data.roomUID] = room;
                 roomNameDic[data.roomName] = room;
@@ -109,10 +97,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
             Debug.Log("[RoomSystem] BindRoomMonos finished");
         }
 
-
         /// <summary>
-        /// 从数据中加载房间状态（异步）。调用方务必 <c>await</c> 完成后再执行上传等依赖场景就绪的逻辑。
-        /// 内部会在全部家具/花盆创建后 <c>await InitPlant</c>（若已注册）。
+        /// 浠庢暟鎹腑鍔犺浇鎴块棿鐘舵€侊紙寮傛锛夈€傝皟鐢ㄦ柟鍔″繀 await 瀹屾垚鍚庡啀鎵ц涓婁紶绛変緷璧栧満鏅氨缁殑閫昏緫銆?
         /// </summary>
         public async Task ResetStateFromData(RoomSaveData saveData)
         {
@@ -122,72 +108,34 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 return;
             }
 
-            // ⭐ STEP 1：清空所有运行时家具
             GridObjectSystem.runtimeDic.Clear();
 
             foreach (var room in rooms)
             {
-                room.ClearAllPlacements(); // 你需要实现
+                room.ClearAllPlacements();
+                room.ClearAllPots();
                 room.GridState.ClearAll();
             }
 
             roomDataDic.Clear();
             roomDataNameDic.Clear();
+            roomDic.Clear();
+            roomNameDic.Clear();
 
-
-            //这里如果是首次会有问题，roomUID会被覆盖
-            // STEP 2：覆盖 RoomData
             foreach (var loadedRoom in saveData.rooms)
             {
                 RoomData roomData = new RoomData(loadedRoom.roomType, loadedRoom.roomName, loadedRoom.roomUID);
-                roomDataDic.Add(roomData .roomUID,roomData);
+                roomDataDic.Add(roomData.roomUID, roomData);
                 roomDataNameDic.Add(roomData.roomName, roomData);
 
-                // 深拷贝 special decoration IDs（无需重建实体，只记录 ID）
                 roomData.wallPlacementId = loadedRoom.wallPlacementId;
                 roomData.floorPlacementId = loadedRoom.floorPlacementId;
                 roomData.doorPlacementId = loadedRoom.doorPlacementId;
-
-                // 深拷贝 placementDatas（避免列表引用共享）
-                if (loadedRoom.placementDatas != null)
-                {
-                    foreach (var pd in loadedRoom.placementDatas)
-                    {
-                        roomData.placementDatas.Add(new PlacementData
-                        {
-                            UID = pd.UID,
-                            name = pd.name,
-                            placementId = pd.placementId,
-                            position = pd.position,
-                            rotation = pd.rotation,
-                            gridLayerUID = pd.gridLayerUID,
-                            subInstanceIds = new List<string>(pd.subInstanceIds)
-                        });
-                    }
-                }
-
-                if (loadedRoom.potDatas != null)
-                {
-                    foreach (var pod in loadedRoom.potDatas)
-                    {
-                        roomData.potDatas.Add(new PlacementData
-                        {
-                            UID = pod.UID,
-                            name = pod.name,
-                            placementId = pod.placementId,
-                            position = pod.position,
-                            rotation = pod.rotation,
-                            gridLayerUID = pod.gridLayerUID,
-                            subInstanceIds = new List<string>(pod.subInstanceIds)
-                        });
-                    }
-                }
             }
 
             GenerateGridData();
             BindRoomMonos();
 
-            // STEP 3：恢复特殊装饰（墙纸/地板/门），无需实体，直接读取材质
             foreach (var loadedRoom in saveData.rooms)
             {
                 if (!roomDic.TryGetValue(loadedRoom.roomUID, out var roomMono))
@@ -199,12 +147,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     if (info != null)
                         roomMono.RestoreSpecialDecoration(Placement_Second_Category.Wallpaper, loadedRoom.wallPlacementId.Value, info.res_url);
                 }
+
                 if (loadedRoom.floorPlacementId.HasValue)
                 {
                     var info = GridObjectSystem.GetPlacementInfo(loadedRoom.floorPlacementId.Value);
                     if (info != null)
                         roomMono.RestoreSpecialDecoration(Placement_Second_Category.Floor, loadedRoom.floorPlacementId.Value, info.res_url);
                 }
+
                 if (loadedRoom.doorPlacementId.HasValue)
                 {
                     var info = GridObjectSystem.GetPlacementInfo(loadedRoom.doorPlacementId.Value);
@@ -213,53 +163,72 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 }
             }
 
-            //STEP 4：重建所有 PlacementRuntime和Pot
-            foreach (var roomData in saveData.rooms)
+            foreach (var loadedRoom in saveData.rooms)
             {
-                if (!roomDic.TryGetValue(roomData.roomUID, out var roomMono))
+                if (!roomDic.TryGetValue(loadedRoom.roomUID, out var roomMono))
                     continue;
 
-                foreach (var pData in roomData.placementDatas)
+                if (loadedRoom.placementDatas != null)
                 {
-                    var runtime = await GridObjectSystem.CreatePlacement(pData.placementId);
-                    if (runtime == null)
-                        continue;
+                    foreach (var pData in loadedRoom.placementDatas)
+                    {
+                        var runtime = await GridObjectSystem.CreatePlacement(pData.placementId);
+                        if (runtime == null)
+                            continue;
 
-                    // ⭐ 恢复数据（关键）
-                    runtime.data.position = pData.position;
-                    runtime.data.rotation = pData.rotation;
-                    runtime.data.gridLayerUID = pData.gridLayerUID;
-                    runtime.info =
-                        GridObjectSystem.GetPlacementInfo(pData.placementId);
+                        runtime.data.UID = pData.UID;
+                        runtime.data.name = pData.name;
+                        runtime.data.placementId = pData.placementId;
+                        runtime.data.position = pData.position;
+                        runtime.data.rotation = pData.rotation;
+                        runtime.data.gridLayerUID = pData.gridLayerUID;
+                        runtime.data.subInstanceIds = pData.subInstanceIds != null
+                            ? new List<string>(pData.subInstanceIds)
+                            : new List<string>();
+                        runtime.info = GridObjectSystem.GetPlacementInfo(pData.placementId);
 
-                    //注册到系统（不要走 TryAdd）
-                    GridObjectSystem.RegisterGridObjectFromLoad(
-                        runtime,
-                        roomMono,
-                        pData.gridLayerUID,
-                        pData.position);
+                        GridObjectSystem.RegisterGridObjectFromLoad(
+                            runtime,
+                            roomMono,
+                            pData.gridLayerUID,
+                            pData.position);
+                    }
                 }
-                foreach (var potData in roomData.potDatas)
+
+                if (loadedRoom.potDatas != null)
                 {
-                    var runtime = await GridObjectSystem.CreatePot(potData.name);
-                    if (runtime == null)
-                        continue;
-                    runtime.data.UID = potData.UID;
-                    GridObjectSystem.RegisterGridObjectFromLoad(runtime, roomMono, potData.gridLayerUID, potData.position);
+                    foreach (var potData in loadedRoom.potDatas)
+                    {
+                        var runtime = await GridObjectSystem.CreatePot(potData.name);
+                        if (runtime == null)
+                            continue;
+
+                        runtime.data.UID = potData.UID;
+                        runtime.data.name = potData.name;
+                        runtime.data.placementId = potData.placementId;
+                        runtime.data.position = potData.position;
+                        runtime.data.rotation = potData.rotation;
+                        runtime.data.gridLayerUID = potData.gridLayerUID;
+                        runtime.data.subInstanceIds = potData.subInstanceIds != null
+                            ? new List<string>(potData.subInstanceIds)
+                            : new List<string>();
+
+                        GridObjectSystem.RegisterGridObjectFromLoad(
+                            runtime,
+                            roomMono,
+                            potData.gridLayerUID,
+                            potData.position);
+                    }
                 }
             }
 
-            // 等花盆场景与植物数据就绪（PlantManager.LoadPlant 为 async Task，只应在全部 Pot 注册后调用一次）
             var initPlantTask = EvtDsp.ReturnEvt<Task>(EvtNames.InitPlant);
             if (initPlantTask != null)
                 await initPlantTask;
 
             ResetRoomObjectRenderer();
-
-            //STEP 5：统一 rebake（非常重要）
             Global_Home_Room_Manager._instance.re_bake_navmesh();
             SwitchRoom(RoomType.LivingRoom);
-
         }
 
         public bool TryGetRoomData(string roomUID, out RoomData roomData)
@@ -318,6 +287,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 SwitchRoom(room);
             }
         }
+
         public void SwitchRoom(RoomType roomType)
         {
             var room = rooms.Where(r => r.RoomType == roomType).FirstOrDefault();
@@ -326,7 +296,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 SwitchRoom(room);
             }
         }
-
 
         public static Room GetRoomByFloorPosition(Vector3 position)
         {
@@ -337,9 +306,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
             return null;
         }
 
-        /// <summary>
-        /// 清除当前房间的所有家具和花盆，并刷新表现
-        /// </summary>
         public void Clear_All_Placement()
         {
             if (currentRoom == null)
@@ -348,57 +314,48 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 return;
             }
 
-            // 1. 清空运行时字典并收集需要处理的对象
             var uidsToRemove = new List<string>(GridObjectSystem.runtimeDic.Keys);
 
-            // 2. 清除当前房间的家具和花盆表现
             currentRoom.ClearAllPlacements();
             currentRoom.ClearAllPots();
 
-            // 3. 清空运行时字典
             foreach (var uid in uidsToRemove)
             {
                 GridObjectSystem.runtimeDic.Remove(uid);
             }
 
-            // 4. 清空当前房间的网格占据状态（保留网格结构）
             currentRoom.GridState.ClearAllOccupied();
 
-            // 5. 获取所有网格UID并触发刷新事件
             var allGridUids = currentRoom.GridState.GetAllGridUids();
             EvtDsp.TriggerEvt<List<string>, MGridState>(EvtNames.Update_GridView_Occupy, allGridUids, MGridState.Normal);
 
-            // 6. 重新烘焙导航网格
             Global_Home_Room_Manager._instance.re_bake_navmesh();
 
             Debug.Log($"[RoomSystem] Cleared all placements in room: {currentRoom.RoomName}");
         }
 
-        /// <summary>
-        /// 关掉其他房间里面的Placement和Pot的Renderer
-        /// </summary>
         public void ResetRoomObjectRenderer()
         {
-            foreach(var room in rooms)
+            foreach (var room in rooms)
             {
-                if(room != currentRoom)
+                if (room != currentRoom)
                 {
-                    foreach(var placment in room.placements)
+                    foreach (var placement in room.placements)
                     {
-                        placment.SetRenderState(false);
+                        placement.SetRenderState(false);
                     }
-                    foreach(var pot in room.pots)
+                    foreach (var pot in room.pots)
                     {
                         pot.SetRenderState(false);
                     }
                 }
                 else
                 {
-                    foreach(var placement in room.placements)
+                    foreach (var placement in room.placements)
                     {
                         placement.SetRenderState(true);
                     }
-                    foreach(var pot in room.pots)
+                    foreach (var pot in room.pots)
                     {
                         pot.SetRenderState(true);
                     }

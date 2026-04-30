@@ -33,10 +33,8 @@ namespace CLIP
                 {
                     EvtDsp.AddEvt(EvtNames.Dispatch_On_Start, OnDispatchStart);
                     EvtDsp.AddEvt(EvtNames.Dispatch_On_End, OnDispatchEnd);
-                    if (Dispatch_Manager._instance._player_dispatch_state.player_state == "On_Dispatch")
-                    {
-                        characterIcon.gameObject.SetActive(false);
-                    }
+                    EvtDsp.AddEvt(EvtNames.Dispatch_VisualsSync, ApplyDispatchVisualsFromManagerState);
+                    ApplyDispatchVisualsFromManagerState();
                 }
                 private void Update()
                 {
@@ -47,6 +45,7 @@ namespace CLIP
                     base.OnDestroy();
                     EvtDsp.RemoveEvt(EvtNames.Dispatch_On_Start, OnDispatchStart);
                     EvtDsp.RemoveEvt(EvtNames.Dispatch_On_End, OnDispatchEnd);
+                    EvtDsp.RemoveEvt(EvtNames.Dispatch_VisualsSync, ApplyDispatchVisualsFromManagerState);
                 }
                 #endregion
                 #region 面板开关
@@ -141,13 +140,19 @@ namespace CLIP
                 }
                 #endregion
                 #region 派遣
+                private void ApplyDispatchVisualsFromManagerState()
+                {
+                    bool onDispatch = Dispatch_Manager._instance._player_dispatch_state.player_state == "On_Dispatch";
+                    characterIcon.gameObject.SetActive(!onDispatch);
+                }
+
                 private void OnDispatchStart()
                 {
-                    characterIcon.gameObject.SetActive(false);
+                    ApplyDispatchVisualsFromManagerState();
                 }
                 private void OnDispatchEnd()
                 {
-                    characterIcon.gameObject.SetActive(true);
+                    ApplyDispatchVisualsFromManagerState();
                 }
                 #endregion
             }

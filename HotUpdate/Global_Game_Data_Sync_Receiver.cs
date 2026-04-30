@@ -21,6 +21,9 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
     private GameItem_DB_SO _inventorySO;
     private Dictionary<string, TaskCompletionSource<string>> responseTasks = new Dictionary<string, TaskCompletionSource<string>>();
 
+
+    private bool _inventoryInitialSyncCompleted = false;
+
     private const string ReceiverName = "Global_Game_Manager";
 
     #region Unity Life Cycle
@@ -234,6 +237,13 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
     {
         if (_inventorySO == null) return;
 
+        //等待从服务器拉取完毕后，才可以向服务器传输物品栏，防止错误的覆盖服务器数据
+        if (!_inventoryInitialSyncCompleted)
+        {
+            Log.Info("Inventory initial sync not completed yet, postpone upload.");
+            return;
+        }
+
         string dataJson = Global_Inventory_Manager.Inventory_Serialization();
         string lastJson = GF_SP.SerializeObject(new List<string>() { "Game_Inventory", dataJson });
 
@@ -286,12 +296,14 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
     public void On_Login_Success()
     {
         _networkCenter._connect_to_player_server = true;
-
         StartCoroutine(LoginSequence());
     }
 
     private IEnumerator LoginSequence()
     {
+        yield return new WaitForSeconds(1.024f);
+        UpdateInventoryFromServer();
+
         yield return new WaitForSeconds(1.024f);
         UpdateWeatherStateFromServer();
 
@@ -364,6 +376,7 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         switch (key)
         {
             case "Game_Inventory":
+                _inventoryInitialSyncCompleted = true;
                 _inventoryManager?.Load_Data_From_Json(payload);
                 break;
 
@@ -382,6 +395,7 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
                 break;
         }
     }
+
 
     #endregion
 

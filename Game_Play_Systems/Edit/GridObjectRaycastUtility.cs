@@ -39,7 +39,6 @@ public static class GridObjectRaycastUtility
         out Vector3 alignPos,
         out Int2 gridPos)
     {
-
         //foreach (var hit in hits)
         //{
         //    Debug.Log("打到物体： " + hit.collider.gameObject.name);
@@ -69,21 +68,32 @@ public static class GridObjectRaycastUtility
                 continue;
 
             var (x, y) = selected.GetCurSize();
-
-            var pos = hit.point - new Vector3(x / 2f, 0, y / 2f);
+            var pos = hit.point;
+            switch (tag.gridLayerType)
+            {
+                case GridLayerType.Floor:
+                case GridLayerType.Ceiling:
+                case GridLayerType.Surface:
+                    pos -= new Vector3(x / 2f, 0, y / 2f);
+                    break;
+                case GridLayerType.Wall_N:
+                case GridLayerType.Wall_S:
+                    //pos -= new Vector3(x / 2f, y / 2f, 0);
+                    pos.z = tag.girdOrginalPoint.position.z - selected.gridData.width;
+                    break;
+                case GridLayerType.Wall_W:
+                case GridLayerType.Wall_E:
+                    //pos -= new Vector3(0, y / 2f, x / 2f);
+                    pos.x = tag.girdOrginalPoint.position.z - selected.gridData.width;
+                    break;
+            }
 
             GridUtility.CalculateGridPosition(tag, pos, out alignPos, out gridPos);
-            //Debug.Log("POs" + pos + "alignPos" + alignPos);
+            Debug.Log("POs" + pos +"\t"+ "alignPos" + alignPos + "\t" + "gridPos" +gridPos);
             gridTag = tag;
 
             return true;
         }
-
-
         return false;
-
-
     }
-
-
 }

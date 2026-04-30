@@ -3,7 +3,6 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using CLIP.Framework_Core.Event;
-using CLIP.Framework_Unity.Asset;
 using CLIP.Framework_Unity;
 
 namespace CLIP.Project_Mouse.Game_Play_System
@@ -25,13 +24,25 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
 
             _onSceneLoaded = onLoaded;
-            EvtDsp.TriggerEvt(EvtNames.SceneLoading_Open);
             StartCoroutine(LoadSceneCoroutine(sceneName));
         }
 
         private IEnumerator LoadSceneCoroutine(string sceneName)
         {
-            yield return new WaitForSeconds(0.05f);
+            bool maskReady = false;
+            void OnMaskReady() => maskReady = true;
+
+            EvtDsp.AddEvt(EvtNames.SceneLoading_MaskReady, OnMaskReady);
+            EvtDsp.TriggerEvt(EvtNames.SceneLoading_Open);
+
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (!maskReady && Time.realtimeSinceStartup < deadline)
+                yield return null;
+
+            EvtDsp.RemoveEvt(EvtNames.SceneLoading_MaskReady, OnMaskReady);
+
+            if (!maskReady)
+                Debug.LogWarning("[SceneLoadingHelper] SceneLoading_MaskReady 超时或未触发（检查 SceneLoadingPanel 是否已注册），仍继续加载场景。");
 
             var asyncOp = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
             if (asyncOp == null)

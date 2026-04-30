@@ -26,6 +26,8 @@ public class PhotoManager : SingletonMono<PhotoManager>
     [SerializeField] private string photoPath;
     private void Start()
     {
+        dispatchPhotoTexture = RenderTextureCompatUtility.EnsureCompatible(dispatchPhotoTexture, "DispatchPhotoTexture");
+
         string info = JsonData_Manager.Load_Single_JsonData("project_mouse_tb_photo_info");
         photoInfos = JsonConvert.DeserializeObject<List<Photo_Info>>(info);
         DontDestroyOnLoad(gameObject);
@@ -219,4 +221,3 @@ public class PhotoManager : SingletonMono<PhotoManager>
         return task;
     }
 }
-

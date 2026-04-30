@@ -73,6 +73,8 @@ public class PlantInteractPanel : UIPanelBase
     }
     public override void OpenPanel(params object[] data)
     {
+        // ShowAll+SwitchPlantMode 会再次 OpenPanel；清掉上次的盆阶段气泡，避免叠在其它全屏 UI 上
+        ClosePlantPops();
         panelObj.SetActive(true);
     }
     private void ShowSeedPops(PlantData data)

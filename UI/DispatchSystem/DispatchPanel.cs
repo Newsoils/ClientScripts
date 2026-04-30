@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
@@ -52,11 +53,17 @@ public class DispatchPanel : UIPanelBase
     public GameObject Bag3StateIcon1;
     public GameObject Bag3StateIcon2;
     public Button confirmButton;
-    [Header("确认打包按钮高亮图 派遣新增_确认打包")]
-    public Sprite confirmButtonHighlightSprite;
-    private Sprite confirmButtonNormalSprite;
+    [Header("确认打包三态：空背包 / 未满三格 / 满三格")]
+    [Tooltip("派遣新增_不可点击")]
+    public Sprite confirmButtonDisabledSprite;
+    [Tooltip("派遣新增_确认打包_非高亮（白突起，1～2 格有物）")]
+    public Sprite confirmButtonPartialSprite;
+    [Tooltip("派遣新增_确认打包（绿突起，三格齐）")]
+    public Sprite confirmButtonFullSprite;
     private int curBagIndex;
+    /// <summary>进入「选物」时从 dispatch_Bags 复制；确认打包前不改动 Manager 里对应槽位。</summary>
     private DispatchBagInfo curBagInfo;
+    private readonly List<DispatchBagInfo> _bagsViewForWarehouse = new List<DispatchBagInfo>(8);
 
     public int CurrentBagIndex => curBagIndex;
 
@@ -91,11 +98,6 @@ public class DispatchPanel : UIPanelBase
         popUpObj.SetActive(false);
         popOriginPosition = popUpObj.GetComponent<RectTransform>().anchoredPosition;
         scrollerOriginPosition = confirmAndScroller.anchoredPosition;
-
-        if (confirmButton != null && confirmButton.image != null)
-        {
-            confirmButtonNormalSprite = confirmButton.image.sprite;
-        }
 
         animation_Player = procedurePlayAnimation.GetComponentInChildren<UIFrameAnimation>();
 
@@ -161,6 +163,10 @@ public class DispatchPanel : UIPanelBase
 
     public override void OnDestroy()
     {
+        if (Dispatch_Manager._instance != null)
+        {
+            Dispatch_Manager._instance.ClearDispatchModelPreview();
+        }
         Bag1Button.onClick.RemoveAllListeners();
         Bag2Button.onClick.RemoveAllListeners();
         Bag3Button.onClick.RemoveAllListeners();
@@ -177,9 +183,44 @@ public class DispatchPanel : UIPanelBase
     private void SwitchBag(int bagIndex)
     {
         //Dispatch_Manager.Instance.SwitchBag(bagIndex);
-        curBagInfo = Dispatch_Manager._instance.dispatch_Bags[bagIndex];
-        SwitchProcedure(Procedure_Dispatch.SelectFood);
         curBagIndex = bagIndex;
+        var src = Dispatch_Manager._instance.dispatch_Bags[bagIndex];
+        curBagInfo = src == null
+            ? new DispatchBagInfo()
+            : new DispatchBagInfo
+            {
+                foodName = src.foodName,
+                snackName = src.snackName,
+                tapeName = src.tapeName,
+                isPacked = src.isPacked
+            };
+        Dispatch_Manager._instance.SetDispatchModelPreview(curBagIndex, curBagInfo);
+        SwitchProcedure(Procedure_Dispatch.SelectFood);
+    }
+
+    /// <summary>选物界面预览 / CD 高亮：与 <see cref="Dispatch_Manager.GetBagForModelPreview"/> 一致。</summary>
+    public DispatchBagInfo GetPreviewBagInfo(int bagIndex)
+    {
+        return Dispatch_Manager._instance.GetBagForModelPreview(bagIndex);
+    }
+
+    /// <summary>仓库格占用数：全列表里当前背包项用 curBagInfo，其余用 dispatch_Bags。</summary>
+    public IReadOnlyList<DispatchBagInfo> GetBagsViewForWarehouse()
+    {
+        _bagsViewForWarehouse.Clear();
+        var bags = Dispatch_Manager._instance.dispatch_Bags;
+        for (int i = 0; i < bags.Count; i++)
+        {
+            if (i == curBagIndex && curBagInfo != null)
+            {
+                _bagsViewForWarehouse.Add(curBagInfo);
+            }
+            else
+            {
+                _bagsViewForWarehouse.Add(bags[i]);
+            }
+        }
+        return _bagsViewForWarehouse;
     }
 
     public void SwitchProcedure(Procedure_Dispatch procedure, bool playAnimation = true)
@@ -216,6 +257,7 @@ public class DispatchPanel : UIPanelBase
         switch (procedure)
         {
             case Procedure_Dispatch.SelectBag:
+                Dispatch_Manager._instance.ClearDispatchModelPreview();
                 procedureSelectBag.SetActive(true);
                 exitDispatchButton.onClick.RemoveAllListeners();
                 exitDispatchButton.onClick.AddListener(() =>
@@ -316,7 +358,45 @@ public class DispatchPanel : UIPanelBase
         }
         RefreshPanel();
         RefreshDispatchModel();
+        if (scrollerController_Dispatch_Food != null && scrollerController_Dispatch_Food.gameObject.activeInHierarchy)
+        {
+            scrollerController_Dispatch_Food.ReloadCurrentIfLoaded();
+        }
     }
+
+    /// <summary>
+    /// 从当前编辑背包撤回该槽位物品（仅本地派遣数据，不立刻改仓库库存）。
+    /// </summary>
+    public void ClearDispatchSlot(Item_Type type)
+    {
+        if (curBagInfo == null)
+        {
+            return;
+        }
+
+        switch (type)
+        {
+            case Item_Type.Food:
+                curBagInfo.foodName = null;
+                break;
+            case Item_Type.Snack:
+                curBagInfo.snackName = null;
+                break;
+            case Item_Type.Tape:
+                curBagInfo.tapeName = null;
+                break;
+            default:
+                return;
+        }
+
+        RefreshPanel();
+        RefreshDispatchModel();
+        if (scrollerController_Dispatch_Food != null && scrollerController_Dispatch_Food.gameObject.activeInHierarchy)
+        {
+            scrollerController_Dispatch_Food.ReloadCurrentIfLoaded();
+        }
+    }
+
     private IEnumerator PlayAnimation(string triggerName, string animationName)
     {
         animator.SetBool(triggerName, true);
@@ -332,7 +412,7 @@ public class DispatchPanel : UIPanelBase
     }
     public void RefreshPanel()
     {
-        var current_info = Dispatch_Manager._instance.dispatch_Bags[curBagIndex];
+        var current_info = curBagInfo;
         if (string.IsNullOrEmpty(current_info.foodName))
         {
             AddFoodImage.SetActive(true);
@@ -358,29 +438,58 @@ public class DispatchPanel : UIPanelBase
             AddCDImage.SetActive(false);
         }
 
-        RefreshConfirmButtonHighlight(current_info);
+        RefreshConfirmButtonState(current_info);
     }
 
-    // 三个物品（food / snack / tape）都装填后，确认按钮才切到高亮 sprite
-    private void RefreshConfirmButtonHighlight(DispatchBagInfo info)
+    private static int CountFilledDispatchSlots(DispatchBagInfo info)
+    {
+        if (info == null)
+        {
+            return 0;
+        }
+
+        int n = 0;
+        if (!string.IsNullOrEmpty(info.foodName))
+        {
+            n++;
+        }
+
+        if (!string.IsNullOrEmpty(info.snackName))
+        {
+            n++;
+        }
+
+        if (!string.IsNullOrEmpty(info.tapeName))
+        {
+            n++;
+        }
+
+        return n;
+    }
+
+    /// <summary>0 格扁平不可点；1～2 格白突起；3 格绿突起。均可点态下点击即写入 Manager，仍可在本页替换物品。</summary>
+    private void RefreshConfirmButtonState(DispatchBagInfo info)
     {
         if (confirmButton == null || confirmButton.image == null)
         {
             return;
         }
 
-        bool isFull = info != null
-                      && !string.IsNullOrEmpty(info.foodName)
-                      && !string.IsNullOrEmpty(info.snackName)
-                      && !string.IsNullOrEmpty(info.tapeName);
-
-        if (isFull && confirmButtonHighlightSprite != null)
+        int filled = CountFilledDispatchSlots(info);
+        if (filled <= 0)
         {
-            confirmButton.image.sprite = confirmButtonHighlightSprite;
+            confirmButton.interactable = false;
+            confirmButton.image.sprite = confirmButtonDisabledSprite;
         }
-        else if (confirmButtonNormalSprite != null)
+        else if (filled < 3)
         {
-            confirmButton.image.sprite = confirmButtonNormalSprite;
+            confirmButton.interactable = true;
+            confirmButton.image.sprite = confirmButtonPartialSprite;
+        }
+        else
+        {
+            confirmButton.interactable = true;
+            confirmButton.image.sprite = confirmButtonFullSprite;
         }
     }
     private void ShowScroller()
@@ -465,20 +574,15 @@ public class DispatchPanel : UIPanelBase
     }
     private void SetPackState()
     {
-        if(string.IsNullOrEmpty(curBagInfo.foodName)||string.IsNullOrEmpty(curBagInfo.snackName))
+        if (CountFilledDispatchSlots(curBagInfo) <= 0)
         {
-            ShowPopUp("食物或幸运小物未装填，打包失败！");
             return;
         }
 
         ShowPopUp("打包​完毕，​小苔随时​可能​出门​哦！");
         Dispatch_Manager._instance.SetBagContent(curBagIndex, curBagInfo);
 
-        // 三样齐全（= 确认按钮处于高亮态）时，直接跳回选择背包界面，不播放过渡动画
-        bool isFullyPacked = !string.IsNullOrEmpty(curBagInfo.foodName)
-                             && !string.IsNullOrEmpty(curBagInfo.snackName)
-                             && !string.IsNullOrEmpty(curBagInfo.tapeName);
-        if (isFullyPacked)
+        if (CountFilledDispatchSlots(curBagInfo) >= 3)
         {
             SwitchProcedure(Procedure_Dispatch.SelectBag, false);
         }
