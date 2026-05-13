@@ -38,7 +38,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public RawImage _output_image;
         public WebSocket ws;
 
-        public bool use_local = true;
+        public bool use_local = false;
 
         [Header("Event")]
         public float _on_connection_close_delay = 5f;
@@ -56,6 +56,12 @@ namespace CLIP.Project_Mouse.Game_Play_System
         [SerializeField] private float _resume_relogin_debounce_seconds = 2.0f;
         private float _last_resume_relogin_time = -999f;
         private Coroutine _resume_relogin_coroutine;
+        [SerializeField] private float _resume_suppress_disconnect_prompt_seconds = 12.0f;
+        private float _suppress_disconnect_prompt_until = -999f;
+        public bool IsAppPaused { get; private set; }
+        public bool IsReconnecting => _is_connecting;
+        public bool ShouldSuppressDisconnectPrompts =>
+            IsAppPaused || !Application.isFocused || Time.unscaledTime < _suppress_disconnect_prompt_until || IsReconnecting;
         void Awake()
         {
             if (instance == null)
@@ -106,14 +112,23 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         private void OnApplicationPause(bool pauseStatus)
         {
+            IsAppPaused = pauseStatus;
             if (!pauseStatus)
             {
+                _suppress_disconnect_prompt_until = Time.unscaledTime + _resume_suppress_disconnect_prompt_seconds;
                 TryResumeReloginIfNeeded("OnApplicationPause(false)");
             }
         }
 
         private void OnApplicationFocus(bool hasFocus)
         {
+            if (!hasFocus)
+            {
+                IsAppPaused = true;
+                return;
+            }
+            IsAppPaused = false;
+            _suppress_disconnect_prompt_until = Time.unscaledTime + _resume_suppress_disconnect_prompt_seconds;
             if (hasFocus)
             {
                 TryResumeReloginIfNeeded("OnApplicationFocus(true)");
@@ -230,6 +245,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         private void TriggerOriginalServerConnectionFailed()
         {
+            // 退后台/失焦期间的短暂断开很常见：不要弹“断线”打断玩家，等恢复后再由重连/恢复流程处理
+            if (IsAppPaused || !Application.isFocused) return;
+            // 恢复前台后的宽限期内，优先静默重连，不要立刻弹窗打断玩家
+            if (Time.unscaledTime < _suppress_disconnect_prompt_until) return;
             EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "服务器连接失败，请检查网络设置！", null);
         }
 
@@ -277,7 +296,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
         private void TryReconnectAfterLoginCoroutine()
         {
             StopReconnectAttempts();
-            _reconnect_coroutine = StartCoroutine(AttemptReconnectLoop(_max_reconnect_attempts_after_login, showSuccessPrompt: false, onFinalFail: TriggerOriginalServerConnectionFailed));
+            bool inResumeGrace = Time.unscaledTime < _suppress_disconnect_prompt_until;
+            int attempts = inResumeGrace ? _max_reconnect_attempts : _max_reconnect_attempts_after_login;
+            Action onFail = inResumeGrace ? null : TriggerOriginalServerConnectionFailed;
+            _reconnect_coroutine = StartCoroutine(AttemptReconnectLoop(attempts, showSuccessPrompt: false, onFinalFail: onFail));
         }
 
         private IEnumerator AttemptReconnectLoop(int maxAttempts, bool showSuccessPrompt, Action onFinalFail)

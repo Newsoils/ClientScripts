@@ -117,7 +117,7 @@ public class FriendChatPanel : MonoBehaviour
 
         var socialPanel = UIManager.Instance.GetPanel<SocialPanel>();
         if (socialPanel != null)
-            socialPanel.OpenPanel();
+            socialPanel.SwitchTab(SocialTab.Friends);
     }
 
     #endregion

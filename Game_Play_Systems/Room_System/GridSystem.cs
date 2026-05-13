@@ -80,6 +80,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
             {
                 OpenGridView(room, layertype);
             }
+
+            if (CameraManager.Instance.State == CameraState.PlacementFrontView)
+            {
+                RefreshWallGridFacing(Camera.main.transform.forward);
+            }
         }
 
 
@@ -117,6 +122,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 ob.name = $"{room.RoomType}_{layerType}_LayerID:{layer.id} _{mGrid.pos.x}_{mGrid.pos.y}";
 
                 mGridView.UId = mGrid.UId;
+                mGridView.LayerUid = tag.LayerUID;
+                mGridView.SetActive(true);
                 Instance.gridDic[mGrid.UId] = mGridView;
             }
 
@@ -141,6 +148,37 @@ namespace CLIP.Project_Mouse.Game_Play_System
             else
             {
                 Debug.LogError($"No GridLayerTag found for room type {room.RoomType} and layertype type {layerType}");
+            }
+        }
+
+        /// <summary>
+        /// 平视视角下，按相机朝向过滤墙面格子：只显示朝向相机的墙上的格子。
+        /// 非墙层格子不受影响。
+        /// </summary>
+        public static void RefreshWallGridFacing(Vector3 cameraForward)
+        {
+            var room = RoomSystem.currentRoom;
+            if (room == null) return;
+
+            Vector3 camDir = cameraForward;
+            camDir.y = 0f;
+            if (camDir.sqrMagnitude < 1e-6f) return;
+            camDir.Normalize();
+
+            foreach (var gridView in Instance.gridDic.Values)
+            {
+                if (gridView == null) continue;
+
+                if (!room.wallsMap.TryGetValue(gridView.LayerUid, out var wall))
+                    continue;
+
+                Vector3 wallFront = wall._wall_front;
+                wallFront.y = 0f;
+                if (wallFront.sqrMagnitude < 1e-6f) continue;
+                wallFront.Normalize();
+
+                float dot = Vector3.Dot(wallFront, camDir);
+                gridView.SetActive(dot >= wall._disappear_value);
             }
         }
 

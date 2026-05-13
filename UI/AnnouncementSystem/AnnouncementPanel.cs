@@ -7,7 +7,7 @@ using TMPro;
 using UnityEngine;
 
 
-namespace CLIP.Project_Mouse.NewFrame.UI
+namespace CLIP.Project_Mouse.UI
 {
     public class AnnouncementPanel : UIPanelBase
     {

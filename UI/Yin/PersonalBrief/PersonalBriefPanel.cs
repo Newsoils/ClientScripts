@@ -1,17 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
-using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
-using CLIP.Project_Mouse.UI;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace CLIP.Project_Mouse.NewFrame.UI
+namespace CLIP.Project_Mouse.UI
 {
     public class PersonalBriefPanel : UIPanelBase
     {
@@ -158,41 +155,74 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         private void InitPersonalBrief()
         {
             CloseChangeName();
-            // 经验值和等级
-            nameText.text = Global_Game_Manager.Instance._player_brief._player_nick_name;
-            idText.text = Global_Game_Manager.Instance._current_player_id;
-            expLevelText.text = ExpManager.instance.curLevel.ToString();
-            expSlider.value = 0;
-            if (ExpManager.instance.curLevelInfo == null || ExpManager.instance.curLevelInfo.nextLevelExp == 0)
+            var ggm = Global_Game_Manager.Instance;
+            var brief = ggm?._player_brief;
+            if (brief != null)
             {
-                expSlider.value = 0;
+                if (nameText != null) nameText.text = brief._player_nick_name ?? "";
+                if (idText != null) idText.text = ggm._current_player_id ?? "";
+                currentIcon = brief._icon_info;
+                currentIconFrame = brief._icon_frame_info;
             }
             else
             {
-                expSlider.value =  ExpManager.instance.curExp * 1f / ExpManager.instance.curLevelInfo.nextLevelExp;
+                if (nameText != null) nameText.text = "";
+                if (idText != null) idText.text = "";
             }
 
-            expText.text = $"{ExpManager.instance.curExp}/{ExpManager.instance.curLevelInfo.nextLevelExp}";
+            RefreshExpUi();
+            if (ExpManager.instance == null)
+                StartCoroutine(RefreshExpUiWhenReady());
 
-            currentIcon = Global_Game_Manager.Instance._player_brief._icon_info;
-            currentIconFrame = Global_Game_Manager.Instance._player_brief._icon_frame_info;
-            // 加载头像
-            // 加载头像框
             InitAchievements();
             InitPhotos(imageList);
+        }
+
+        private void RefreshExpUi()
+        {
+            var exp = ExpManager.instance;
+            if (expLevelText != null)
+                expLevelText.text = exp != null ? exp.curLevel.ToString() : "-";
+
+            if (expSlider != null)
+            {
+                expSlider.value = 0f;
+                if (exp != null && exp.curLevelInfo != null && exp.curLevelInfo.nextLevelExp > 0)
+                    expSlider.value = exp.curExp * 1f / exp.curLevelInfo.nextLevelExp;
+            }
+
+            if (expText != null)
+            {
+                if (exp != null && exp.curLevelInfo != null)
+                    expText.text = $"{exp.curExp}/{exp.curLevelInfo.nextLevelExp}";
+                else
+                    expText.text = "-/-";
+            }
+        }
+
+        private IEnumerator RefreshExpUiWhenReady()
+        {
+            int guard = 0;
+            while (ExpManager.instance == null && guard++ < 300)
+                yield return null;
+            RefreshExpUi();
         }
 
         // 初始化成就
         private void InitAchievements()
         {
-            achievementRecordList = Global_Game_Manager.Instance._player_brief.achievements_pinned;
+            var brief = Global_Game_Manager.Instance?._player_brief;
+            if (brief == null) return;
+            achievementRecordList = brief.achievements_pinned;
             StartCoroutine(LoadAchievementIconFromAchievementList());
         }
 
         // 初始化照片
         private void InitPhotos(List<RawImage> imageList)
         {
-            photoInfoList = Global_Game_Manager.Instance._player_brief._brief_photo_selected;
+            var brief = Global_Game_Manager.Instance?._player_brief;
+            if (brief == null) return;
+            photoInfoList = brief._brief_photo_selected;
             StartCoroutine(LoadImagesFromPhotoInfoList(imageList));
         }
 

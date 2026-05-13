@@ -1,18 +1,19 @@
 using System.Collections;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
+using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Kernel;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.InputSystem;
 using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
 
 namespace CLIP.Project_Mouse.Game_Play_System
 {
-    public class NPCManager : MonoBehaviour
+    public class NPCManager : SingletonMono<NPCManager>
     {
-        public static NPCManager instance;
 
         //NPC数据
         [SerializeField]
@@ -24,9 +25,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
         /// Key = 好感度等级，Value = 升级所需经验值
         /// </summary>
         public Dictionary<int, int> NPCFavor_LevelUp_neededExp = new Dictionary<int, int>();
-
-        //[SerializeField]
-        //public NPC_Data_SO _NPC_Data_SO;
 
         //传给TS层的事件
         public UnityEvent<string> on_Meet_NPC;
@@ -44,19 +42,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public UnityEvent<string> receive_NPC_Gift_TO_Player;
 
-        private void Awake()
-        {
-            if (instance == null)
-            {
-                instance = this;
-            }
-            DontDestroyOnLoad(this.gameObject);
-
-            JsonData_Manager.Load_NPC_static_Data(out NPC_Info_Dict, out NPC_Base_Dict, out NPCFavor_LevelUp_neededExp);
-        }
 
         void Start()
         {
+            DontDestroyOnLoad(this.gameObject);
+
+            JsonData_Manager.LoadNPCData(out NPC_Info_Dict, out NPC_Base_Dict, out NPCFavor_LevelUp_neededExp);
+            NPCChatManager.Instance.Initialize();
+
             EvtDsp.AddEvt<int>(EvtNames.Meet_NPC, Meet_NPC);
             EvtDsp.AddEvt<int, Item_Type>(EvtNames.Give_Gift_TO_NPC, Give_Gift_To_NPC);
 
@@ -69,24 +62,24 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             //测试代码
 
-            //var keyboard = Keyboard.current;
-            //if (keyboard == null) return;
+            var keyboard = Keyboard.current;
+            if (keyboard == null) return;
 
-            //if (keyboard.mKey.wasPressedThisFrame)
-            //{
-            //    int randomNPCId = Random.Range(1, NPC_Base_Dict.Count + 1);
-            //    EvtDsp.TriggerEvt<int>(EvtNames.Meet_NPC, randomNPCId);
-            //}
+            if (keyboard.mKey.wasPressedThisFrame)
+            {
+                int randomNPCId = Random.Range(1, NPC_Base_Dict.Count + 1);
+                EvtDsp.TriggerEvt<int>(EvtNames.Meet_NPC, randomNPCId);
+            }
 
-            //if (keyboard.gKey.wasPressedThisFrame)
-            //{
-            //    EvtDsp.TriggerEvt<int, Item_Type>(EvtNames.Give_Gift_TO_NPC, 1, Item_Type.Pot);
-            //}
+            if (keyboard.gKey.wasPressedThisFrame)
+            {
+                EvtDsp.TriggerEvt<int, Item_Type>(EvtNames.Give_Gift_TO_NPC, 1, Item_Type.Pot);
+            }
 
-            //if (keyboard.aKey.wasPressedThisFrame)
-            //{
-            //    Ask_For_All_NPC_Data();
-            //}
+            if (keyboard.aKey.wasPressedThisFrame)
+            {
+                Ask_For_All_NPC_Data();
+            }
         }
 
 
@@ -145,8 +138,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             EvtDsp.TriggerEvt<NPC_RuntimeData>(EvtNames.On_Single_NPC_Data_Updated, newData);
             EvtDsp.TriggerEvt(EvtNames.On_NPC_Data_Update);
-            //Debug.Log("收到NPC数据：" + newData.npc_id + "\t" + NPC_Base_Dict[newData.npc_id].npc_name
-            //    + "\t" + "好感度等级：" + newData.favor_level + "\t" + "好感度：" + newData.favor_Value);
+            Debug.Log("收到NPC数据：" + newData.npc_id + "\t" + NPC_Base_Dict[newData.npc_id].npc_name
+                + "\t" + "好感度等级：" + newData.favor_level + "\t" + "好感度：" + newData.favor_Value);
         }
 
         public void Receive_All_NPC_Data(string json)

@@ -1,6 +1,4 @@
-using System.Runtime.ConstrainedExecution;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.NewFrame.UI;
 using UnityEngine;
 using UnityEngine.UI;
 

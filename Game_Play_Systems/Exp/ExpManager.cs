@@ -59,17 +59,22 @@ namespace CLIP
                 }
                 private void Update()
                 {
-                    //var keyboard = Keyboard.current;
-                    //if (keyboard == null) return;
-                    //if(keyboard.digit2Key.wasPressedThisFrame|| keyboard.digit5Key.wasPressedThisFrame)
+                    var keyboard = Keyboard.current;
+                    if (keyboard == null) return;
+                    if(keyboard.f1Key.wasPressedThisFrame)
+                    {
+                        curExp += levels[curLevel].nextLevelExp;
+                        TryLevelUp();
+                    }
+                    //if (keyboard.digit2Key.wasPressedThisFrame || keyboard.digit5Key.wasPressedThisFrame)
                     //{
                     //    curLevel = 40;
-                    //    SaveToServer() ;
+                    //    SaveToServer();
                     //}
-                    //if(keyboard.digit3Key.wasPressedThisFrame|| keyboard.digit6Key.wasPressedThisFrame)
+                    //if (keyboard.digit3Key.wasPressedThisFrame || keyboard.digit6Key.wasPressedThisFrame)
                     //{
                     //    curLevel = 50;
-                    //    SaveToServer() ;
+                    //    SaveToServer();
                     //}
                 }
                 private void TryLevelUp()
@@ -84,6 +89,8 @@ namespace CLIP
                         curLevel += 1;
                         curThreshold = 0;
                         Log.Info("升级了，当前等级：" + curLevel);
+                        onLevelUp?.Invoke();
+                        EvtDsp.TriggerEvt(EvtNames.Task_Unlocked);
                     }
                 }
                 private void CheckThreshold()

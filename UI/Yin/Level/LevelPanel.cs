@@ -104,14 +104,12 @@ namespace CLIP
 
                 public override void OpenPanel(params object[] data)
                 {
-                    InputManager.Instance.AllowTouchOnUI = true;
                     panelObj.SetActive(true);
                     Refresh();
                     EvtDsp.TriggerEvt(EvtNames.OnLevelPanelOpen);
                 }
                 public override void ClosePanel()
                 {
-                    InputManager.Instance.AllowTouchOnUI = false;
                     panelObj.SetActive(false);
                     EvtDsp.TriggerEvt(EvtNames.OnLevelPanelClose);
                 }

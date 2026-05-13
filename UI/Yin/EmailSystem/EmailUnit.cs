@@ -1,11 +1,9 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.NewFrame.UI;
 
 namespace CLIP
 {

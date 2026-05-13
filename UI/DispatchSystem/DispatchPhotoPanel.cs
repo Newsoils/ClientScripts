@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using CLIP.Framework_Core.LYC.TaskSystem;
+using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
 using UnityEngine;
@@ -64,7 +64,7 @@ namespace CLIP.Project_Mouse.UI
 
         public override void OpenPanel(params object[] data)
         {
-            TaskTriggers.TriggerEventOfMultipleOperations(4, 1);
+            TaskEvent.Trigger(TaskEvent.Task_OpenPhotoAlbum);
             obj.SetActive(true);
             UIManager.Instance.GetPanel<MainPanel>().ShowTopPanelOnly();
 

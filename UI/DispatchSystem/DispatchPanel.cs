@@ -266,8 +266,8 @@ public class DispatchPanel : UIPanelBase
                     //SceneLoadHelper.Load_MainScene((s) =>EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active));
                     SceneLoadingHelper.Load_MainScene(() => EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active));
                 });
-                lastBagButton.gameObject.SetActive(true);
-                nextBagButton.gameObject.SetActive(true);
+                lastBagButton.gameObject.SetActive(false);
+                nextBagButton.gameObject.SetActive(false);
                 Bag1State.text = GetBagState(0);
                 Bag2State.text = GetBagState(1);
                 Bag3State.text = GetBagState(2);

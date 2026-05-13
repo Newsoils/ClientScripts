@@ -1,6 +1,5 @@
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel.Achievement;
-using CLIP.Project_Mouse.NewFrame.UI;
 
 //using DG.DemiEditor;
 using TMPro;

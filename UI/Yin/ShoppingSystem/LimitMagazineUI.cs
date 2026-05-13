@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.NewFrame.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -189,7 +188,7 @@ namespace CLIP.Project_Mouse.UI
             }
 
             string namesJoined = string.Join("，", itemNames);
-            string message = $"是否要花费{price}罐罐购买{namesJoined}";
+            string message = $"是否要花费{price}罐罐购买{namesJoined}?";
 
             PromptMessage.Instance.ShowPrompt(message, () =>
             {

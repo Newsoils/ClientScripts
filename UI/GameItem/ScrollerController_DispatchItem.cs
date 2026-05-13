@@ -4,7 +4,6 @@ using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
-using CLIP.Project_Mouse.NewFrame.UI;
 using CLIP.Project_Mouse.UI;
 using EnhancedUI.EnhancedScroller;
 using UnityEngine;

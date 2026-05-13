@@ -21,6 +21,21 @@ public static class EvtNames
     public static string Receive_NPC_Gift_TO_Player = "Receive_NPC_Gift_TO_Player";
     public static string Updata_NPC_Favor_Level = "Updata_NPC_Favor_Level";
 
+    // NPC 对话系统事件（数据层 → 业务层广播）
+    public static string Evt_NPCFavorUpdated = "Evt_NPCFavorUpdated";
+    public static string Evt_AllNPCFavorReceived = "Evt_AllNPCFavorReceived";
+    public static string Evt_DialogueLoaded = "Evt_DialogueLoaded";
+
+    // NPC 聊天面板事件（View ↔ Controller 解耦）
+    /// <summary>Controller → View：打开选项面板，payload 为 <see cref="EvtData_OpenOption"/>。</summary>
+    public static string Evt_NPCChat_OpenOption = "Evt_NPCChat_OpenOption";
+    /// <summary>Controller → View：关闭选项面板，无 payload。</summary>
+    public static string Evt_NPCChat_CloseOption = "Evt_NPCChat_CloseOption";
+    /// <summary>Controller → View：打开聊天面板，携带 <see cref="NPC_Info"/> 初始化视图。</summary>
+    //public static string Evt_NPCChat_Open = "Evt_NPCChat_Open";
+    /// <summary>View → Controller：消息滚动播放完毕，推进对话状态机，无 payload。</summary>
+    public static string Evt_NPCChat_MessageFinished = "Evt_NPCChat_MessageFinished";
+
 
     public static string On_Get_Exp = "On_GetExp";
 
@@ -61,8 +76,6 @@ public static class EvtNames
     public static string Set_MainPanel_All_Active = "Set_MainPanel_All_Active";
     public static string Show_TopPanel_Close_Other = "Show_TopPanel_Close_Other";
 
-    /// <summary>任务系统：是否存在「可领取」任务状态变化（用于主界面任务按钮红点）。</summary>
-    public static string Task_ClaimableChanged = "Task_ClaimableChanged";
 
     //派遣 DispatchUI
     public static string Dispatch_On_Start = "Dispatch_On_Start";
@@ -206,4 +219,15 @@ public static class EvtNames
     public static string SceneLoading_MaskReady = "SceneLoading_MaskReady";
     public static string SceneLoading_Progress = "SceneLoading_Progress";
     public static string SceneLoading_Close = "SceneLoading_Close";
+
+
+    /// <summary>任务系统：是否存在「可领取」任务状态变化（用于主界面任务按钮红点）。</summary>
+    public static string Task_ClaimableChanged = "Task_ClaimableChanged";
+
+    public static string Task_ClaimReward = "Task_ClaimReward";
+    public static string Task_Operation = "Task_Operation";
+
+    /// <summary>任务系统：等级提升时解锁了新任务。</summary>
+    public static string Task_Unlocked = "Task_Unlocked";
+
 }

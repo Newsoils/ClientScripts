@@ -149,8 +149,6 @@ namespace CLIP.Framework_Unity.Asset
             }
         }
 
-
-
         public async Task<T> LoadAsycByKey<T>(string key) where T : UnityEngine.Object
         {
             if (!keyToPath.TryGetValue(key, out var path))
@@ -193,82 +191,11 @@ namespace CLIP.Framework_Unity.Asset
         }
 
 
-
-        public Task<T> GetAssetByKeyword<T>(string key, Action<T> onLoaded = null) where T : UnityEngine.Object
-        {
-            return GetAssetByKeyword_Inner<T>(onLoaded, new string[] { key });
-        }
-
-        public Task<T> GetAssetByKeyword<T>(string key1, string key2, Action<T> onLoaded = null) where T : UnityEngine.Object
-        {
-            return GetAssetByKeyword_Inner<T>(onLoaded, new string[] { key1, key2 });
-        }
-
-
-        public Task<T> GetAssetByKeyword<T>(params string[] keywords) where T : UnityEngine.Object
-        {
-            return GetAssetByKeyword_Inner<T>(null, keywords);
-        }
-
-        public Task<T> GetAssetByKeyword<T>(Action<T> onLoaded, params string[] keywords) where T : UnityEngine.Object
-        {
-            return GetAssetByKeyword_Inner<T>(onLoaded, keywords);
-        }
-
         public void LoadAndSet<T>(string key, Action<T> onLoaded) where T : UnityEngine.Object
         {
             _ = LoadAsync<T>(key, onLoaded);
         }
 
-        private async Task<T> GetAssetByKeyword_Inner<T>(Action<T> onLoaded, string[] keywords) where T : UnityEngine.Object
-        {
-            var key = assetKeys.FirstOrDefault(k =>
-                keywords.All(kw => k.Contains(kw))
-            );
-            if (string.IsNullOrEmpty(key))
-            {
-                string keywordsStr = string.Join(", ", keywords);
-                Log.Info($"未找到资源：{keywordsStr}");
-                onLoaded?.Invoke(null);
-                return null;
-            }
-
-            T asset;
-
-            asset = await LoadAsync<T>(key);
-            onLoaded?.Invoke(asset);
-
-            return asset;
-        }
-
-        public async Task<List<T>> GetAssetsByKeywordAsync<T>(Action<List<T>> onLoaded = null, params string[] keywords) where T : UnityEngine.Object
-        {
-            List<T> assets = new();
-
-            var keys = assetKeys
-                .Where(k => keywords.All(kw => k.Contains(kw)))
-                .ToList();
-
-            var tasks = keys.Select(key => LoadAsync<T>(key)).ToList();
-            T[] results = await Task.WhenAll(tasks);
-            assets = results.ToList();
-            onLoaded?.Invoke(assets);
-            return assets;
-        }
-
-        public async Task<T[]> GetAssetsByKeywordAsync<T>(params string[] keywords) where T : UnityEngine.Object
-        {
-            T[] assets;
-
-            var keys = assetKeys
-                .Where(k => keywords.All(kw => k.Contains(kw)))
-                .ToList();
-
-            var tasks = keys.Select(key => LoadAsync<T>(key)).ToList();
-            assets = await Task.WhenAll(tasks);
-
-            return assets;
-        }
         public static bool TryConvertFileNameToResKey(string fileName, string fileType, out string resKey)
         {
             string key = StringTools.ToSafeString(fileName);

@@ -5,7 +5,6 @@ using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Project_Mouse.Kernel.Inventory;
-using CLIP.Project_Mouse.NewFrame.UI;
 using UnityEngine;
 using UnityEngine.UI;
 

@@ -27,7 +27,7 @@ namespace CLIP.Project_Mouse.UI
         [Header("Scale")]
         public float minScaleSize;
         public float maxScaleSize;
-        private float scaleRatio = 1;
+        private float scaleRatio = 1f;
 
         [Header("Reset")]
         private Vector3 originPos;

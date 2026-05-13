@@ -1,4 +1,5 @@
 using CLIP.Framework_Unity;
+using Lean.Touch;
 using UnityEngine;
 
 namespace CLIP.Project_Mouse.Game_Play_System
@@ -46,8 +47,21 @@ namespace CLIP.Project_Mouse.Game_Play_System
             _currentMode = null;
             isNoneState = true;
         }
+
+        /// <summary>退出当前 mode 并切换到 DefaultGridObjectMode。
+        /// 用于删除家具等场景：既要让旧 mode 做清理（Exit），又不能让 _currentMode 为空导致后续 tap 全被吞掉。</summary>
+        public void ResetToDefault()
+        {
+            _currentMode?.Exit();
+            _currentMode = new DefaultGridObjectMode();
+            _currentMode.Enter();
+            isNoneState = false;
+        }
         public void HandleTap(Vector2 mousePos)
         {
+            // 双保险：InputManager.HandleFingerTap 用 StartedOverGui 过滤了 UI 起手的 Tap，
+            // 这里再拦一次兜底。
+            if (LeanTouch.PointOverGui(mousePos)) return;
             _currentMode?.OnTap(mousePos);
         }
 
@@ -67,6 +81,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void HandleLongPress(Vector2 mousePos)
         {
+            if (LeanTouch.PointOverGui(mousePos)) return;
             _currentMode?.OnLongPress(mousePos);
         }
 

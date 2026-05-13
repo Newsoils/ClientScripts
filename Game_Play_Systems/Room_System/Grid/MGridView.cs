@@ -13,6 +13,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
     public class MGridView : MonoBehaviour
     {
         public string UId;
+        public string LayerUid;
 
         public Material _normal_mat;
         public Material _highlight_mat;
@@ -30,6 +31,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void SetActive(bool active)
         {
+            if (_meshRenderer == null) _meshRenderer = GetComponentInChildren<MeshRenderer>();
+            if (_meshRenderer == null) return;
             _meshRenderer.enabled = active;
         }
 

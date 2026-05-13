@@ -1,15 +1,13 @@
-using System.Collections.Generic;
-using System.Diagnostics;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Kernel.Social;
-using CLIP.Project_Mouse.LYC.DialogueSystem;
 using CLIP.Project_Mouse.UI;
-using TMPro;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.UI;
+
+
+public enum SocialTab { Friends, Requests, Npc }
 
 /// <summary>
 /// 社交主面板：好友列表 / 好友请求 / NPC 三个 Tab 页签切换。
@@ -37,6 +35,7 @@ public class SocialPanel : UIPanelBase
     public NpcDetailPanel npcDetailPanel;
 
     public GameObject requestRedDot;
+    public GameObject tabs;
 
     public Button exitButton;
 
@@ -46,7 +45,6 @@ public class SocialPanel : UIPanelBase
 
     private SocialTab _currentTab = SocialTab.Friends;
 
-    private enum SocialTab { Friends, Requests, Npc }
 
     Player_Social_Manager SM => Player_Social_Manager._instance;
 
@@ -70,8 +68,9 @@ public class SocialPanel : UIPanelBase
 
         exitButton.onClick.AddListener(ClosePanel);
 
-        NPCManager.instance.Ask_For_All_NPC_Data();
-        NPCChatPanelMgr.Instance.InitNPCFavorRuntimeDatas();
+        SwitchTab(SocialTab.Friends);
+        obj.SetActive(false);
+        NPCManager.Instance.Ask_For_All_NPC_Data();
     }
 
     public override void OnDestroy()
@@ -111,7 +110,7 @@ public class SocialPanel : UIPanelBase
     #endregion
 
     #region Tab
-    private void SwitchTab(SocialTab tab)
+    public void SwitchTab(SocialTab tab)
     {
         _currentTab = tab;
 
@@ -124,7 +123,7 @@ public class SocialPanel : UIPanelBase
             friendPanel.ClosePanel();
         }
 
-        if(tab == SocialTab.Requests) 
+        if (tab == SocialTab.Requests)
         {
             friendRequestPanel.OpenPanel();
         }
@@ -133,7 +132,7 @@ public class SocialPanel : UIPanelBase
             friendRequestPanel.ClosePanel();
         }
 
-        if(tab == SocialTab.Npc) 
+        if (tab == SocialTab.Npc)
         {
             npcPanel.OpenPanel();
         }
@@ -148,8 +147,8 @@ public class SocialPanel : UIPanelBase
     private void RefreshCurrentTab()
     {
         if (SM == null) return;
-        switch(_currentTab)
-            {
+        switch (_currentTab)
+        {
             case SocialTab.Requests:
                 friendRequestPanel.RefreshPanel();
                 break;
@@ -162,6 +161,7 @@ public class SocialPanel : UIPanelBase
         }
         UpdateRequestRedDot();
     }
+
 
     #endregion
 
@@ -217,21 +217,13 @@ public class SocialPanel : UIPanelBase
 
     public void OpenFriendChatPanel(Friend_Social_Record record)
     {
+        friendPanel.ClosePanel();
         friendChatPanel.OpenPanel(record);
     }
-
-
-    public void OpenNpcChat(NpcChatUnit npcChatUnit)
+    public void OpenNPCChatPanel(NPC_Info info, bool isGroupChat)
     {
-        // NPC 聊天沿用旧逻辑，如果后续需要也可以迁移
-        var npcPanel = FindObjectOfType<NpcChatInteractManager>();
-        if (npcPanel != null)
-        {
-            npcPanel.gameObject.SetActive(true);
-            npcPanel.InitChatPanel(npcChatUnit);
-            NPCManager.instance.Ask_For_All_NPC_Data();
-        }
-        obj.SetActive(false);
+        npcPanel.ClosePanel();
+        npcChatPanel.OpenPanel(info, isGroupChat);
     }
 
     public void OpenNPCDetail(NPC_Info info)
@@ -254,15 +246,17 @@ public class SocialPanel : UIPanelBase
         return defaultAvatarSprite;
     }
 
+    public void SetTabsActive(bool active)
+    {
+        tabs.SetActive(active);
+    }
+
     #endregion
 
 
-    
+
 
 
     // ========== 对话面板操作 ==========
-    public void OpenChatPanel(NPC_Base NPC_Base, bool isGroupChat)
-    {
-        npcChatPanel.OpenPanel(NPC_Base, isGroupChat);
-    }
+   
 }

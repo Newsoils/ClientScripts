@@ -40,7 +40,7 @@ namespace CLIP
                     {
                         if (_instance == null)
                         {
-                            Debug.LogWarning("Email_And_Announcement_Manager instance is null.");
+                            Debug.LogWarning("Email_And_Announcement_Manager Instance is null.");
                         }
                         else if (_instance._temp_mail_record == null)
                         {
@@ -67,7 +67,7 @@ namespace CLIP
                     {
                         if (_instance == null)
                         {
-                            Debug.LogWarning("Email_And_Announcement_Manager instance is null.");
+                            Debug.LogWarning("Email_And_Announcement_Manager Instance is null.");
                         }
                         else if (_instance._temp_announcement_record == null)
                         {
@@ -97,7 +97,7 @@ namespace CLIP
                     {
                         if (_instance == null)
                         {
-                            Debug.LogWarning("Email_And_Announcement_Manager instance is null.");
+                            Debug.LogWarning("Email_And_Announcement_Manager Instance is null.");
                         }
                         else
                         {
@@ -123,7 +123,7 @@ namespace CLIP
                     {
                         if (_instance == null)
                         {
-                            Debug.LogWarning("Email_And_Announcement_Manager instance is null.");
+                            Debug.LogWarning("Email_And_Announcement_Manager Instance is null.");
                         }
                         else
                         {
@@ -173,7 +173,7 @@ namespace CLIP
                     {
                         if (_instance == null)
                         {
-                            Debug.LogWarning("Email_And_Announcement_Manager instance is null.");
+                            Debug.LogWarning("Email_And_Announcement_Manager Instance is null.");
                         }
                         else
                         {

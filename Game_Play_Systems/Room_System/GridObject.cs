@@ -1,7 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
@@ -15,7 +12,7 @@ public class GridObject : MonoBehaviour
     public Room_Placing_Type placingType;
     public Transform Root;
     [Header("Data")]
-    public PlacementData data = new PlacementData();
+    public GridObjectData data = new GridObjectData();
     public GridData gridData = new GridData(0, 0, 0);
     public Room room;
 

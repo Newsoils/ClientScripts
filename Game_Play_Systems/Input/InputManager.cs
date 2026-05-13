@@ -59,22 +59,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public Vector2 CurrentDragPosition => _currentDragPosition;
         public Vector2 JoystickInput => _joystickInput;
         public float PinchRatio => _pinchRatio;
-
-
-        private bool _allowTouchOnUI;
-        public bool AllowTouchOnUI
-        {
-            get => _allowTouchOnUI;
-            set
-            {
-                _allowTouchOnUI = value;
-                if (!value)
-                {
-                    // 可选：当关闭允许 UI 触摸时，清除当前所有在 UI 上的手指
-                    // 但通常不需要
-                }
-            }
-        }
+        public bool IsDragging => _isDragging;
         #endregion
 
         #region Settings
@@ -85,6 +70,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         [SerializeField] private float _longPressThreshold = 0.4f;
         [SerializeField] private float _longPressMoveTolerance = 10f;
+        [Tooltip("开：双指每帧打 pinch 判定与 gesture。配合 CinemachineCameraController.debugZoomRotationTrace。复现完关。")]
+        [SerializeField] private bool debugPinchGestureTrace;
         #endregion
 
         #region Private Variables
@@ -100,7 +87,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         private float _singleTapTimer;
         private float _doubleTapTimer;
         private bool _isSingleTapPossible;
-        public float _pinchRatio = 1;
+        private float _pinchRatio = 1f;
 
         // 多指操作相关
         private Vector2 _multiDragStartCenter;
@@ -111,6 +98,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
         private bool _longPressTriggered;
         private bool _isDragging;
         //private bool _dragOver;
+
+        /// <summary>已滑出 UI 区域的手指 ID → 是否已触发过 DragBegin。
+        /// UI 起手的手指在滑出 UI 前不产生 delta，滑出后开始对外暴露 drag 信号。</summary>
+        private Dictionary<int, bool> _uiFingersLeftUI = new Dictionary<int, bool>();
         #endregion
 
         #region 生命周期
@@ -154,20 +145,15 @@ namespace CLIP.Project_Mouse.Game_Play_System
         #region Event Handlers
         private void HandleFingerDown(LeanFinger finger)
         {
-            // 修改这里：如果手指在 UI 上且不允许 UI 触摸，才忽略
-            if (finger.IsOverGui && !AllowTouchOnUI)
-            {
-                Log.Info("触碰UI，忽略输入");
-                return;
-            }
-
+            // UI 起手的手指也进 _currentFingers——否则 OnDragBegin/OnDrag/OnDragRelease 永远不会触发，
+            // "从仓库 UI 拖出家具到世界"的流程就断了。真正的区别在 HandleSingleFingerUpdate：
+            // 只有当 UI 起手的手指滑出 UI 区域后，才把 delta 暴露给外部（SingleDragDelta/MultiDragDelta），
+            // 保证 UI 内的滚动（分类 tab / 仓库列表）不会触发 CinemachineController.CheckRotate。
             _currentFingers.Add(finger);
 
             // 重置单指点击状态
             _isSingleTapPossible = true;
             _singleTapTimer = 0f;
-
-            // 记录点击位置
             _lastTapPosition = finger.ScreenPosition;
 
             // 单指按下：准备可能的点击或拖动
@@ -177,11 +163,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 _currentDragPosition = finger.ScreenPosition;
             }
 
-            // 多指按下：初始化多指操作
-            if (_currentFingers.Count >= 2)
-            {
-                //UpdateMultiFingerData();
-            }
+            if (finger.StartedOverGui)
+                _uiFingersLeftUI[finger.Index] = false;
         }
 
         private void HandleFingerUpdate(LeanFinger finger)
@@ -209,6 +192,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             // 从列表中移除手指
             _currentFingers.Remove(finger);
+            _uiFingersLeftUI.Remove(finger.Index);
 
             if (_isDragging && _currentFingers.Count == 0)
             {
@@ -233,7 +217,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         private void HandleFingerTap(LeanFinger finger)
         {
-            if (finger.IsOverGui && !AllowTouchOnUI) return;
+            // 用 StartedOverGui（按下时位置）兜底"UI 起手→轻微滑出 UI 仍被 LeanTouch 算 Tap"
+            // 的边界 case；HandleFingerDown 已经按 IsOverGui 拦了主路。
+            if (finger.StartedOverGui) return;
             // 单指点击事件
             //if (_currentFingers.IndexOf(finger) == 0) // 只处理第一个手指的点击
             {
@@ -270,9 +256,31 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             var finger = _currentFingers[0];
             Vector2 currentPosition = finger.ScreenPosition;
-            Vector2 delta = finger.ScreenDelta;
+            Vector2 rawDelta = finger.ScreenDelta;
 
-            // 检查是否达到拖动阈值
+            // UI 起手的手指：在滑出 UI 前不产生 SingleDragDelta，否则仓库列表 / 分类 tab 滚动
+            // 会触发 CinemachineController.CheckRotate 导致相机误转。
+            // 世界起手的手指始终正常工作。
+            bool uiFingerLeftUI = false;
+            if (_uiFingersLeftUI.TryGetValue(finger.Index, out bool hasLeftUI))
+            {
+                if (!hasLeftUI && !finger.IsOverGui)
+                {
+                    // 手指刚滑出 UI，标记并触发 DragBegin
+                    _uiFingersLeftUI[finger.Index] = true;
+                    uiFingerLeftUI = true;
+                }
+                else
+                {
+                    uiFingerLeftUI = hasLeftUI;
+                }
+            }
+
+            // 对外暴露的 delta：UI 起手但未滑出 UI → 归零；其余正常
+            _singleDragDelta = (uiFingerLeftUI || !_uiFingersLeftUI.ContainsKey(finger.Index))
+                ? rawDelta : Vector2.zero;
+
+            // 检查是否达到拖动阈值（用 rawDelta 算，不受 UI 过滤影响）
             float dragDistance = Vector2.Distance(currentPosition, _singleDragStartPosition);
 
             if (!_isDragging && dragDistance > _dragThreshold)
@@ -286,12 +294,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
             if (_isDragging)
             {
-                // 更新当前位置
                 _currentDragPosition = currentPosition;
-                _singleDragDelta = delta;
 
-                // 触发拖动事件
-                OnSingleDrag?.Invoke(delta, currentPosition);
+                // 触发拖动事件（拖拽链只看 _singleDragDelta，已被上面的逻辑过滤）
+                OnSingleDrag?.Invoke(_singleDragDelta, currentPosition);
             }
 
             // 长按检测
@@ -335,6 +341,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 SetGesture(TouchGestureType.MultiDrag);
                 OnMultiDrag?.Invoke(_multiDragDelta, _multiDragCenter);
             }
+
+            if (debugPinchGestureTrace)
+            {
+                Debug.Log(
+                    $"[PinchDbg] f={Time.frameCount} pinchCh={pinchChange:F5} centerMv={centerMoveDistance:F1} " +
+                    $"gesture={_currentGesture} pinchRatio={_pinchRatio:F4} multiΔ={_multiDragDelta} fingers={_currentFingers.Count}",
+                    this);
+            }
         }
 
         private void UpdateMultiFingerData()
@@ -344,13 +358,20 @@ namespace CLIP.Project_Mouse.Game_Play_System
             // 计算多个手指的中心点
             Vector2 sum = Vector2.zero;
             Vector2 deltaSum = Vector2.zero;
+            int activeDeltaCount = 0;
             foreach (var finger in _currentFingers)
             {
                 sum += finger.ScreenPosition;
-                deltaSum += finger.ScreenDelta;
+                bool hasLeftUI = !_uiFingersLeftUI.TryGetValue(finger.Index, out bool v) || v;
+                if (hasLeftUI)
+                {
+                    deltaSum += finger.ScreenDelta;
+                    activeDeltaCount++;
+                }
             }
             _multiDragCenter = sum / _currentFingers.Count;
-            _multiDragDelta = deltaSum / _currentFingers.Count;
+            // 只有离开 UI 的手指才产生 delta；全部仍在 UI 内时归零，不触发相机平移
+            _multiDragDelta = activeDeltaCount > 0 ? deltaSum / activeDeltaCount : Vector2.zero;
 
             // 如果是第一次记录，保存为起始中心点
             if (_multiDragStartCenter == Vector2.zero)

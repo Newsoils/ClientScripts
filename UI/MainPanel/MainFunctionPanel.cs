@@ -1,8 +1,6 @@
 using CLIP.Project_Mouse.UI;
 using UnityEngine;
 using UnityEngine.UI;
-using CLIP.Project_Mouse.LYC.TaskSystem;
-using CLIP.Project_Mouse.NewFrame.UI;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Framework_Core.Event;
@@ -34,7 +32,7 @@ public class MainFunctionPanel : MonoBehaviour
     {
         if (taskClaimableRedDot == null)
             return;
-        var mgr = TaskMgr.Instance;
+        var mgr = TaskManager.Instance;
         bool show = mgr != null && mgr.HasClaimableReward();
         taskClaimableRedDot.gameObject.SetActive(show);
     }

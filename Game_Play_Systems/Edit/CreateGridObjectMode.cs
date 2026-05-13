@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
-using CLIP.Framework_Core.LYC.TaskSystem;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Kernel;
 using DG.Tweening;
@@ -31,6 +30,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         private List<string> _lastPreviewGirdViews = new List<string>();
 
+        private const float LIFT_HEIGHT = 0.5f;
+        private const float LIFT_DURATION = 0.2f;
+
         public CreateGridObjectMode(GridObject selected)
         {
             _selected = selected;
@@ -40,7 +42,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             Debug.Log("进创建模式");
 
-            CameraManager.Instance.ChangeState(CameraState.Placement);
             if (_selected == null)
             {
                 Debug.LogError("进入CreateGridObjectMode时，传入的selected为null");
@@ -66,13 +67,13 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void Exit()
         {
+            CameraManager.Instance.Unfreeze();
             if (_selected is PlacementRuntime placement)
             {
                 placement.SetBorderVisible(false);
             }
 
             GridSystem.CloseGridView();
-            CameraManager.Instance.ChangeState(CameraState.Normal);
             if (_selected != null)
             {
                 GameObject.Destroy(_selected.gameObject);
@@ -96,7 +97,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void OnDragBegin(Vector2 screenPos)
         {
-
+            CameraManager.Instance.Freeze();
         }
 
         public void OnDrag(Vector2 screenPos)
@@ -127,7 +128,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 }
                 _lastLayerType = gridLayerTag.gridLayerType;
 
-                _selected.transform.position = _curPosition;
+                _selected.transform.position = _curPosition + Vector3.up * LIFT_HEIGHT;
 
                 var (x, y) = _selected.GetCurSize();
                 EvtDsp.TriggerEvt<List<string>, MGridState?>(EvtNames.Update_GridView_Preview_Occupy, _lastPreviewGirdViews, null);
@@ -150,7 +151,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void OnDragRelease(Vector2 screenPos)
         {
-            // 放置逻辑
+            CameraManager.Instance.Unfreeze();
             Debug.Log("释放拖动，尝试放置家具");
             if (_selected == null) return;
             if (_curGridTag == null) return;
@@ -168,15 +169,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 {
                     placement.SetBorderVisible(false);
                 }
-                // 通知任务系统
-                // "首次摆放一个家具"
-                TaskTriggers.TriggerEventOfMultipleOperations(1, 1);
+                _selected.transform.DOKill();
+                _selected.transform.DOMove(_curPosition, LIFT_DURATION);
+                TaskEvent.TriggerPlaceFurniture();
             }
 
             _selected = null;
             EvtDsp.TriggerEvt(EvtNames.Close_Edit_Placement_Panel);
-
-
+            EditManager.Instance.SetMode(new DefaultGridObjectMode());
         }
 
         public void OnRotate()

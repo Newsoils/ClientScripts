@@ -1,7 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using CLIP.Project_Mouse.NewFrame.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;

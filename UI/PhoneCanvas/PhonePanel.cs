@@ -1,8 +1,5 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.NewFrame.UI;
 using CLIP.Project_Mouse.UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -164,7 +161,7 @@ public class PhonePanel : UIPanelBase
         }
         else
         {
-            ClosePhone(() => SceneLoadingHelper.Load_DispatchScene());
+            ClosePhone(() => SceneLoadHelper.Load_DispatchScene());
             MainPanel.CloseMainFuncP();
         }
     }

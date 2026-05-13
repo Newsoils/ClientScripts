@@ -12,13 +12,13 @@ public class WaterPlantMode : IEditMode
     private GameObject waterObj;
     public void Enter()
     {
-        CameraManager.Instance.ChangeState(CameraState.Frozen);
+        CameraManager.Instance.Freeze();
     }
 
     public void Exit()
     {
         EvtDsp.TriggerEvt(EvtNames.ClosePlantPop);
-        CameraManager.Instance.ChangeState(CameraState.Normal);
+        CameraManager.Instance.Unfreeze();
     }
 
     public void OnDrag(Vector2 screenPos)

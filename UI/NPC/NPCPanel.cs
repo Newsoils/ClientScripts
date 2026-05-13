@@ -13,7 +13,6 @@ public class NPCPanel : MonoBehaviour
 
     public GameObject npcChatUnitPrefab;
 
-
     private void Start()
     {
         EvtDsp.AddEvt(EvtNames.On_NPC_Data_Update, RefreshNPCList);
@@ -25,7 +24,7 @@ public class NPCPanel : MonoBehaviour
     }
 
 
-    public  void OpenPanel(params object[] data)
+    public void OpenPanel(params object[] data)
     {
         // 检查对象是否已被销毁
         if (this == null || gameObject == null || !gameObject.activeInHierarchy)
@@ -36,7 +35,7 @@ public class NPCPanel : MonoBehaviour
         obj.SetActive(true);
         RefreshNPCList();
     }
-    
+
     public void ClosePanel()
     {
         obj.SetActive(false);
@@ -45,7 +44,7 @@ public class NPCPanel : MonoBehaviour
 
     public void RefreshNPCList()
     {
-        var npcDict = NPCManager.instance.NPC_Info_Dict;
+        var npcDict = NPCManager.Instance.NPC_Info_Dict;
         var acquaintedNpcs = new List<NPC_Info>();
         foreach (var kv in npcDict)
         {
@@ -82,5 +81,5 @@ public class NPCPanel : MonoBehaviour
         }
     }
 
-    
+
 }

@@ -16,13 +16,9 @@ namespace CLIP
                 public Sprite blue;
                 public Sprite green;
 
-                void Start()
+                void Awake()
                 {
                     bgCanvas = GetComponent<Canvas>();
-                }
-
-                void Update()
-                {
                     bgCanvas.worldCamera = Camera.main;
                 }
 

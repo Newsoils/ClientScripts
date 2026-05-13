@@ -1,15 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Kernel.Achievement;
 using CLIP.Project_Mouse.Kernel.Inventory;
-using CLIP.Project_Mouse.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace CLIP.Project_Mouse.NewFrame.UI
+namespace CLIP.Project_Mouse.UI
 {
     public class AchievementPanel : UIPanelBase
     {

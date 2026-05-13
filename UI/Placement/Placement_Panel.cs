@@ -4,6 +4,7 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Core.Serialization;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Scene_View_Control;
 using CLIP.Project_Mouse.UI;
 using TMPro;
 using UnityEngine;
@@ -31,6 +32,17 @@ public class Placement_Panel : UIPanelBase
     public Button cancelModification;
 
     public Button clearAllPlacement;
+
+    [Tooltip("测试用：循环切换 装修自由 / 俯视 / 平视 三个相机视角；平视时自动朝向视野中心墙。")]
+    public Button btn_TestSwitchCamera;
+
+    private static readonly CameraState[] s_placementCameraCycle = new[]
+    {
+        CameraState.Placement,
+        CameraState.PlacementTopDown,
+        CameraState.PlacementFrontView,
+    };
+    private CameraState _currentPlacementState = CameraState.Placement;
 
     private Placement_First_Label[] firstLabels;
     private Placement_Second_Label[] secondLabels;
@@ -60,6 +72,8 @@ public class Placement_Panel : UIPanelBase
         cancelModification.onClick.AddListener(CancelModify);
 
         clearAllPlacement.onClick.AddListener(ClearAllPlacement);
+
+        btn_TestSwitchCamera.onClick.AddListener(SwitchPlacementCamera);
 
         searchInputField.onValueChanged.AddListener(value =>
         {
@@ -94,6 +108,7 @@ public class Placement_Panel : UIPanelBase
         ConfirmModification.onClick.RemoveAllListeners();
         cancelModification.onClick.RemoveAllListeners();
         clearAllPlacement.onClick.RemoveAllListeners();
+        btn_TestSwitchCamera.onClick.RemoveAllListeners();
 
         searchInputField.onValueChanged.RemoveAllListeners();
         searchInputField.onSubmit.RemoveAllListeners();
@@ -143,13 +158,66 @@ public class Placement_Panel : UIPanelBase
         EvtDsp.TriggerEvt(EvtNames.OnPlacementPanelOpen);
 
         EditManager.Instance.SetMode(new DefaultGridObjectMode());
-        InputManager.Instance.AllowTouchOnUI = true;
 
         var roomSnapshot = new RoomSaveData { rooms = RoomSystem.Instance.RoomDatas };
         Save_Load_Tools.Save("Room.json", roomSnapshot);
 
         EvtDsp.TriggerEvt<bool>(EvtNames.SetMainCharacterState, false);
-        CameraManager.Instance.ChangeState(CameraState.Placement);
+        _currentPlacementState = CameraState.Placement;
+        CameraManager.Instance.ChangeState(_currentPlacementState);
+    }
+
+    /// <summary>
+    /// 测试按钮：循环切换三个 placement 相机视角（自由 → 俯视 → 平视 → 自由 …）。
+    /// 切到 PlacementFrontView 时，找当前视野中心的墙（wall._wall_front 与水平相机视线点积最小者，即正对玩家那面墙），
+    /// 把相机 yaw 设到面向该墙。
+    /// </summary>
+    private void SwitchPlacementCamera()
+    {
+        int idx = System.Array.IndexOf(s_placementCameraCycle, _currentPlacementState);
+        int nextIdx = (idx + 1) % s_placementCameraCycle.Length;
+        _currentPlacementState = s_placementCameraCycle[nextIdx];
+
+        CameraManager.Instance.ChangeState(_currentPlacementState);
+
+        if (_currentPlacementState == CameraState.PlacementFrontView)
+        {
+            var wall = FindClosestFacingWall();
+            if (wall != null && CameraManager.Instance.curCtrl != null)
+            {
+                CameraManager.Instance.curCtrl.SetYawByForward(-wall._wall_front);
+            }
+        }
+    }
+
+    /// <summary>找当前房间里最被相机正对的那面墙：水平投影下 wall._wall_front 与 camDir 点积最小（最接近 -1）。</summary>
+    private static Hide_Wall FindClosestFacingWall()
+    {
+        var room = RoomSystem.currentRoom;
+        if (room == null || Camera.main == null) return null;
+
+        Vector3 camDir = Camera.main.transform.forward;
+        camDir.y = 0f;
+        if (camDir.sqrMagnitude < 1e-6f) return null;
+        camDir.Normalize();
+
+        Hide_Wall best = null;
+        float minDot = float.PositiveInfinity;
+        foreach (var wall in room.wallsMap.Values)
+        {
+            if (wall == null) continue;
+            Vector3 front = wall._wall_front;
+            front.y = 0f;
+            if (front.sqrMagnitude < 1e-6f) continue;
+            front.Normalize();
+            float dot = Vector3.Dot(front, camDir);
+            if (dot < minDot)
+            {
+                minDot = dot;
+                best = wall;
+            }
+        }
+        return best;
     }
 
     public override void ClosePanel()
@@ -164,7 +232,6 @@ public class Placement_Panel : UIPanelBase
         EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active);
         EvtDsp.TriggerEvt(EvtNames.OnPlacementPanelClose);
         EvtDsp.TriggerEvt(EvtNames.ReSetMainCharacterRenderer);
-        InputManager.Instance.AllowTouchOnUI = false;
     }
 
     public void RefreshByFirstCategory(Placement_First_Category first, bool isFavorite = false)

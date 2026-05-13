@@ -135,6 +135,7 @@ namespace CLIP
                 }
                 public void SwitchRoom(string roomName)
                 {
+                    ClickManager.NotifyMapRoomSwitchConsumedPick();
                     RoomSystem.Instance.SwitchRoomByName(roomName);
                     ClosePanel();
                 }

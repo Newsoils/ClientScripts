@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
-using CLIP.Framework_Core.LYC.TaskSystem;
 using CLIP.Framework_Unity.Asset;
+using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Kernel;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -148,7 +147,7 @@ namespace CLIP
                         return;
                     int price = itemInShop.sell_price;
                     List<(string, int)> items = new List<(string, int)> { (itemInShop.name, 1) };
-                    string message = $"是否要花费{price}{itemInShop.currency_unit}购买{itemInShop.name}物品";
+                    string message = $"是否要花费{price}{itemInShop.currency_unit}购买{itemInShop.name}?";
 
                     PromptMessage.Instance.ShowPrompt(message, () =>
                     {
@@ -161,10 +160,8 @@ namespace CLIP
                                 ExpManager.TempAddExpForRoomPlacementGains(items);
                                 EvtDsp.TriggerEvt(EvtNames.RefreshUI);
 
-                                if (itemInShop.type == Project_Mouse.ENUM.Item_Type.Food)
-                                {
-                                    TaskTriggers.TriggerEventOfMultipleOperations(2, 1);
-                                }
+                                TaskEvent.TriggerByCategory(itemInShop.type);
+
                             }
                             else
                             {

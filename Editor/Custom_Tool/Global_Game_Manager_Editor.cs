@@ -48,7 +48,7 @@ namespace CLIP.Project_Mouse.Custom_Tool
                         }
                         else
                         {
-                            Debug.LogWarning("Global_Game_Manager instance is null.");
+                            Debug.LogWarning("Global_Game_Manager Instance is null.");
                         }
                     }
 
@@ -61,7 +61,7 @@ namespace CLIP.Project_Mouse.Custom_Tool
                         }
                         else
                         {
-                            Debug.LogWarning("Global_Game_Manager instance is null.");
+                            Debug.LogWarning("Global_Game_Manager Instance is null.");
                         }
                     }
                 }

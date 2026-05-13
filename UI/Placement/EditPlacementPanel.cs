@@ -16,6 +16,9 @@ namespace CLIP.Project_Mouse.UI
         public Button BTN_Delete;
         public Button BTN_Rotate;
 
+        [Tooltip("面板相对家具屏幕中心的偏移（Canvas 像素）。负 Y 表示放在家具下方，避免与拖拽手指重合误触删除按钮。")]
+        [SerializeField] private Vector2 panelOffset = new Vector2(0f, -150f);
+
         private GridObject curGridObject;
         private string curGridLayerUid;
   
@@ -50,6 +53,8 @@ namespace CLIP.Project_Mouse.UI
                 if (!GridObjectSystem.DeleteGridObject(curGridObject, RoomSystem.currentRoom, curGridLayerUid, curGridObject.data.position))
                     return;
                 ClosePanel();
+                EditManager.Instance.ResetToDefault();
+                RoomSystem.Instance.Upload_Data_To_Server();
             }
             else
             {
@@ -81,7 +86,7 @@ namespace CLIP.Project_Mouse.UI
                 curGridLayerUid = (string)data[1];
                 hitpos = (Vector3)data[2];
 
-                var pos = curGridObject.transform.position;
+                var pos = curGridObject.Root.position;
 
                 //var width = curPlacement.data.placementInfo.width;
                 //var length = curPlacement.data.placementInfo.length;
@@ -130,6 +135,8 @@ namespace CLIP.Project_Mouse.UI
                 screenPos,
                 null, // ⚠️ Overlay 必须是 null
                 out Vector2 localPos);
+
+            localPos += panelOffset;
 
             // 3️⃣ 应用到 UI
             panelRoot.anchoredPosition = localPos;

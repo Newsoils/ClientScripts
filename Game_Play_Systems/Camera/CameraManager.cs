@@ -1,205 +1,105 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using Cinemachine;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
-using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.UI;
 using UnityEngine;
-using UnityEngine.Experimental.GlobalIllumination;
 
 public class CameraManager : SingletonMono<CameraManager>
 {
-    public CameraControl cameraControl;
-    public RoomCameraDatabase camera_db;
-    public List<CameraCtrlData> cameraControllers;
-    public Dictionary<string, Dictionary<CameraType, CameraCtrlData>> cameras; //房间名-照相机种类-相机
+    private static readonly Dictionary<string, CinemachineCameraController> s_cameras = new();
+
     public CinemachineCameraController curCtrl;
-    public CinemachineBrain mainCamera;
-    public GameObject obj;
 
     private string currentRoomName;
 
-    public CameraState state;
+    public CameraState State { get; private set; } = CameraState.Normal;
+
+    public bool InputDisabled { get; private set; }
 
 
-    private void Start()
+    #region Controller 自注册
+    /// <summary>把 controller 注册到全局相机表，key = ctrl.CameraName。</summary>
+    public static void Register(CinemachineCameraController ctrl)
     {
-        InitState(CameraState.Normal);
-        EvtDsp.AddEvt(EvtNames.OnLevelPanelOpen, ChangeFrozenState);
-        EvtDsp.AddEvt(EvtNames.OnLevelPanelClose, ChangeNormalState);
-        InitCamera();
-        //SwitchCamera("客厅", CameraType.Normal);
-    }
-    protected override void OnDestroy()
-    {
-        base.OnDestroy();
-        EvtDsp.RemoveEvt(EvtNames.OnLevelPanelOpen, ChangeFrozenState);
-        EvtDsp.RemoveEvt(EvtNames.OnLevelPanelClose, ChangeNormalState);
-    }
-
-    private void LateUpdate()
-    {
-        switch (state)
+        var name = ctrl.CameraName;
+        if (string.IsNullOrEmpty(name))
         {
-            case CameraState.Normal:
-                UpdateNormalState();
-                break;
-            case CameraState.Placement:
-                UpdatePlacementState();
-                break;
+            Debug.LogError($"[CameraManager] '{ctrl.name}' 的 cameraName 为空，无法注册。请在 prefab Inspector 上填好。");
+            return;
+        }
+        if (s_cameras.TryGetValue(name, out var existing) && existing != ctrl)
+        {
+            Debug.LogWarning(
+                $"[CameraManager] 相机名重复 '{name}'：已存在 '{existing.name}'，被 '{ctrl.name}' 覆盖。" +
+                "请检查 prefab 上的 cameraName 是否冲突。");
+        }
+        s_cameras[name] = ctrl;
+    }
+
+    /// <summary>从全局相机表移除 controller（仅当表里登记的就是它本身才移除）。</summary>
+    public static void Unregister(CinemachineCameraController ctrl)
+    {
+        var name = ctrl.CameraName;
+        if (string.IsNullOrEmpty(name)) return;
+        if (s_cameras.TryGetValue(name, out var existing) && existing == ctrl)
+        {
+            s_cameras.Remove(name);
         }
     }
+    #endregion
 
 
-    public void ChangeRoom(string name)
+    #region 切相机
+    /// <summary>按相机名切换：关掉所有其他相机、激活目标相机、复位状态、更新 curCtrl。重复切到同一台跳过。</summary>
+    public void SwitchCamera(string cameraName)
     {
-        //SwitchCamera(name, CameraType.Normal);
-        currentRoomName = name;
-        RefreshCamera();
-    }
-    private void InitCamera()
-    {
-        cameras = cameraControllers
-        .GroupBy(data => data.roomName)
-        .ToDictionary(
-            group => group.Key,
-            group => group.ToDictionary(data => data.type, data => data)
-        );
-    }
-    private void SwitchCamera(string roomName, CameraType type)
-    {
-        curCtrl?.gameObject.SetActive(false);
-        curCtrl = cameras[roomName][type].ctrl;
-        curCtrl.gameObject.SetActive(true);
-    }
-    private void RefreshRoomName()
-    {
-        var room = RoomSystem.currentRoom;
-        if (room != null)
-            currentRoomName = room.RoomName;
+        if (string.IsNullOrEmpty(cameraName)) return;
+        if (!s_cameras.TryGetValue(cameraName, out var next))
+        {
+            Debug.LogError($"[CameraManager] 找不到相机 '{cameraName}'，请检查对应 prefab 是否在场景中且 cameraName 配置正确。");
+            return;
+        }
+        if (next == curCtrl) return;
+
+        foreach (var c in s_cameras.Values)
+        {
+            if (c != next && c != null && c.gameObject.activeSelf)
+            {
+                c.gameObject.SetActive(false);
+            }
+        }
+        if (!next.gameObject.activeSelf) next.gameObject.SetActive(true);
+        next.ResetCamera();
+        curCtrl = next;
     }
 
-
-    private void RefreshCamera()
+    /// <summary>进入新房间，记下 currentRoomName 并切到 (roomName, Normal) 房间相机。</summary>
+    public void ChangeRoom(string roomName)
     {
-        if (string.IsNullOrEmpty(currentRoomName)) return;
-        var camera = camera_db.GetView(currentRoomName, state);
-        cameraControl.SnapToPivot(state, camera);
+        currentRoomName = roomName;
+        State = CameraState.Normal;
+        SwitchCamera(MakeRoomCameraName(roomName, CameraState.Normal));
     }
 
-
-
-    #region 状态
-    public void InitState(CameraState newState)
-    {
-        state = newState;
-        EnterState(state);
-    }
+    /// <summary>切换当前房间相机的状态（Normal ↔ Placement），currentRoomName 必须先经 ChangeRoom 设置。</summary>
     public void ChangeState(CameraState newState)
     {
-        ExitState(state);
-        state = newState;
-
-        RefreshRoomName();
-
-
-        EnterState(state);
-    }
-    private void EnterState(CameraState state)
-    {
-        switch (state)
-        {
-            case CameraState.Normal:
-                EnterNormalState();
-                break;
-            case CameraState.Placement:
-                EnterPlacementState();
-                break;
-        }
-    }
-    private void ExitState(CameraState state)
-    {
-        switch (state)
-        {
-            case CameraState.Normal:
-                ExitNormalState();
-                break;
-            case CameraState.Placement:
-                ExitPlacementState();
-                break;
-        }
-    }
-    #region 普通状态
-    private void EnterNormalState()
-    {
-        RefreshCamera();
-    }
-    private void UpdateNormalState()
-    {
-        cameraControl.CheckMove();
-        cameraControl.CheckScale();
-        cameraControl.CheckReset();
-        cameraControl.CheckRotate();
-    }
-    private void ExitNormalState()
-    {
-
+        State = newState;
+        SwitchCamera(MakeRoomCameraName(currentRoomName, newState));
     }
 
-    #endregion
-    #region 家具
-    public void EnterPlacementState()
+    /// <summary>房间相机命名规则：&lt;房间名&gt;_&lt;state&gt;。所有房间相机 prefab 的 cameraName 都应按此格式填写。</summary>
+    public static string MakeRoomCameraName(string roomName, CameraState state)
     {
-        RefreshCamera();
+        return $"{roomName}_{state}";
     }
-    public void UpdatePlacementState()
-    {
-        //cameraControl.CheckMove(true);
-    }
-    public void ExitPlacementState()
-    {
-        cameraControl.Reset();
-
-        //yaw.enabled = true;
-        //controlCamera.orthographicSize = 18f;
-    }
-    #endregion
-    #region 冻结
-    public void ChangeFrozenState()
-    {
-        ChangeState(CameraState.Frozen);
-    }
-    public void ChangeNormalState()
-    {
-        ChangeState(CameraState.Normal);
-    }
-    #endregion
     #endregion
 
 
+    #region 输入冻结
+    /// <summary>禁用所有 controller 的输入处理（依然渲染，只是不响应输入）。</summary>
+    public void Freeze() => InputDisabled = true;
 
-    public void CloseCamera()
-    {
-        obj.SetActive(false);
-    }
-
-    public void OpenCamera()
-    {
-        obj.SetActive(true);
-    }
-}
-
-[Serializable]
-public class CameraCtrlData
-{
-    public string roomName;
-    public CameraType type;
-    public CinemachineCameraController ctrl;
-}
-public enum CameraType
-{
-    Normal,
-    Placement
+    /// <summary>恢复 controller 的输入处理。</summary>
+    public void Unfreeze() => InputDisabled = false;
+    #endregion
 }

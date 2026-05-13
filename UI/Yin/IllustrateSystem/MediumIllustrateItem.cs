@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using CLIP.Project_Mouse.NewFrame.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;

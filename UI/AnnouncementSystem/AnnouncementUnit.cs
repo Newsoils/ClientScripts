@@ -1,6 +1,5 @@
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Kernel;
-using CLIP.Project_Mouse.NewFrame.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;

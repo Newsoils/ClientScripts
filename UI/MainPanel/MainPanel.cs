@@ -207,7 +207,7 @@ public class MainPanel : UIPanelBase
         if (!SceneLoadHelper.IsDispatchScene)
         {
             //SceneLoadHelper.Load_DispatchScene();
-            SceneLoadingHelper.Load_DispatchScene();
+            SceneLoadHelper.Load_DispatchScene();
             CloseMainFuncP();
             dispatchButton.gameObject.SetActive(false);
         }

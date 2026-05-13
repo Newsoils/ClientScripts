@@ -163,13 +163,29 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         SendMsg(action, target);
         TaskCompletionSource<string> result = new TaskCompletionSource<string>();
         responseTasks.Add(action, result);
-        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(2));
+        // 2 秒在真机/退后台恢复时太激进（主线程卡顿/网络抖动都会误判断线）
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(6));
         var completedTask = await Task.WhenAny(result.Task, timeoutTask);
         if (completedTask == timeoutTask)
         {
             responseTasks.Remove(action);
             Debug.Log($"获取服务器{action}数据超时");
-            EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "与服务器断开连接，请检查网络设置！",()=> EvtDsp.TriggerEvt(EvtNames.Network_Disconnect));
+            var nc = NetWork_Center_WSS.instance;
+
+            // 连接还在（ws 未断），但某个请求超时：视为“软失败”，不要直接判定断线并弹窗/踢回登录
+            bool connectionSeemsAlive = nc != null && nc._is_connected;
+
+            // App 切后台/失焦/恢复宽限期/正在重连时：一律不弹断线窗
+            bool shouldSuppressDisconnectPrompt = nc != null ? nc.ShouldSuppressDisconnectPrompts : !Application.isFocused;
+
+            if (!shouldSuppressDisconnectPrompt && !connectionSeemsAlive)
+            {
+                EvtDsp.TriggerEvt<string, Action>(
+                    EvtNames.ShowPrompt,
+                    "与服务器断开连接，请检查网络设置！",
+                    () => EvtDsp.TriggerEvt(EvtNames.Network_Disconnect)
+                );
+            }
             onTaskComplete?.Invoke(null);
             return null;
         }

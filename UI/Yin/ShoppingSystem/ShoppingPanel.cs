@@ -1,16 +1,12 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
-using CLIP.Framework_Core.LYC.TaskSystem;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Kernel;
-using CLIP.Project_Mouse.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 
-namespace CLIP.Project_Mouse.NewFrame.UI
+namespace CLIP.Project_Mouse.UI
 {
     public class ShoppingPanel : UIPanelBase
     {
@@ -30,7 +26,6 @@ namespace CLIP.Project_Mouse.NewFrame.UI
         public GameObject chooseMagazine;
 
         public Button exitButton;
-
 
         [Header("购物车")]
         public GameObject shoppingCartItemPrefab;
@@ -102,68 +97,64 @@ namespace CLIP.Project_Mouse.NewFrame.UI
 
 
         // 购买物品
-        public void PurchaseItem()
-        {
-            _ = BuyItemAsync();
-        }
-        public async Task<bool> BuyItemAsync()
-        {
-            List<(string, int)> price = new List<(string, int)>();
-            List<(string, int)> buyList = new List<(string, int)>();
-            List<ShoppingCartItem> itemToRemove = new List<ShoppingCartItem>();
-            foreach (var cartItem in shoppingCartItems)
-            {
-                if (cartItem.isSelected)
-                {
-                    price.Add((cartItem.shoppingCartItem.currency_unit, cartItem.shoppingCartItem.sell_price));
-                    buyList.Add((cartItem.shoppingCartItem.name, cartItem.itemCount));
-                    itemToRemove.Add(cartItem);
-                }
-            }
+        //public bool PurchaseItem()
+        //{
+        //    List<(string, int)> price = new List<(string, int)>();
+        //    List<(string, int)> buyList = new List<(string, int)>();
+        //    List<ShoppingCartItem> itemToRemove = new List<ShoppingCartItem>();
+        //    foreach (var cartItem in shoppingCartItems)
+        //    {
+        //        if (cartItem.isSelected)
+        //        {
+        //            price.Add((cartItem.shoppingCartItem.currency_unit, cartItem.shoppingCartItem.sell_price));
+        //            buyList.Add((cartItem.shoppingCartItem.name, cartItem.itemCount));
+        //            itemToRemove.Add(cartItem);
+        //        }
+        //    }
 
-            TaskTriggers.TriggerEventOfMulOprByJudgeJunc(2, 1, () =>
-            {
-                // 是否存在物品  0 --> Food;  1 --> Tape
-                bool[] hasItem = new bool[2];
+        //    TaskTriggers.TriggerEvent(2, 1, () =>
+        //    {
+        //        // 是否存在物品  0 --> Food;  1 --> Tape
+        //        bool[] hasItem = new bool[2];
 
-                foreach (var item in itemToRemove)
-                {
-                    if (item.shoppingCartItem.type == Project_Mouse.ENUM.Item_Type.Food)
-                    {
-                        hasItem[0] = true;
-                    }
-                    else if (item.shoppingCartItem.type == Project_Mouse.ENUM.Item_Type.Tape)
-                    {
-                        hasItem[1] = true;
-                    }
-                }
-                foreach (bool has in hasItem)
-                {
-                    if (!has)
-                    {
-                        return false;
-                    }
-                }
+        //        foreach (var item in itemToRemove)
+        //        {
+        //            if (item.shoppingCartItem.type == Project_Mouse.ENUM.Item_Type.Food)
+        //            {
+        //                hasItem[0] = true;
+        //            }
+        //            else if (item.shoppingCartItem.type == Project_Mouse.ENUM.Item_Type.Tape)
+        //            {
+        //                hasItem[1] = true;
+        //            }
+        //        }
+        //        foreach (bool has in hasItem)
+        //        {
+        //            if (!has)
+        //            {
+        //                return false;
+        //            }
+        //        }
 
-                return true;
-            });
-            MoneyManager.Instance.ChangeCurrencyMulti(price, "商城购物", (string result) =>
-            {
-                if (result != "success") return;
-                Global_Inventory_Manager.Change_Items_Count(buyList);
-                EvtDsp.TriggerEvt(EvtNames.RefreshUI);
-                foreach (var cartItem in itemToRemove)
-                {
-                    if (cartItem.shoppingCartItem.type == Project_Mouse.ENUM.Item_Type.Food)
-                    {
-                        TaskTriggers.TriggerEventOfMultipleOperations(2, 1);
-                    }
-                    cartItem.DeleteItem();
-                }
-                CloseShoppingCart();
-            });
-            return true;
-        }
+        //        return true;
+        //    });
+        //    _ = MoneyManager.Instance.ChangeCurrencyMulti(price, "商城购物", (string result) =>
+        //    {
+        //        if (result != "success") return;
+        //        Global_Inventory_Manager.Change_Items_Count(buyList);
+        //        EvtDsp.TriggerEvt(EvtNames.RefreshUI);
+        //        foreach (var cartItem in itemToRemove)
+        //        {
+        //            if (cartItem.shoppingCartItem.type == Project_Mouse.ENUM.Item_Type.Food)
+        //            {
+        //                TaskTriggers.TriggerEvent(2, 1);
+        //            }
+        //            cartItem.DeleteItem();
+        //        }
+        //        CloseShoppingCart();
+        //    });
+        //    return true;
+        //}
 
         // 更新购物车UI
         public void UpdateCartUI()

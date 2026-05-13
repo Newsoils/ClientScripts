@@ -5,7 +5,8 @@ public enum CameraState
 {
     Normal,
     Placement,
-    Frozen
+    PlacementTopDown,
+    PlacementFrontView,
 }
 
 [Serializable]

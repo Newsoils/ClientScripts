@@ -75,7 +75,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         void Start()
         {
-            roomPhotoRT = RenderTextureCompatUtility.CreateCompatible(Screen.width, Screen.height, 24, true, "RoomPhotoRT");
+            roomPhotoRT = RenderTextureCompatUtility.EnsureCompatible(roomPhotoRT, "DefaultPhotoRT");
             dispatchPhotoRT = RenderTextureCompatUtility.EnsureCompatible(dispatchPhotoRT, "DispatchPhotoRT");
             defaultPhotoRT = RenderTextureCompatUtility.EnsureCompatible(defaultPhotoRT, "DefaultPhotoRT");
 

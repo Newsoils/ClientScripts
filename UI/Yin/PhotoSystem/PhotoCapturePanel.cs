@@ -1,353 +1,176 @@
 using System.Collections;
-using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.UI;
-using Lean.Common;
-using Lean.Touch;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace CLIP.Project_Mouse.NewFrame.UI
+namespace CLIP.Project_Mouse.UI
 {
+    /// <summary>
+    /// 房间拍照面板。OpenPanel 时基于 <see cref="photoCamera"/> 模板生成一台拍照子相机挂到 Camera.main 下，
+    /// 并克隆 <see cref="bgCanvas"/> 当世界空间背景板；targetTexture = roomPhotoRT 即为实时取景。ClosePanel 销毁实例。
+    /// </summary>
     public class PhotoCapturePanel : UIPanelBase
     {
-        [Header("相机切换")]
-        public GameObject photoCameras;
-        public List<GameObject> photoCameraButtons = new List<GameObject>();
-
-        private Dictionary<string, List<GameObject>> roomCameraDict = new Dictionary<string, List<GameObject>>();
-        public GameObject currentCameraButtonsRoot;
-
-        [Header("相机模式")]
-        public PhotoCameraType currentPhotoCameraType = PhotoCameraType.PhotoCamera0;
-        public GameObject currentPhotoCamerRoot;
-        public Camera currentCamera;
-        public PhotoCameraType choosedPhotoCameraType;
-        public GameObject choosedPhotoCameraRoot;
-
-        [Header("拍照设置")]
+        [Header("拍照相机")]
+        [Tooltip("拍照相机模板。建议拖 Prefab；若拖场景对象，请确保 PhotoCapturePanel 不会因场景切换导致引用变 null（本面板是 DontDestroyOnLoad）。")]
         public Camera photoCamera;
-        public RenderTexture renderTexture;
-        public RawImage photoDisplay;
-        [Range(0, 1080)] public int captureX = 0, captureWidth = 1080;
-        [Range(0, 1920)] public int captureY = 0, captureHeight = 1920;
-        //captureX：截图区域左下角的横坐标
-        //captureY：截图区域左下角的纵坐标
-        //captureWidth：截图区域的宽度
-        //captureHeight：截图区域的高度
 
-        [Header("相机切换按钮父物体")]
-        public GameObject livingroomCameraButtonsRoots;
-        public GameObject balconyCameraButtonsRoots;
-        public GameObject bedroomCameraButtonsRoots;
-        public GameObject toiletCameraButtonsRoots;
+        [Tooltip("拍照相机 orthographicSize / 主相机 orthographicSize。默认 7.3/17，让拍照相机截取主相机视野中央的正方形区域。")]
+        [SerializeField] private float sizeRatio = 7.3f / 17f;
 
-        [Header("相机Root父物体")]
-        public GameObject livingroomCameraRoots;
-        public GameObject balconyCameraRoots;
-        public GameObject bedroomCameraRoots;
-        public GameObject toiletCameraRoots;
+        [Header("背景 Canvas")]
+        [Tooltip("场景里的背景 Canvas（Screen Space - Camera 模式，绑主相机）。\n" +
+                 "OpenPanel 时复制一份改成 WorldSpace，作为主相机正前方的世界空间背景板：\n" +
+                 "主相机看全部、拍照相机 ortho 较小只看中央 → 拍到的就是玩家屏幕中央那一块，比例完全一致。")]
+        [SerializeField] private Canvas bgCanvas;
+
+        [Tooltip("背景板放在主相机正前方的距离（世界单位）。需大于场景里最远物体的距离，且小于主/拍照相机的 farClipPlane。")]
+        [SerializeField] private float bgPlaneDistance = 130f;
 
         [Header("UI")]
+        public RawImage photoDisplay;
         public RawImage bgImage;
         public GameObject afterPhoto;
         public GameObject photoCanvas;
         public GameObject frameCanvas;
         public GameObject photoPanel;
-        [Range(0, 1)] public float alphaValue = 0.5f;
+
+        private Camera photoCameraInstance;
+        private Camera mainCamera;
+        private Canvas bgCanvasClone;
 
 
         private void Start()
         {
-            //takePhoto = GameObject.Find("TakePhoto");
-            AddChildButtonsRecursively(photoCameras.transform);
-            InitializedRoomCameraDict();
-            //takePhoto.GetComponent<Button>().onClick.AddListener(OpenTakePhoto);
-            //Global_Photo_Manager.Instance.roomPhotoRawImage = photoDisplay;
             DontDestroyOnLoad(this.gameObject);
-            //bgImage.texture = Global_Photo_Manager.Instance.roomPhotoRT;
-            //renderTexture = Global_Photo_Manager.Instance.roomPhotoRT;
         }
 
 
         #region 接口方法实现
-
-        // 打开拍照界面
         public override void OpenPanel(params object[] data)
         {
-            string currentRoomName = GetCurrentRoomName();
-            RoomSystem.Instance.canSwitchRoom = false;
-            switch (currentRoomName)
+            mainCamera = Camera.main;
+            if (mainCamera == null)
             {
-                case "客厅":
-                    currentCameraButtonsRoot = livingroomCameraButtonsRoots;
-                    break;
-                case "卧室":
-                    currentCameraButtonsRoot = bedroomCameraButtonsRoots;
-                    break;
-                case "浴室":
-                    currentCameraButtonsRoot = toiletCameraButtonsRoots;
-                    break;
-                case "阳台":
-                    currentCameraButtonsRoot = balconyCameraButtonsRoots;
-                    break;
-                default:
-                    Debug.Log("当前房间不存在");
-                    return;
+                Debug.LogError("[PhotoCapturePanel] Camera.main 为空，无法启用拍照。请确认场景里有 tag=MainCamera 的相机。");
+                return;
             }
 
-            currentPhotoCamerRoot = roomCameraDict[currentRoomName][0];
-            currentPhotoCamerRoot.SetActive(true);
+            RoomSystem.Instance.canSwitchRoom = false;
 
-            Camera foundCamera = currentPhotoCamerRoot.GetComponentInChildren<Camera>(true);
-            currentCamera = foundCamera;
-            frameCanvas.GetComponent<Canvas>().worldCamera = foundCamera;
-            foundCamera.targetTexture = null;
+            SpawnPhotoCamera();
 
             photoCanvas.SetActive(true);
-            InputManager.Instance.AllowTouchOnUI = true;
-            CameraManager.Instance.CloseCamera();
-            //ResetCamera resetCamera = currentPhotoCamerRoot.GetComponentInChildren<ResetCamera>(true);
-            //resetCamera.Reset();
             EvtDsp.TriggerEvt(EvtNames.OnTakePhotoPanelOpen);
         }
 
-        // 关闭拍照界面
         public override void ClosePanel()
         {
-            currentPhotoCamerRoot.SetActive(false);
+            DestroyPhotoCamera();
+
             photoCanvas.SetActive(false);
-            InputManager.Instance.AllowTouchOnUI = false;
             RoomSystem.Instance.canSwitchRoom = true;
 
-            CameraManager.Instance.OpenCamera();
             EvtDsp.TriggerEvt(EvtNames.OnTakePhotoPanelClose);
         }
-
         #endregion
 
 
-        #region 内部方法
-
-        // 初始化相机Root字典
-        private void InitializedRoomCameraDict()
+        private void Update()
         {
-            //foreach(var room in RoomSystem.Instance.Room_SO.roomConfigs)
-            //{
-       
-            //}
-            roomCameraDict.Add("客厅", new List<GameObject>());
-            roomCameraDict.Add("卧室", new List<GameObject>());
-            roomCameraDict.Add("浴室", new List<GameObject>());
-            roomCameraDict.Add("阳台", new List<GameObject>());
-            foreach (Transform child in livingroomCameraRoots.transform)
-            {
-                roomCameraDict["客厅"].Add(child.gameObject);
-            }
-            foreach (Transform child in balconyCameraRoots.transform)
-            {
-                roomCameraDict["阳台"].Add(child.gameObject);
-            }
-            foreach (Transform child in bedroomCameraRoots.transform)
-            {
-                roomCameraDict["卧室"].Add(child.gameObject);
-            }
-            foreach (Transform child in toiletCameraRoots.transform)
-            {
-                roomCameraDict["浴室"].Add(child.gameObject);
-            }
+            if (photoCameraInstance == null || mainCamera == null) return;
+
+            photoCameraInstance.orthographicSize = mainCamera.orthographicSize * sizeRatio;
+            SyncBgCanvasCloneSize();
         }
 
-        public string GetEnglishName(string roomName)
+        /// <summary>把背景板撑成主相机当前视口的世界尺寸（ortho：高=2*orthoSize，宽=高*aspect）。</summary>
+        private void SyncBgCanvasCloneSize()
         {
-            switch (roomName)
-            {
-                case "客厅":
-                    return "living_room";
-                case "卧室":
-                    return "bed_room";
-                case "浴室":
-                    return "toilet";
-                case "阳台":
-                    return "balcony";
-                default:
-                    Debug.Log("当前房间不存在");
-                    return null;
-            }
-        }
-
-        // 递归添加子物体中的按钮
-        private void AddChildButtonsRecursively(Transform parent)
-        {
-            foreach (Transform child in parent)
-            {
-                if (child.GetComponent<PhotoCameraSetting>() != null && child.GetComponent<Button>() != null)
-                {
-                    photoCameraButtons.Add(child.gameObject);
-                }
-
-                AddChildButtonsRecursively(child);
-            }
+            if (bgCanvasClone == null || mainCamera == null) return;
+            var bgRect = bgCanvasClone.GetComponent<RectTransform>();
+            float h = mainCamera.orthographicSize * 2f;
+            float w = h * mainCamera.aspect;
+            bgRect.sizeDelta = new Vector2(w, h);
         }
 
 
-        // 获取当前房间名称
-        private string GetCurrentRoomName()
+        #region 拍照相机实例
+        /// <summary>生成拍照子相机挂到主相机下，并克隆一份 bgCanvas 作为世界空间背景板。</summary>
+        private void SpawnPhotoCamera()
         {
-           return RoomSystem.currentRoom != null ? RoomSystem.currentRoom.RoomName : null;
+            if (photoCamera.gameObject.scene.IsValid() && photoCamera.gameObject.activeSelf)
+            {
+                photoCamera.gameObject.SetActive(false);
+            }
+
+            photoCameraInstance = Instantiate(photoCamera, mainCamera.transform);
+            var t = photoCameraInstance.transform;
+            t.localPosition = Vector3.zero;
+            t.localRotation = Quaternion.identity;
+            t.localScale = Vector3.one;
+
+            photoCameraInstance.targetTexture = Global_Photo_Manager.Instance.roomPhotoRT;
+            photoCameraInstance.orthographicSize = mainCamera.orthographicSize * sizeRatio;
+            photoCameraInstance.gameObject.SetActive(true);
+
+            var canvas = frameCanvas.GetComponent<Canvas>();
+            canvas.worldCamera = photoCameraInstance;
+
+            bgCanvasClone = Instantiate(bgCanvas, mainCamera.transform);
+            bgCanvasClone.renderMode = RenderMode.WorldSpace;
+            bgCanvasClone.worldCamera = null;
+            var bgRect = bgCanvasClone.GetComponent<RectTransform>();
+            bgRect.localScale = Vector3.one;
+            bgRect.localPosition = new Vector3(0f, 0f, bgPlaneDistance);
+            bgRect.localRotation = Quaternion.identity;
+            SyncBgCanvasCloneSize();
         }
 
-        private void SetPhotoPanelTransparency(float alphaValue)
+        /// <summary>销毁拍照子相机和背景板克隆体。</summary>
+        private void DestroyPhotoCamera()
         {
-            //return;
-            //Image image = photoPanel.GetComponent<Image>();
-            //if (image != null)
-            //{
-            //    var color = image.color;
-            //    color.a = alphaValue;
-            //    image.color = color;
-            //}
-            //else
-            //{
-            //    Debug.LogError("PhotoPanel does not have an Image component.");
-            //}
+            if (bgCanvasClone != null)
+            {
+                Destroy(bgCanvasClone.gameObject);
+                bgCanvasClone = null;
+            }
+            if (photoCameraInstance == null) return;
+            photoCameraInstance.targetTexture = null;
+            Destroy(photoCameraInstance.gameObject);
+            photoCameraInstance = null;
         }
-
         #endregion
 
-        // 切换相机类型
-        public void SwitchPhotoCameraType()
-        {
-            string currentRoomName = GetCurrentRoomName();
-            if (currentRoomName == null) return;
 
-            int nextType = ((int)currentPhotoCameraType + 1) % 3;
-            PhotoCameraType targetType = (PhotoCameraType)nextType;
-
-            var cameraRoots = roomCameraDict[currentRoomName];
-            if (cameraRoots == null || cameraRoots.Count < 3) return;
-
-            GameObject targetCameraRoot = cameraRoots[nextType];
-
-            LeanPinchCamera newPinchCamera = targetCameraRoot.GetComponentInChildren<LeanPinchCamera>(true);
-            LeanPitchYaw newPitchYaw = targetCameraRoot.GetComponentInChildren<LeanPitchYaw>(true);
-            LeanPinchCamera pinchCamera = currentPhotoCamerRoot.GetComponentInChildren<LeanPinchCamera>(true);
-            LeanPitchYaw pitchYaw = currentPhotoCamerRoot.GetComponentInChildren<LeanPitchYaw>(true);
-
-            newPitchYaw.Pitch = pitchYaw.Pitch;
-            newPitchYaw.Yaw = pitchYaw.Yaw;
-            newPinchCamera.Zoom = pinchCamera.Zoom;
-            newPinchCamera.gameObject.transform.localPosition = pinchCamera.gameObject.transform.localPosition;
-
-            currentPhotoCameraType = targetType;
-            currentPhotoCamerRoot.SetActive(false);
-            targetCameraRoot.SetActive(true);
-            currentPhotoCamerRoot = targetCameraRoot;
-            Camera foundCamera = currentPhotoCamerRoot.GetComponentInChildren<Camera>(true);
-            currentCamera = foundCamera;
-            frameCanvas.GetComponent<Canvas>().worldCamera = foundCamera;
-            foundCamera.targetTexture = null;
-        }
-
-        // 打开选择相机界面
-        public void ShowPhotoCameraButtons()
-        {
-            string currentRoomName = GetCurrentRoomName();
-            if (currentRoomName == null) return;
-
-            currentCameraButtonsRoot.SetActive(true);
-
-            for (int i = 0; i < photoCameraButtons.Count; i++)
-            {
-                var cameraSetting = photoCameraButtons[i].GetComponent<PhotoCameraSetting>();
-                if (cameraSetting != null)
-                {
-                    photoCameraButtons[i].SetActive(cameraSetting.roomName == currentRoomName && cameraSetting.cameraType != currentPhotoCameraType);
-                }
-            }
-
-            var layout = currentCameraButtonsRoot.GetComponent<HorizontalLayoutGroup>();
-            if (layout != null)
-            {
-                LayoutRebuilder.ForceRebuildLayoutImmediate(currentCameraButtonsRoot.GetComponent<RectTransform>());
-            }
-        }
-
-        // 确认选择相机类型
-        public void ConfirmToChangePhotoCameraType()
-        {
-            LeanPinchCamera newPinchCamera = choosedPhotoCameraRoot.GetComponentInChildren<LeanPinchCamera>(true);
-            LeanPitchYaw newPitchYaw = choosedPhotoCameraRoot.GetComponentInChildren<LeanPitchYaw>(true);
-            LeanPinchCamera pinchCamera = currentPhotoCamerRoot.GetComponentInChildren<LeanPinchCamera>(true);
-            LeanPitchYaw pitchYaw = currentPhotoCamerRoot.GetComponentInChildren<LeanPitchYaw>(true);
-
-            newPinchCamera.gameObject.transform.position = pinchCamera.gameObject.transform.position;
-            newPinchCamera.Zoom = pinchCamera.Zoom;
-            newPitchYaw.Pitch = pitchYaw.Pitch;
-            newPitchYaw.Yaw = pitchYaw.Yaw;
-
-            currentPhotoCameraType = choosedPhotoCameraType;
-            currentPhotoCamerRoot.SetActive(false);
-            choosedPhotoCameraRoot.SetActive(true);
-            currentPhotoCamerRoot = choosedPhotoCameraRoot;
-            Camera foundCamera = currentPhotoCamerRoot.GetComponentInChildren<Camera>(true);
-            currentCamera = foundCamera;
-            frameCanvas.GetComponent<Canvas>().worldCamera = foundCamera;
-            foundCamera.targetTexture = null;
-            foundCamera.targetTexture = Global_Photo_Manager.Instance.roomPhotoRT;
-        }
-
-        // 拍照
+        #region 拍照
         public void CapturePhoto()
         {
             StartCoroutine(CaptureAndShowPhoto());
+        }
 
-            IEnumerator CaptureAndShowPhoto()
-            {
-                currentCamera.targetTexture = Global_Photo_Manager.Instance.roomPhotoRT;
-                yield return new WaitForEndOfFrame();
+        private IEnumerator CaptureAndShowPhoto()
+        {
+            yield return new WaitForEndOfFrame();
+            Global_Photo_Manager.Instance.CapturePhoto(PhotoMode.Room);
+            yield return new WaitForEndOfFrame();
+            Global_Photo_Manager.Instance.Try_Load_Last_Image(photoDisplay);
 
-                //string fileName = $"screenshot_{System.DateTime.Now:yyyyMMdd_HHmmss}.png";
-                //Global_Photo_Manager.Instance.Save_RT_to_PNG(0, 0, Screen.safeArea.width, Screen.safeArea.height, "indoor", fileName);
-
-                Global_Photo_Manager.Instance.CapturePhoto(PhotoMode.Room);
-
-                yield return new WaitForEndOfFrame();
-
-                currentCamera.targetTexture = null;
-                Global_Photo_Manager.Instance.Try_Load_Last_Image(photoDisplay);
-
-                if (afterPhoto != null)
-                {
-                    SetPhotoPanelTransparency(alphaValue);
-                    afterPhoto.SetActive(true);
-                    photoPanel.SetActive(true);
-                }
-            }
+            afterPhoto.SetActive(true);
+            photoPanel.SetActive(true);
         }
 
         public void CloseAfterPhoto()
         {
-            if (afterPhoto != null)
-            {
-                photoPanel.SetActive(false);
-                afterPhoto.SetActive(false);
-                SetPhotoPanelTransparency(0);
-            }
+            photoPanel.SetActive(false);
+            afterPhoto.SetActive(false);
         }
 
         public void SavePhoto()
         {
             Global_Photo_Manager.Instance.SaveLastPhotoToGallery();
         }
-
-    }
-
-    public enum PhotoCameraType
-    {
-        PhotoCamera0,
-        PhotoCamera1,
-        PhotoCamera2,
+        #endregion
     }
 }

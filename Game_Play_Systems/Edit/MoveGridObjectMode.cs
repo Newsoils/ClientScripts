@@ -25,12 +25,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
         private GridLayerType _lastLayerType = GridLayerType.None;
         private List<string> _previewGridUids = new List<string>();
         private Vector3 _originalWorldPosition;
-        private float _originalYOffset = 0.5f;
 
+        private const float LIFT_HEIGHT = 0.5f;
         private const float LIFT_DURATION = 0.2f;
 
         private bool hasHighed = false;
-        private bool isDraging = false;
 
         public MoveGridObjectMode(GridObject selected = null)
         {
@@ -39,16 +38,16 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void Enter()
         {
-
-            CameraManager.Instance.ChangeState(CameraState.Placement);
             if (_selected != null)
             {
+                CameraManager.Instance.Freeze();
                 InitMovePlacement(_selected, _selected.transform.position);
             }
         }
 
         public void Exit()
         {
+            CameraManager.Instance.Unfreeze();
             GridSystem.CloseGridView();
 
             if (_previewGridUids.Count > 0)
@@ -58,7 +57,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
             _lastPreviewGirdViews.Clear();
 
-            if (_selected != null)
+            if (_selected != null && GridObjectSystem.runtimeDic.ContainsKey(_selected.UId))
             {
                 var (w, h) = _selected.GetCurSize();
                 var occupied = GridUtility.CalculateOccpiedPos(w, h, _originalGridPos);
@@ -90,7 +89,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             if (curP != null)
             {
                 InitMovePlacement(curP, hitpos);
-                EvtDsp.TriggerEvt(EvtNames.Move_Placement_Panel, _selected.transform.position);
+                EvtDsp.TriggerEvt(EvtNames.Move_Placement_Panel, _selected.Root.position);
             }
             else
             {
@@ -105,13 +104,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
             OnTap(screenPos);
         }
 
-        private void InitMovePlacement(GridObject target, Vector3 hitpos)
+        private void InitMovePlacement(GridObject target, Vector3 hitpos, bool openPanel = true)
         {
             _selected = target;
 
             var placingType = _selected.placingType;
             Enum_Helper.GridLayerMap.TryGetValue(placingType, out var gridLayerTypes);
 
+            GridSystem.CloseGridView();
             GridSystem.OpenGridView(RoomSystem.currentRoom, gridLayerTypes);
             EvtDsp.TriggerEvt(EvtNames.RefreshGridView);
 
@@ -131,28 +131,46 @@ namespace CLIP.Project_Mouse.Game_Play_System
             var uids = RoomSystem.currentRoom.GridState.GetGridUids(_originalLayerUid, occupied);
             EvtDsp.TriggerEvt<List<string>, MGridState>(EvtNames.Update_GridView_Occupy, uids, MGridState.Normal);
 
+            if (_selected is PlacementRuntime placementForBorder)
+            {
+                placementForBorder.UpdateBorderMesh();
+            }
             _selected.SetBorderVisible(true);
 
             if (hasHighed)
             {
                 _selected.transform.DOKill();
-                _selected.transform.DOMoveY(_selected.transform.position.y + _originalYOffset, LIFT_DURATION);
+                _selected.transform.DOMoveY(_selected.transform.position.y + LIFT_HEIGHT, LIFT_DURATION);
                 hasHighed = false;
             }
 
             AudioManager.Instance.PlayAudioByRefKey("getPlacement");
-            EvtDsp.TriggerEvt<GridObject, string, Vector3>(EvtNames.Open_Edit_Placement_Panel, target, _originalLayerUid, hitpos);
+            if (openPanel)
+            {
+                EvtDsp.TriggerEvt<GridObject, string, Vector3>(EvtNames.Open_Edit_Placement_Panel, target, _originalLayerUid, hitpos);
+            }
         }
 
         public void OnDragBegin(Vector2 screenPos)
         {
             var curP = GridObjectRaycastUtility.RaycastPlacement(screenPos, placementMask, out var hitpos);
 
+            if (curP == null)
+            {
+                if (_selected != null) _selected.SetBorderVisible(false);
+                EvtDsp.TriggerEvt(EvtNames.Close_Edit_Placement_Panel);
+                EditManager.Instance.SetMode(new DefaultGridObjectMode());
+                return;
+            }
+
+            CameraManager.Instance.Freeze();
+            EvtDsp.TriggerEvt(EvtNames.Close_Edit_Placement_Panel);
+
             if (_selected != null && curP != _selected)
             {
                 _selected.SetBorderVisible(false);
             }
-            InitMovePlacement(curP, hitpos);
+            InitMovePlacement(curP, hitpos, openPanel: false);
         }
 
         public void OnDrag(Vector2 screenPos)
@@ -192,7 +210,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 var uids = RoomSystem.currentRoom.GridState.GetGridUids(_curGridTag.LayerUID, occupiedPositions);
                 EvtDsp.TriggerEvt<List<string>, MGridState?>(EvtNames.Update_GridView_Preview_Occupy, uids, isVaild ? MGridState.Highlight : MGridState.Occupied);
                 _lastPreviewGirdViews = uids;
-                EvtDsp.TriggerEvt(EvtNames.Move_Placement_Panel, _selected.transform.position);
             }
 
             if (_selected is PlacementRuntime placement)
@@ -203,6 +220,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void OnDragRelease(Vector2 screenPos)
         {
+            CameraManager.Instance.Unfreeze();
             if (_selected == null) return;
 
             Debug.Log("释放拖动，尝试移动家具");
@@ -240,7 +258,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
             else
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不够，无法放置");
+                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不足，无法放置！");
                 RestoreToOriginalPosition();
                 _selected.transform.DOKill();
                 _selected.transform.DOMove(_originalWorldPosition, LIFT_DURATION);
@@ -248,6 +266,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             EvtDsp.TriggerEvt(EvtNames.Close_Edit_Placement_Panel);
             _selected = null;
+            EditManager.Instance.SetMode(new DefaultGridObjectMode());
         }
 
         private void RestoreToOriginalPosition()
@@ -291,13 +310,13 @@ namespace CLIP.Project_Mouse.Game_Play_System
             else
             {
                 RoomSystem.currentRoom.GridState.SetOccupied(targetLayerUid, rawOccupiedPositions, true);
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "旋转后位置不合法，无法旋转!");
+                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不足，无法旋转！");
             }
         }
 
         private Vector3 GetLiftedPosition(Vector3 basePosition)
         {
-            return basePosition + Vector3.up * _originalYOffset;
+            return basePosition + Vector3.up * LIFT_HEIGHT;
         }
     }
 }

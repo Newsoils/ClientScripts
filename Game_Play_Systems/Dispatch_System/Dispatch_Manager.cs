@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
-using CLIP.Framework_Core.LYC.TaskSystem;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
@@ -370,8 +369,7 @@ namespace CLIP
                         Log.Info("小苔刚刚出发!!_\n" +
                                 _player_dispatch_state._current_dispatch_info.dispatch_info_to_str());
                         // 通知任务系统
-                        //TaskTriggers.TriggerEventOfMultipleOperations("第一次完成派遣", 1);
-                        TaskTriggers.TriggerEventOfMultipleOperations(3, 1);
+                        TaskEvent.TriggerXiaoTaiReturnHome();
                     }
 
 

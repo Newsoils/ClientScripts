@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace CLIP.Project_Mouse.Game_Play_System
 {
+    /// <summary>场景中的房间根物体：驱动显示与交互；持久化数据在 <see cref="Kernel.RoomData"/>（经 <see cref="RoomSystem"/> 绑定）。</summary>
     public class Room : MonoBehaviour
     {
         private RoomData roomData;
@@ -177,12 +178,12 @@ namespace CLIP.Project_Mouse.Game_Play_System
             BindPlacementWallVisibility(placement, gridLayerUId);
         }
 
-        public void AddOtherPlacementToRoomData(PlacementData placementData)
+        public void AddOtherPlacementToRoomData(GridObjectData placementData)
         {
             roomData.placementDatas.Add(placementData);
         }
 
-        public void RemoveOtherPlacementToRoomDat(PlacementData placementData)
+        public void RemoveOtherPlacementToRoomDat(GridObjectData placementData)
         {
             roomData.placementDatas.Remove(placementData);
         }
