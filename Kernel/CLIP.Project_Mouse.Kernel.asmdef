@@ -1,0 +1,18 @@
+{
+    "name": "CLIP.Project_Mouse.Kernel",
+    "rootNamespace": "",
+    "references": [
+        "GUID:53ba43c05f32826459df6d3ac8c41ad9",
+        "GUID:a63a3c8abb639d2428b8c570afa3bd8c",
+        "GUID:bbdef65244eff3c49be3d05ce22e6d9e"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
