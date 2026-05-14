@@ -87,19 +87,17 @@ namespace CLIP.NewSoil
             //加载资源,播放健康游戏忠告
             var loadTask = GameAssets.Instance.InitAsync();
 
-            var noticeTask = ShowHealthNotice(); // 👈 新增
+            var noticeTask = ShowHealthNotice(); 
 
             // ✅ 等两个都完成
             await Task.WhenAll(loadTask, noticeTask);
 
             await Task.Delay(100); // 单位是毫秒，100ms = 0.1秒
 
-
             // 所有资源加载完毕后再进入游戏主场景
             var loadOp = SceneManager.LoadSceneAsync(activeSceneIndex);
             while (!loadOp.isDone)
                 await Task.Yield();
-            CreateOrFindSystem<SceneLoadHelper>(root);
             CreateOrFindSystem<CharacterClothesManager>(root);
             CreateOrFindSystem<CharacterHandHeldController>(root);
 

@@ -187,6 +187,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             if (GridObjectRaycastUtility.RaycastGrid(screenPos, gridLayerMask, _selected, out var gridLayerTag, out var alignPos, out var gPos))
             {
+                // 禁止将家具移动到其他房间的网格平面上
+                if (RoomSystem.currentRoom == null || gridLayerTag.roomName != RoomSystem.currentRoom.RoomName)
+                    return;
+
                 pos = alignPos;
                 _curPosition = alignPos;
                 _curGridTag = gridLayerTag;
@@ -228,6 +232,19 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             EvtDsp.TriggerEvt<List<string>, MGridState?>(EvtNames.Update_GridView_Preview_Occupy, _lastPreviewGirdViews, null);
             _lastPreviewGirdViews.Clear();
+
+            // 禁止将家具放置到其他房间
+            if (_curGridTag != null && RoomSystem.currentRoom != null && _curGridTag.roomName != RoomSystem.currentRoom.RoomName)
+            {
+                RestoreToOriginalPosition();
+                _selected.transform.DOKill();
+                _selected.transform.DOMove(_originalWorldPosition, LIFT_DURATION);
+                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "不能将家具移动到其他房间！");
+                EvtDsp.TriggerEvt(EvtNames.Close_Edit_Placement_Panel);
+                _selected = null;
+                EditManager.Instance.SetMode(new DefaultGridObjectMode());
+                return;
+            }
 
             var (x, y) = _selected.GetCurSize();
             HashSet<Int2> occupiedPositions = GridUtility.CalculateOccpiedPos(x, y, _curGPosition);

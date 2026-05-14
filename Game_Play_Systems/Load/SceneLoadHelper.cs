@@ -3,7 +3,7 @@ using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
 using UnityEngine.SceneManagement;
 
-public class SceneLoadHelper : SingletonMono<SceneLoadHelper>
+public static class SceneLoadHelper 
 {
     public static string DispatchSceneName = "Dispatch_Demo";
     public static string MainSceneName = "MainScene";

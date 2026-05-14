@@ -158,10 +158,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         #region 其他数据
 
-        public static void LoadTaskData(out Dictionary<int, TaskModel> taskModelsDic, out Dictionary<int, List<TaskModel>> taskGroupByLevel)
+        public static void LoadTaskData(out Dictionary<int, TaskModel> taskModelsDic, out Dictionary<int, List<TaskModel>> taskGroupByLevel,out List<TaskModel> _recurTasks)
         {
             taskModelsDic = new Dictionary<int, TaskModel>();
             taskGroupByLevel = new Dictionary<int, List<TaskModel>>();
+            _recurTasks = new List<TaskModel>();
             var jsonFile = Resources.Load<TextAsset>(TaskDataPath);
             var taskModels = JsonConvert.DeserializeObject<List<TaskModel>>(jsonFile.text);
             foreach (var task in taskModels)
@@ -173,6 +174,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     taskGroupByLevel[task.unlockExp] = list;
                 }
                 list.Add(task);
+                if(task.isRecurTask)
+                {
+                    _recurTasks.Add(task);
+                }
             }
         }
 

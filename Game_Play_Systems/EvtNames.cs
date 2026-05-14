@@ -230,4 +230,7 @@ public static class EvtNames
     /// <summary>任务系统：等级提升时解锁了新任务。</summary>
     public static string Task_Unlocked = "Task_Unlocked";
 
+    /// <summary>经验系统：玩家等级数据从服务器加载完成。</summary>
+    public static string PlayerLevelDataLoaded = "PlayerLevelDataLoaded";
+
 }

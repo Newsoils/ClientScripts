@@ -96,7 +96,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         }
 
 
-        public void CapturePhoto(PhotoMode mode, string name = "", bool isScreen = false, string saveDirectoryOverride = null)
+        public void CapturePhoto(PhotoMode mode, string name = "", bool isScreen = false, string saveDirectoryOverride = null, string photoConfigName = "")
         {
             string fileName = name;
 
@@ -108,7 +108,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             StartCoroutine(CaptureRT(mode, (tex) =>
             {
                 string path = SaveTextureToDisk(tex, fileName, saveDirectoryOverride);
-                AddPhotoInfo(path, fileName, mode);
+                AddPhotoInfo(path, fileName, mode, photoConfigName);
                 Destroy(tex);
             }));
 
@@ -117,7 +117,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 StartCoroutine(CaptureScreen((tex) =>
                 {
                     string path = SaveTextureToDisk(tex, fileName, saveDirectoryOverride);
-                    AddPhotoInfo(path, fileName, mode);
+                    AddPhotoInfo(path, fileName, mode, photoConfigName);
                     Destroy(tex);
                 }));
             }
@@ -193,11 +193,12 @@ namespace CLIP.Project_Mouse.Game_Play_System
             return path;
         }
 
-        public void AddPhotoInfo(string path, string fileName, PhotoMode mode)
+        public void AddPhotoInfo(string path, string fileName, PhotoMode mode, string photoConfigName = "")
         {
             photo_info_saved info = new photo_info_saved();
 
             info._photo_name = fileName;
+            info._photo_config_name = photoConfigName;
             info._local_path = path;
             info._photo_upload_time = DateTime.Now;
             info._photo_type = "normal";
@@ -620,7 +621,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             string fileName = $"{photoInfo.photo_name}_{photoInfo.camera_id}_{System.DateTime.Now:yyyyMMdd_HHmmss}.png";
 
             //Global_Photo_Manager.Instance.Save_RT_to_PNG("dispatch", fileName);
-            CapturePhoto(PhotoMode.Dispatch, fileName, false, saveDirectoryOverride);
+            CapturePhoto(PhotoMode.Dispatch, fileName, false, saveDirectoryOverride, photoInfo.photo_name);
 
             yield return new WaitForEndOfFrame();
 
@@ -786,10 +787,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
         /// <summary>
         /// 添加一张派遣照片到元数据列表（同时写入 _local_image_list 和 _dispatch_photo_path_list 以保持向后兼容）。
         /// </summary>
-        public void AddDispatchPhoto(string path, string photoName)
+        public photo_info_saved AddDispatchPhoto(string path, string photoName, string photoConfigName = "")
         {
             photo_info_saved info = new photo_info_saved();
             info._photo_name = photoName;
+            info._photo_config_name = photoConfigName;
             info._local_path = path;
             info._photo_upload_time = DateTime.Now;
             info._photo_type = "normal";
@@ -797,7 +799,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
             _local_image_list.Add(info);
             Save_PhotoList_Info();
 
-        _dispatch_photo_path_list.Add(path);
+            _dispatch_photo_path_list.Add(path);
+            return info;
         }
 
         /// <summary>
@@ -806,6 +809,32 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public photo_info_saved GetPhotoInfo(string photoName)
         {
             return _local_image_list.Find(p => p._photo_name == photoName);
+        }
+
+        public photo_info_saved GetLatestDispatchPhotoByConfigName(string photoConfigName)
+        {
+            if (string.IsNullOrEmpty(photoConfigName)) return null;
+
+            for (int i = _local_image_list.Count - 1; i >= 0; i--)
+            {
+                var info = _local_image_list[i];
+                if (info._photo_source == PhotoMode.Dispatch.ToString()
+                    && info._photo_config_name == photoConfigName)
+                {
+                    return info;
+                }
+            }
+
+            return null;
+        }
+
+        public photo_info_saved GetDispatchPhotoByFileName(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName)) return null;
+
+            return _local_image_list.Find(p =>
+                p._photo_source == PhotoMode.Dispatch.ToString()
+                && p._photo_name == fileName);
         }
  
         /// <summary>
@@ -825,7 +854,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             if (File.Exists(info._local_path)) File.Delete(info._local_path);
             ReleaseTextureByInfo(info);
             _local_image_list.Remove(info);
-            _dispatch_photo_path_list.Remove(info._photo_name);
+            _dispatch_photo_path_list.Remove(info._local_path);
             Save_PhotoList_Info();
             Save_Dispatch_PhotoList();
         }

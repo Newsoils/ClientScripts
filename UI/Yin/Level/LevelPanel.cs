@@ -44,11 +44,11 @@ namespace CLIP
 
                 public void Refresh()
                 {
-                    curLevel.text = ExpManager.instance.curLevel.ToString();
-                    nextLevel.text = (ExpManager.instance.curLevelInfo.nextLevelExp - ExpManager.instance.curExp).ToString();
-                    if (ExpManager.instance.curLevelInfo.nextLevelExp > 0)
+                    curLevel.text = ExpManager.Instance.curLevel.ToString();
+                    nextLevel.text = (ExpManager.Instance.curLevelInfo.nextLevelExp - ExpManager.Instance.curExp).ToString();
+                    if (ExpManager.Instance.curLevelInfo.nextLevelExp > 0)
                     {
-                        curExp.fillAmount = (float)ExpManager.instance.curExp / ExpManager.instance.curLevelInfo.nextLevelExp;
+                        curExp.fillAmount = (float)ExpManager.Instance.curExp / ExpManager.Instance.curLevelInfo.nextLevelExp;
                     }
                     else
                     {
@@ -64,17 +64,17 @@ namespace CLIP
                         Destroy(child.gameObject);
                     }
                     lines.Clear();
-                    if(ExpManager.instance.curLevelInfo.rewardItem.Count < ExpManager.instance.curLevelInfo.thresholdNum)
+                    if(ExpManager.Instance.curLevelInfo.rewardItem.Count < ExpManager.Instance.curLevelInfo.thresholdNum)
                     {
                         return;
                     }
-                    for(int i = 0; i < ExpManager.instance.curLevelInfo.thresholdNum + 1; i++)
+                    for(int i = 0; i < ExpManager.Instance.curLevelInfo.thresholdNum + 1; i++)
                     {
-                        if(i != ExpManager.instance.curLevelInfo.thresholdNum)
+                        if(i != ExpManager.Instance.curLevelInfo.thresholdNum)
                         {
                             GameObject obj = Instantiate(thresholdLine, thresholdLineFrame);
                             ThresholdLine line = obj.GetComponent<ThresholdLine>();
-                            line.Init(ExpManager.instance.curLevelInfo.rewardItem[i].items);
+                            line.Init(ExpManager.Instance.curLevelInfo.rewardItem[i].items);
                             lines.Add(line);
                         }
                         else
@@ -91,11 +91,11 @@ namespace CLIP
                     {
                         Destroy(child.gameObject);
                     }
-                    if (ExpManager.instance.curLevelInfo.rewardItem.Count < ExpManager.instance.curLevelInfo.thresholdNum)
+                    if (ExpManager.Instance.curLevelInfo.rewardItem.Count < ExpManager.Instance.curLevelInfo.thresholdNum)
                     {
                         return;
                     }
-                    foreach (var item in ExpManager.instance.curLevelInfo.rewardItem[^1].items)
+                    foreach (var item in ExpManager.Instance.curLevelInfo.rewardItem[^1].items)
                     {
                         GameObject obj = Instantiate(rewardItemCell, rewardItemFrame);
                         obj.GetComponent<RewardItemCell>().Init(item.Item1, item.Item2);

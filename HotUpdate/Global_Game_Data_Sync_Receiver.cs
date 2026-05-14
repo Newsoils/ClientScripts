@@ -54,8 +54,9 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         Debug.Log("Global_Game_Data_Sync_Receiver initialized");
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
+        base.OnDestroy();
         UnbindUnityEvents();
         UnregisterFromNetwork();
         EvtDsp.RemoveEvt<string, string>(EvtNames.Save_Data_To_Server, SaveDataToServer);

@@ -60,6 +60,10 @@ public static class GridObjectRaycastUtility
             var tag = hit.collider.GetComponent<GridLayerTag>();
             if (tag == null) continue;
 
+            // 禁止将家具放置到其他房间的网格平面上
+            if (RoomSystem.currentRoom == null || tag.roomName != RoomSystem.currentRoom.RoomName)
+                continue;
+
             var placingType = selected.placingType;
             if (!Enum_Helper.GridLayerMap.TryGetValue(placingType, out var validLayers))
                 continue;

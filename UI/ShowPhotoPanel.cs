@@ -52,14 +52,17 @@ namespace CLIP.Project_Mouse.UI
         }
 
         /// <summary>
-        /// 需要给照片路径
+        /// 支持传 photo_info_saved 或照片路径。新逻辑优先传元数据，路径仍保留给旧调用兼容。
         /// </summary>
-        /// <param name="data"></param>
         public override void OpenPanel(params object[] data)
         {
-            if (data.Length > 0 && data[0] is string photoPath && !string.IsNullOrEmpty(photoPath))
+            if (data.Length > 0 && data[0] is photo_info_saved photoInfo)
             {
-
+                _currentPhotoInfo = photoInfo;
+                _currentPhotoPath = photoInfo._local_path;
+            }
+            else if (data.Length > 0 && data[0] is string photoPath && !string.IsNullOrEmpty(photoPath))
+            {
                 _currentPhotoInfo = Global_Photo_Manager.Instance.GetPhotoInfoByPath(photoPath);
                 if (_currentPhotoInfo == null)
                 {
@@ -70,10 +73,15 @@ namespace CLIP.Project_Mouse.UI
             }
             else
             {
-                // 没有传参数，加载最后一张
                 _currentPhotoPath = Global_Photo_Manager.Instance.Last_Photo_Path;
                 if (!string.IsNullOrEmpty(_currentPhotoPath))
                     _currentPhotoInfo = Global_Photo_Manager.Instance.GetPhotoInfoByPath(_currentPhotoPath);
+            }
+
+            if (_currentPhotoInfo == null)
+            {
+                Log.Error("ShowPhotoPanel: 照片元数据为空。");
+                return;
             }
 
             if (string.IsNullOrEmpty(_currentPhotoPath) || !File.Exists(_currentPhotoPath))

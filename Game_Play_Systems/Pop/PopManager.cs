@@ -33,7 +33,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         }
         private ClickInteractData SelectData()
         {
-            List<ClickInteractData> canSlect = datas.Where(x => x.favorLevel <= ExpManager.instance.curLevel).ToList();
+            List<ClickInteractData> canSlect = datas.Where(x => x.favorLevel <= ExpManager.Instance.curLevel).ToList();
             return canSlect[Random.Range(0, canSlect.Count)];
         }
     }

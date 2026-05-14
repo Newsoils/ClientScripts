@@ -171,7 +171,7 @@ namespace CLIP.Project_Mouse.UI
             }
 
             RefreshExpUi();
-            if (ExpManager.instance == null)
+            if (ExpManager.Instance == null)
                 StartCoroutine(RefreshExpUiWhenReady());
 
             InitAchievements();
@@ -180,7 +180,7 @@ namespace CLIP.Project_Mouse.UI
 
         private void RefreshExpUi()
         {
-            var exp = ExpManager.instance;
+            var exp = ExpManager.Instance;
             if (expLevelText != null)
                 expLevelText.text = exp != null ? exp.curLevel.ToString() : "-";
 
@@ -203,7 +203,7 @@ namespace CLIP.Project_Mouse.UI
         private IEnumerator RefreshExpUiWhenReady()
         {
             int guard = 0;
-            while (ExpManager.instance == null && guard++ < 300)
+            while (ExpManager.Instance == null && guard++ < 300)
                 yield return null;
             RefreshExpUi();
         }

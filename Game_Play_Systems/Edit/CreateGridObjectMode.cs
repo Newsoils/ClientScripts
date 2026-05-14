@@ -156,6 +156,17 @@ namespace CLIP.Project_Mouse.Game_Play_System
             if (_selected == null) return;
             if (_curGridTag == null) return;
 
+            // 禁止将家具放置到其他房间
+            if (RoomSystem.currentRoom == null || _curGridTag.roomName != RoomSystem.currentRoom.RoomName)
+            {
+                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "不能将家具放置到其他房间！");
+                GameObject.Destroy(_selected.gameObject);
+                _selected = null;
+                EvtDsp.TriggerEvt(EvtNames.Close_Edit_Placement_Panel);
+                EditManager.Instance.SetMode(new DefaultGridObjectMode());
+                return;
+            }
+
             EvtDsp.TriggerEvt<List<string>, MGridState?>(EvtNames.Update_GridView_Preview_Occupy, _lastPreviewGirdViews, null);
             _lastPreviewGirdViews.Clear();
             if (!GridObjectSystem.TryAddGridObject(_selected, RoomSystem.currentRoom, _curGridTag.LayerUID, _curGPosition))

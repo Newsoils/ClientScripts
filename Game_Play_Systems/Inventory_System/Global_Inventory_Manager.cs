@@ -193,7 +193,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                         break;
 
                     case "亲密度":
-                        ExpManager.instance.AddExp(count);
+                        ExpManager.Instance.AddExp(count);
                         break;
 
                     default:

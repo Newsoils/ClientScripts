@@ -43,7 +43,7 @@ namespace CLIP
                 }
                 private void RefreshUI()
                 {
-                    level.text = ExpManager.instance.curLevel.ToString();
+                    level.text = ExpManager.Instance.curLevel.ToString();
                     coinNum.text = MoneyManager.Instance.curCoin.ToString();
                     diamondNum.text = MoneyManager.Instance.curDiamond.ToString();
                 }

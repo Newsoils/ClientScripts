@@ -148,7 +148,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 }
                 task.result = "success";
                 SaveToLocal(data);
+
                 EvtDsp.TriggerEvt(EvtNames.RefreshUI);
+                TaskEvent.TriggerCostCoin(change);
+
             });
             return task;
         }
