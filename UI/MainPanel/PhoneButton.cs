@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using UnityEngine;
@@ -40,14 +39,13 @@ public class PhoneButton : SingletonMono<PhoneButton>
     {
         animator2.SetBool("Open", false);
         phonePanel.gameObject.SetActive(false);
-        yield return PlayAnimation(animator2, "ClosePhone2", "ClosePhone2");
+        yield return PlayAnimationInReverse(animator2, "OpenPhone2", "OpenPhone2");
         animator2.gameObject.SetActive(false);
         animator1.gameObject.SetActive(true);
         EvtDsp.TriggerEvt(EvtNames.OnPhonePanelClose);
-        yield return PlayAnimation(animator1, "ClosePhone", "ClosePhone");
+        yield return PlayAnimationInReverse(animator1, "OpenPhone", "OpenPhone");
         phoneButton.gameObject.SetActive(true);
         animator1.gameObject.SetActive(false);
-        //EvtDsp.TriggerEvt(EvtNames.ClosePlantPop);
         onComplete?.Invoke();
 
     }
@@ -62,6 +60,30 @@ public class PhoneButton : SingletonMono<PhoneButton>
             yield return null;
         }
         animator.SetBool(triggerName, false);
+        Debug.Log("动画播放完毕");
+    }
+
+    private IEnumerator PlayAnimationInReverse(Animator animator, string animationName, string boolName)
+    {
+        animator.SetBool(boolName, false);
+        animator.Play(animationName, 0, 1f);
+        animator.Update(0f);
+
+        AnimatorStateInfo info = animator.GetCurrentAnimatorStateInfo(0);
+        float duration = info.length;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float normalizedTime = 1f - Mathf.Clamp01(elapsed / duration);
+            animator.Play(animationName, 0, normalizedTime);
+            animator.Update(0f);
+            yield return null;
+        }
+
+        animator.Play(animationName, 0, 0f);
+        animator.Update(0f);
         Debug.Log("动画播放完毕");
     }
     public void OpenPanel()

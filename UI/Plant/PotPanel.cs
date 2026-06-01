@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using CLIP.Framework_Core.Event;
 using TMPro;
@@ -37,20 +35,33 @@ public class PotPanel : MonoBehaviour
         Vector3 position = Camera.main.WorldToScreenPoint(parent.transform.position + offset);
         transform.position = position;
         timeText.text = GetTimeText();
-        int stageCount = data.lifeCycle.Where(x => x > 0).ToList().Count;
-        int curStage = data.lifeCycle.Take(plant.data.growStage + 1).Where(x => x > 0).ToList().Count;
+        int stageCount = GetStageCount();
+        int curStage = GetCurrentStage(stageCount);
         stageText.text = "阶段 " + curStage + "/" + stageCount;
+    }
+    private int GetStageCount()
+    {
+        return data.lifeCycle.Count(x => x > 0);
+    }
+    private int GetCurrentStage(int stageCount)
+    {
+        if (plant.data.growStage == 1)
+        {
+            return Mathf.Clamp(data.lifeCycle.Take(plant.data.growStage2).Count(x => x > 0), 1, stageCount);
+        }
+        return stageCount;
     }
     private string GetTimeText()
     {
-        if(plant.data.growStage == 4)
+        if(plant.data.growStage != 1)
         {
             return "--:--";
         }
         else
         {
-            int minutes = Mathf.Max((int)plant.nextStageTime, 0);
-            int seconds = Mathf.Max((int)((plant.nextStageTime - minutes) * 60), 0);
+            float nextStageTime = plant.GetNextStageRemainingMinutes();
+            int minutes = Mathf.Max((int)nextStageTime, 0);
+            int seconds = Mathf.Max((int)((nextStageTime - minutes) * 60), 0);
             return minutes + ":" + seconds;
         }
     }

@@ -19,11 +19,6 @@ public class player_dispatch_state
     public List<string> _photo_obtained = new List<string>();
     public single_dispatch_info _current_dispatch_info;
 
-
-    public string player_state = "At_Home";
-    public int player_at_home_length_in_minute = 0;
-    public int player_on_dispatch_length_in_minute = 0;
-
     //[Header("Reward_Info")]
     public string last_visited_map;
     public string last_reward_info;
@@ -60,9 +55,6 @@ public class player_dispatch_state
             this._map_cleared = _data._map_cleared;
             this._photo_obtained = _data._photo_obtained;
             this._current_dispatch_info = _data._current_dispatch_info;
-            this.player_state = _data.player_state;
-            this.player_at_home_length_in_minute = _data.player_at_home_length_in_minute;
-            this.player_on_dispatch_length_in_minute = _data.player_on_dispatch_length_in_minute;
             this.last_reward_info = _data.last_reward_info;
             this.last_visited_map = _data.last_visited_map;
             this.last_reward_currency = _data.last_reward_currency;
@@ -89,63 +81,23 @@ public class player_dispatch_state
         }
     }
 
-    public string dispatch_system_tick()
+    /// <param name="catStatus">与服端 CatInfo.Status 一致：0 在家，1 出游；不在此用本地计时推断出门/回家。</param>
+    public string dispatch_system_tick(int catStatus)
     {
-        if (player_state == "At_Home")
-        {
-            player_at_home_length_in_minute++;
-            if (try_leave_home() == true)
-            {
-                on_start_dispatch();
-                return "On_Dispatch_Start";
-            }
+        if (catStatus == 0)
             return "At_Home";
-        }
-        if (player_state == "On_Dispatch")
+        if (catStatus == 1)
         {
-            player_on_dispatch_length_in_minute++;
-            if (DateTime.Now >= _current_dispatch_info.end_time)
-            {
-                on_end_dispatch();
-                return "On_Dispatch_End";
-            }
             string _mw_report = check_middle_way_event();
             if (_mw_report == "Get_Middle_Way_Photo")
-            {
-                _on_get_mid_way_photo.Invoke();
-            }
+                _on_get_mid_way_photo?.Invoke();
             return "On_Dispatch";
         }
         return "Nothing_Happen";
     }
 
-    public bool try_leave_home()
-    {
-        //测试，10秒出门
-        //if (player_at_home_length_in_minute >= 10f)
-        //{
-        //    player_at_home_length_in_minute = 0;
-        //    return true;
-        //}
-
-        Departure_Probability dp = _dispatch_config.departure_probability_list.Find(
-            (_dp) =>
-            {
-                return _dp.min_time <= player_at_home_length_in_minute
-                    && _dp.max_time >= player_at_home_length_in_minute;
-            }
-            );
-        if (dp == null) return false;
-        int seed = (int)DateTime.Now.ToBinary();
-        Random rand = new Random(seed);
-        float p = (float)rand.NextDouble();
-        return p <= dp.probability;
-    }
-
     public void on_start_dispatch()
     {
-        player_state = "On_Dispatch";
-
         //Clear up
         //_current_dispatch_info = new single_dispatch_info();
 
@@ -182,8 +134,9 @@ public class player_dispatch_state
 
         //Get dispatch time length
         int time_len = rand.Next(_food.min_travel_time, _food.max_travel_time);
+        time_len = 1;
         _current_dispatch_info.dispatch_length_in_minute = time_len;
-        TimeSpan ts = new TimeSpan(0, time_len, 0);
+        TimeSpan ts = new TimeSpan(0, 1, 0);
         _current_dispatch_info.start_time = DateTime.Now;
         _current_dispatch_info.end_time = _current_dispatch_info.start_time + ts;
 
@@ -201,9 +154,6 @@ public class player_dispatch_state
                 _current_dispatch_info.can_get_middle_way_photo = true;
             }
         }
-        player_at_home_length_in_minute = 0;
-
-        player_on_dispatch_length_in_minute = 0;
     }
 
     public (int, int, string) on_end_dispatch()
@@ -217,8 +167,6 @@ public class player_dispatch_state
         last_visited_map = _current_dispatch_info.go_to_map_name;
         last_reward_info = _current_dispatch_info.reward_to_str();
         //TODO save to DB
-
-        player_state = "At_Home";
 
         var res = (_current_dispatch_info.reward_currency, _current_dispatch_info.reward_exp, _current_dispatch_info.reward_photo_name);
 
@@ -304,8 +252,13 @@ public class player_dispatch_state
         {
             return "Already_Trigger_Middle_Way_Event";
         }
+        bool localTripScheduled = _current_dispatch_info.end_time > _current_dispatch_info.start_time;
+        double elapsedMinutes = localTripScheduled
+            ? (DateTime.Now - _current_dispatch_info.start_time).TotalMinutes
+            : 0;
         if (_current_dispatch_info.dispatch_length_in_minute >= 24 * 60 &&
-            player_on_dispatch_length_in_minute >= (int)(_current_dispatch_info.dispatch_length_in_minute * 0.5f))
+            localTripScheduled &&
+            elapsedMinutes >= _current_dispatch_info.dispatch_length_in_minute * 0.5f)
         {
             int seed = (int)DateTime.Now.ToBinary();
             System.Random rand = new System.Random(seed);

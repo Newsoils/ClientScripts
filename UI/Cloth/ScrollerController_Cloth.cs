@@ -143,7 +143,7 @@ public class ScrollerController_Cloth : ScrollerController_GameItem<ScrollData_G
 
     private void OnItemClick(ScrollData_GameItem data)
     {
-        CharacterClothesManager.Instance.ChangeClothes(CharacterType.Target, data.name);
+        CharacterClothesManager.Instance.PreviewCloth(data.name);
     }
 
 }

@@ -4,6 +4,7 @@ using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Project_Mouse.Kernel.Social;
+using Common;
 using CLIP.Project_Mouse.UI;
 using TMPro;
 using UnityEngine;
@@ -101,12 +102,14 @@ public class FriendChatPanel : MonoBehaviour
         _record = record;
         Obj.SetActive(true);
 
+        SM.SetCurrentChatFriend(_record);
+
         InitHeader();
         InitEmojis();
         InitGifts();
         ShowChatView();
 
-        SM.update_social_chat_msg_from_server(_record.friend_name);
+        SM.update_social_chat_msg_from_server(_record.FriendId);
     }
 
     public void ClosePanel()
@@ -126,7 +129,7 @@ public class FriendChatPanel : MonoBehaviour
 
     private void InitHeader()
     {
-        friendName.text = _record._brief_info._player_nick_name;
+        friendName.text = _record.DisplayName;
         bool isHot = _record.hot_daily_count > 3;
         hotObj.SetActive(isHot);
         if (isHot) hotCount.text = _record.hot_daily_count.ToString();
@@ -183,13 +186,13 @@ public class FriendChatPanel : MonoBehaviour
 
         if (Global_Photo_Manager.Instance != null)
         {
-            Global_Photo_Manager.Instance.Load_Dispatch_PhotoList();
             if (Dispatch_Manager._instance != null)
             {
-                foreach (string path in Global_Photo_Manager.Instance._dispatch_photo_path_list)
+                foreach (var photoRecord in Global_Photo_Manager.Instance.dispatchList)
                 {
+                    var path = photoRecord.localPath;
                     string fileName = Path.GetFileName(path);
-                    if (fileName.StartsWith($"#PhotoWith{_record.friend_name}#"))
+                    if (fileName.StartsWith($"#PhotoWith{_record.DisplayName}#"))
                     {
                         GameObject go;
                         if (giftIndex < giftChildCount)
@@ -224,10 +227,16 @@ public class FriendChatPanel : MonoBehaviour
         for (int i = messageRoot.childCount - 1; i >= 0; i--)
             DestroyImmediate(messageRoot.GetChild(i).gameObject);
 
-        foreach (var chatRecord in _record._chat_msg)
+        var messages = _record.ChatInfo?.Content;
+        if (messages == null || messages.Count == 0)
+            return;
+
+        foreach (var chatMsg in messages)
         {
-            bool isReceive = chatRecord._msg_sender == _record.friend_name;
-            bool isGift = !string.IsNullOrEmpty(chatRecord._msg_good_item_name);
+            bool isReceive = chatMsg.Person?.RoleInfo?.RoleID == _record.RoleId
+                || chatMsg.Person?.RoleInfo?.RoleName == _record.DisplayName;
+            bool isExpression = chatMsg.MsgType == ChatMsgType.Expression;
+            bool isGift = chatMsg.MsgType != ChatMsgType.Text && !isExpression;
 
             GameObject prefab;
             if (isGift)
@@ -238,35 +247,49 @@ public class FriendChatPanel : MonoBehaviour
             GameObject msgObj = Instantiate(prefab, messageRoot);
             var msgComp = msgObj.GetComponent<MessageUnit>();
 
-            if (!isGift && msgComp != null)
-            {
-                var msgContent = chatRecord._msg_content;
-                if (msgContent != null && !string.IsNullOrEmpty(msgContent.res_url))
-                {
-                    var dbMsg = chatMsgSO.chat_msg_db.Find(m => m.msg_id == msgContent.msg_id);
-                    if (dbMsg != null && !string.IsNullOrEmpty(dbMsg.res_url))
-                    {
-                        string[] _image_url_data = dbMsg.res_url.Split('#');
-                        if (_image_url_data.Length == 2)
-                        {
-                            Project_Mouse_Resource_Management.load_sub_sprite(_image_url_data[0], _image_url_data[1], (sprite) =>
-                            {
-                                msgComp.message.sprite = sprite;
-                            });
-                        }
-                        else
-                        {
-                            Project_Mouse_Resource_Management.load_sprite_async(_image_url_data[0], (sprite) =>
-                            {
-                                msgComp.message.sprite = sprite;
-                            });
-                        }
-                    }
-                }
-            }
+            if (!isGift && msgComp != null && !string.IsNullOrEmpty(chatMsg.Text))
+                ApplyChatImageSprite(msgComp, chatMsg.Text);
         }
 
         ScrollToBottom();
+    }
+
+    /// <summary>
+    /// 将聊天 Text（res_url）加载为 <see cref="MessageUnit.message"/> 精灵。
+    /// 含 <c>#</c> 时为「图集路径#子精灵名」，否则为完整 Resources 精灵路径（与 <see cref="Emoji.InitEmoji"/> 一致）。
+    /// </summary>
+    private void ApplyChatImageSprite(MessageUnit msgComp, string text)
+    {
+        if (msgComp == null || string.IsNullOrEmpty(text))
+            return;
+
+        LoadSpriteFromResUrl(msgComp, text);
+    }
+
+    private static void LoadSpriteFromResUrl(MessageUnit msgComp, string resUrl)
+    {
+        if (msgComp == null || string.IsNullOrEmpty(resUrl))
+            return;
+
+        if (resUrl.Contains("#"))
+        {
+            string[] parts = resUrl.Split('#');
+            if (parts.Length < 2)
+                return;
+
+            Project_Mouse_Resource_Management.load_sub_sprite(parts[0], parts[1], sprite =>
+            {
+                if (msgComp != null && sprite != null)
+                    msgComp.message.sprite = sprite;
+            });
+            return;
+        }
+
+        Project_Mouse_Resource_Management.load_sprite_async(resUrl, sprite =>
+        {
+            if (msgComp != null && sprite != null)
+                msgComp.message.sprite = sprite;
+        });
     }
 
     private void ScrollToBottom()
@@ -315,7 +338,7 @@ public class FriendChatPanel : MonoBehaviour
     {
         if (giftUnit.isPhoto)
         {
-            Global_Photo_Manager.Instance.try_load_image(giftUnit.localPhotoPath, photoGift);
+            _=Global_Photo_Manager.Instance.LoadImageByPath(giftUnit.localPhotoPath, t=> photoGift.texture =t);
             photoGift.gameObject.SetActive(true);
         }
         else
@@ -351,7 +374,7 @@ public class FriendChatPanel : MonoBehaviour
             if (msgComp != null)
                 msgComp.message.sprite = _selectedEmoji.mSprite;
 
-            SM.on_send_social_chat_msg(_record.friend_name, _selectedEmoji.id);
+            SM.on_send_social_chat_msg(_record.DisplayName, _selectedEmoji.id);
         }
         else if (txtSendBox.text == "送给好友照片")
         {
@@ -362,12 +385,13 @@ public class FriendChatPanel : MonoBehaviour
             if (_selectedGift == null) return;
 
             Instantiate(sendGiftPrefab, messageRoot);
-            SM.on_send_present_to_friend(_record.friend_name,
+            SM.on_send_present_to_friend(_record.DisplayName,
                 _selectedGift._game_item_in_inventory.item_name);
 
             _selectedGift._game_item_in_inventory._item_count--;
-            if (Global_Inventory_Manager._instance != null)
-                Global_Inventory_Manager._instance.Send_inventory_to_server();
+            //if (Global_Inventory_Manager.Instance != null)
+            //    // TODO zhaorui
+            //    Global_Inventory_Manager.Instance.Send_inventory_to_server();
         }
 
         ScrollToBottom();

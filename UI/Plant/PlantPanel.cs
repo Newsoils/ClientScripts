@@ -80,6 +80,7 @@ public class PlantPanel : UIPanelBase
         });
 
         EvtDsp.AddEvt(EvtNames.ReloadPlantData, RefreshUI);
+        EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshUI);
     }
     IEnumerator DebouncedValidate(string text)
     {
@@ -104,9 +105,11 @@ public class PlantPanel : UIPanelBase
         searchInputField.onSubmit.RemoveAllListeners();
 
         EvtDsp.RemoveEvt(EvtNames.ReloadPlantData, RefreshUI);
+        EvtDsp.RemoveEvt(EvtNames.RefreshUI, RefreshUI);
     }
     public override void ClosePanel()
     {
+        ClickManager.NotifyUiConsumedPick();
         EditManager.Instance.ExitCurrentMode();
         mScroller.ClearData();
         obj.SetActive(false);

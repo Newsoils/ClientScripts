@@ -42,27 +42,26 @@ public class GridObject : MonoBehaviour
 
     public virtual void Rotate90()
     {
-        // 将当前枚举值转换为整数，加1后取模，再转回枚举
         int current = (int)data.rotation;
         int next = (current + 1) % 4;
         data.rotation = (Placement_Rotation)next;
 
-        float baseAngle = 0f;
-        if (placingType == Room_Placing_Type.Wall_Furniture && room != null && room.TryGetLayerTag(data.gridLayerUID, out var gridLayerTag))
-        {
-            baseAngle = gridLayerTag.gridLayerType switch
-            {
-                GridLayerType.Wall_E => 90f,
-                GridLayerType.Wall_S => 180f,
-                GridLayerType.Wall_W => 270f,
-                _ => 0f
-            };
-        }
+        float angle = (int)data.rotation * 90f;
+        Root.DORotate(Vector3.up * angle, 0.3f);
 
-        float angle = baseAngle + (int)data.rotation * 90f;
-        Vector3 endValue = new Vector3(0, angle, 0);
-        Root.transform.DORotate(endValue, 0.3f);
-        // 如果将来需要处理子物体或特殊逻辑，可在此扩展
+        SyncRootPivot();
+    }
+
+    public void SyncRootPivot()
+    {
+        // 旋转90°/270°时，Root的local X/Z方向在世界上翻转了，
+        // 需要交换 length 和 width 的偏移量来保持家具世界位置不变
+        bool swapped = data.rotation == Placement_Rotation.Deg90 || data.rotation == Placement_Rotation.Deg270;
+        float x = swapped ? gridData.width / 2f : gridData.length / 2f;
+        float z = swapped ? gridData.length / 2f : gridData.width / 2f;
+        // 保留现有 Y，避免把 prefab 中刻意设置的 Root Y（如部分花盆）重置为 0 导致下沉穿模
+        float y = Root.localPosition.y;
+        Root.localPosition = new Vector3(x, y, z);
     }
 
     /// <summary>
@@ -91,9 +90,9 @@ public class GridObject : MonoBehaviour
             return;
 
         var targetRotation = CalculateWallDefaultRotation(gridLayerType);
-        if (data.rotation == targetRotation)
-            return;
-
+        //if (data.rotation == targetRotation)
+        //    return;
+        data.rotation = targetRotation;
 
         float baseAngle = gridLayerType switch
         {
@@ -102,30 +101,28 @@ public class GridObject : MonoBehaviour
             GridLayerType.Wall_W => 270f,
             _ => 0f
         };
-        float angle = baseAngle + (int)data.rotation * 90f;
-        Vector3 endValue = new Vector3(0, angle, 0);
+        //float angle = baseAngle + (int)data.rotation * 90f;
+        Vector3 endValue = new Vector3(0,baseAngle, 0);
 
         if (animate)
-            Root.transform.DORotate(endValue, 0.3f);
+            Root.DORotate(endValue, 0.3f);
         else
             Root.localRotation = Quaternion.Euler(endValue);
 
-        data.rotation = targetRotation;
+        //SyncRootPivot();
 
     }
 
     public virtual void Rotate90Back()
     {
         int current = (int)data.rotation;
-        int next = (current - 1) % 4;
+        int next = (current - 1 + 4) % 4;
         data.rotation = (Placement_Rotation)next;
 
-        // 同时旋转模型
-        Root.transform.Rotate(0, 90, 0); // 顺时针旋转90度
+        float angle = (int)data.rotation * 90f;
+        Root.DORotate(Vector3.up * angle, 0.3f);
 
-        //float angle = (int)data.rotation * 90f;
-        //Vector3 endValue = new Vector3(0, angle, 0);
-        //Root.transform.DORotate(endValue, 0.3f);
+        SyncRootPivot();
     }
 
     public (int length, int width) GetCurSize()
@@ -220,7 +217,7 @@ public class GridObject : MonoBehaviour
 
         float angle =  (int)data.rotation * 90f;
         Root.localRotation = Quaternion.Euler(0, angle, 0);
-        // 如果有边界框等需要同步旋转，也在这里处理
+        SyncRootPivot();
     }
 
 

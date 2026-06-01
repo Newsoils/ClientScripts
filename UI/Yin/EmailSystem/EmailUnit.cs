@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -39,9 +40,7 @@ namespace CLIP
                     }
 
                     //int daysLimit = record.mail_state == "unread" ? 30 : 14;
-                    int daysLimit = 30;
-                    int daysPassed = (int)(System.DateTime.Now - record.mail_date).TotalDays;
-                    int daysLeft = daysLimit - daysPassed;
+                    int daysLeft = GetMailDaysLeft(record);
                     if (daysLeft > 0)
                     {
                         lastDays.text = $"剩{daysLeft}天";
@@ -52,11 +51,26 @@ namespace CLIP
                     }
                 }
 
+                static int GetMailDaysLeft(Mail_Record record)
+                {
+                    if (record.mail_valid_time > 0)
+                    {
+                        var expire = record.mail_valid_time > 1_000_000_000_000L
+                            ? DateTimeOffset.FromUnixTimeMilliseconds(record.mail_valid_time).LocalDateTime
+                            : DateTimeOffset.FromUnixTimeSeconds(record.mail_valid_time).LocalDateTime;
+                        return (int)Math.Ceiling((expire - DateTime.Now).TotalDays);
+                    }
+
+                    const int daysLimit = 30;
+                    int daysPassed = (int)(DateTime.Now - record.mail_date).TotalDays;
+                    return daysLimit - daysPassed;
+                }
+
                 public void OpenEmailDetail()
                 {
                     //EmailCanvasInteracterManager.Instance.OpenEmailDetail(record);
                     UIManager.Instance.GetPanel<EmailPanel>().OpenEmailDetail(record);
-                    List<int> readId = new List<int>
+                    List<ulong> readId = new List<ulong>
                     {
                         record.mail_id
                     };

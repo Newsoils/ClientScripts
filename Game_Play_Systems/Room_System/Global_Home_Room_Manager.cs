@@ -8,14 +8,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
     public class Global_Home_Room_Manager : MonoBehaviour
     {
 
-        public static Global_Home_Room_Manager _instance;
+        public static Global_Home_Room_Manager Instance;
 
         public NavMeshSurface _current_surface;
 
 
         void Awake()
         {
-            _instance = this;
+            Instance = this;
         }
 
         public void re_bake_navmesh()

@@ -25,6 +25,12 @@ namespace CLIP.Project_Mouse.Game_Play_System
         [Tooltip("可选：设置父物体Transform路径（为空则使用自身）")]
         public string parentPath;
 
+        [Tooltip("实例化后是否覆盖本地坐标")]
+        public bool overrideLocalPosition;
+
+        [Tooltip("overrideLocalPosition 为 true 时，实例化后的本地坐标")]
+        public Vector3 localPosition;
+
         public PersistentObjectConfig()
         {
             id = Guid.NewGuid().ToString("N").Substring(0, 8);

@@ -53,7 +53,7 @@ namespace CLIP.Framework_Unity.Asset
         {
             if (mode != "R.L.")
                 return null;
-
+            Debug.LogError("LoadGameObjectAsync: " + path);
             // 预检查
             var test = Resources.Load<GameObject>(path);
             if (test == null)
@@ -81,6 +81,7 @@ namespace CLIP.Framework_Unity.Asset
         {
             if (mode == "R.L.")
             {
+                Debug.LogError("LoadGameObjectAsync: " + path);
                 var go = Resources.Load<GameObject>(path);
 
                 if (go != null)
@@ -117,7 +118,7 @@ namespace CLIP.Framework_Unity.Asset
 
         //    if (mode == "R.L.")
         //    {
-        //        var rq = Resources.LoadAsync<Sprite>(path);
+        //        var rq = Resources.LoadAsyncByKey<Sprite>(path);
         //        rq.completed += _ =>
         //        {
         //            if (rq.asset != null)

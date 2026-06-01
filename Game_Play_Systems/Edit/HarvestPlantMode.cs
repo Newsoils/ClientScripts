@@ -1,25 +1,33 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
 
 public class HarvestPlantMode : IEditMode
 {
-    private LayerMask gridLayerMask = LayerMask.GetMask("GridLayer");
     private LayerMask placementMask = LayerMask.GetMask("Placement");
     private bool canInteract;
+    private static HarvestPlantMode current;
 
     public void Enter()
     {
+        current = this;
         EvtDsp.TriggerEvt(EvtNames.ShowHarvestPop);
         canInteract = true;
     }
 
     public void Exit()
     {
+        if (current == this)
+            current = null;
         EvtDsp.TriggerEvt(EvtNames.ClosePlantPop);
+    }
+
+    public static void HandleHarvestCompleted()
+    {
+        if (current == null)
+            return;
+        current.canInteract = true;
+        EvtDsp.TriggerEvt(EvtNames.ShowHarvestPop);
     }
 
     public void OnDrag(Vector2 screenPos)
@@ -47,26 +55,27 @@ public class HarvestPlantMode : IEditMode
         if (canInteract)
         {
             canInteract = false;
-            _ = TapToHarvest(screenPos);
+            TapToHarvest(screenPos);
         }
 
     }
 
-    public async Task TapToHarvest(Vector2 screenPos)
+    public void TapToHarvest(Vector2 screenPos)
     {
         var pot = RaycastPot(screenPos);
         if (pot != null)
         {
             Plant plant = PlantManager.Instance.GetPlantByPot(pot);
-            if (plant != null && plant.data.growStage == 4)
+            if (plant != null && plant.data.growStage == 2)
             {
-                await PlantManager.Instance.HarvestPlant(plant);
-                EvtDsp.TriggerEvt(EvtNames.ShowHarvestPop);
+                PlantManager.Instance.HarvestPlant(plant);
+                return;
             }
         }
         else
         {
             EditManager.Instance.ExitCurrentMode();
+            return;
         }
         canInteract = true;
     }

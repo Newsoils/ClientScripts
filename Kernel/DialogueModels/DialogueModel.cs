@@ -1,109 +1,62 @@
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using UnityEngine;
 
 namespace CLIP.Project_Mouse.Kernel
 {
     /// <summary>
     /// 对话数据模型，统一普通对话和选项对话。
-    /// - IsOptionDialogue == false 时为普通对话，使用 Contents 显示文本
-    /// - IsOptionDialogue == true 时为选项对话，使用 Options 选择列表
+    /// - isOptionDialogue == false 时为普通对话，使用 contents 显示文本
+    /// - isOptionDialogue == true 时为选项对话，使用 options 选择列表
     /// </summary>
     [System.Serializable]
     public class DialogueModel
     {
-        public int _dialogueId;
+        public int dialogueId;
 
-        public int _paragraphId;
+        public int paragraphId;
 
-        public int _speakerId;
+        public int speakerId;
 
-        public EnumDialogueSpeaker _speaker;
+        public EnumDialogueSpeaker speaker;
 
         /// <summary>
         /// 普通对话文本。选项对话时为 null。
         /// </summary>
-        public string _contents;
+        public string contents;
 
-        public string _chatHints;
+        public string chatHints;
 
-        public int _nextDialogueId;
+        public int nextDialogueId;
 
         /// <summary>
         /// 是否为选项对话。
         /// </summary>
-        public bool _isOptionDialogue;
+        public bool isOptionDialogue;
 
-        public bool _isLastDialogue;
-
-        /// <summary>
-        /// 选项列表：选项文本 → 下一句对话 id。仅 IsOptionDialogue == true 时有效。
-        /// </summary>
-        [JsonConverter(typeof(StringIntDictConverter))]
-        public Dictionary<string, int> Options;
-
-        private List<string> _cachedOptionList = null;
-        public int DialogueId => _dialogueId;
-        public int ParagraphId => _paragraphId;
-        public int SpeakerId => _speakerId;
-        public EnumDialogueSpeaker Speaker => _speaker;
-        public string Contents => _contents;
-        public string ChatHints => _chatHints;
-        public int NextDialogueId => _nextDialogueId;
-        public bool IsOptionDialogue
-        {
-            get
-            {
-                return string.IsNullOrEmpty(_contents) && Options.Count > 0;
-            }
-        }
-
-        public bool IsLastDialogue => _isLastDialogue;
-
-        [JsonConstructor]
-        public DialogueModel(
-            int _dialogueId,
-            int _paragraphId,
-            EnumDialogueSpeaker _speaker,
-            string _contents,
-            int _nextDialogueId,
-            bool _isOptionDialogue = false,
-            bool _isLastDialogue = false)
-        {
-            this._dialogueId = _dialogueId;
-            this._paragraphId = _paragraphId;
-            this._speaker = _speaker;
-            this._contents = _contents;
-            this._nextDialogueId = _nextDialogueId;
-            this._isOptionDialogue = _isOptionDialogue;
-            this._isLastDialogue = _isLastDialogue;
-        }
-
-        public void SetContents(string newContents) => _contents = newContents;
-
+        public bool isLastDialogue;
 
         /// <summary>
-        /// 获取选项文本列表（带缓存）。
+        /// 选项列表：选项文本 → 下一句对话 id。仅 isOptionDialogue == true 时有效。
         /// </summary>
-        public List<string> GetOptionList()
+        public List<OptionInfo> options;
+
+        public Dictionary<int, OptionInfo> optionsLookup;
+
+        public void BuildLookupDict()
         {
-            if (_cachedOptionList == null || Options == null)
-                InvalidateOptionListCache();
-            return _cachedOptionList;
+            optionsLookup = new Dictionary<int, OptionInfo>(options?.Count ?? 0);
+            if (options == null) return;
+            foreach (var opt in options)
+                optionsLookup[opt.optionIndex] = opt;
         }
 
-        /// <summary>
-        /// 选中某个选项后，设置下一句对话 id。
-        /// </summary>
-        public void SetNextDialogueId(int nextDialogueId)
-        {
-            _nextDialogueId = nextDialogueId;
-        }
+    }
 
-        private void InvalidateOptionListCache()
-        {
-            _cachedOptionList = Options != null
-                ? new List<string>(Options.Keys)
-                : new List<string>();
-        }
+
+    public class OptionInfo
+    {
+        [SerializeField] public int optionIndex;
+        [SerializeField] public string content;
+        [SerializeField] public int nextDialogueId;
     }
 }

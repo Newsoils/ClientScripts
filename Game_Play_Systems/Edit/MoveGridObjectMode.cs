@@ -106,6 +106,15 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         private void InitMovePlacement(GridObject target, Vector3 hitpos, bool openPanel = true)
         {
+            if (_selected != null && _selected != target && GridObjectSystem.runtimeDic.ContainsKey(_selected.UId))
+            {
+                var (ow, oh) = _selected.GetCurSize();
+                var oldOccupied = GridUtility.CalculateOccpiedPos(ow, oh, _originalGridPos);
+                RoomSystem.currentRoom.GridState.SetOccupied(_originalLayerUid, oldOccupied, true);
+                var oldUids = RoomSystem.currentRoom.GridState.GetGridUids(_originalLayerUid, oldOccupied);
+                EvtDsp.TriggerEvt<List<string>, MGridState>(EvtNames.Update_GridView_Occupy, oldUids, MGridState.Occupied);
+            }
+
             _selected = target;
 
             var placingType = _selected.placingType;
@@ -197,7 +206,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 _curGPosition = gPos;
 
                 // 切换墙层时，自动将墙面家具对齐到新墙的默认朝向
-                if (_lastLayerType != GridLayerType.None && _lastLayerType != gridLayerTag.gridLayerType)
+                // SnapToWallDefaultRotation 内部会判断是否已经是该墙的朝向，不会重复旋转
+                if (_lastLayerType != gridLayerTag.gridLayerType)
                 {
                     _selected.SnapToWallDefaultRotation(gridLayerTag.gridLayerType, animate: false);
                 }
@@ -302,32 +312,60 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void OnRotate()
         {
+            //if (_selected == null) return;
+
+            //Int2 targetPos = _selected.data.position;
+            //var targetLayerUid = _selected.data.gridLayerUID;
+
+            //var (rawX, rawY) = _selected.GetCurSize();
+            //HashSet<Int2> rawOccupiedPositions = GridUtility.CalculateOccpiedPos(rawX, rawY, targetPos);
+
+            //RoomSystem.currentRoom.GridState.SetOccupied(targetLayerUid, rawOccupiedPositions, false);
+            //bool isVaild = GridObjectSystem.CheckGridObjectVaildAfterRotate(_selected, RoomSystem.currentRoom, targetLayerUid, targetPos);
+
+            //if (isVaild)
+            //{
+            //    _selected.Rotate90();
+
+            //    // 旋转后重新获取当前尺寸（Rotate90 已更新 data.rotation）
+            //    var (x, y) = _selected.GetCurSize();
+            //    HashSet<Int2> occupiedPositions = GridUtility.CalculateOccpiedPos(x, y, targetPos);
+            //    RoomSystem.currentRoom.GridState.SetOccupied(targetLayerUid, occupiedPositions, true);
+            //}
+            //else
+            //{
+            //    RoomSystem.currentRoom.GridState.SetOccupied(targetLayerUid, rawOccupiedPositions, true);
+            //    EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不足，无法旋转！");
+            //}
+
+
+            Debug.Log("旋转家具");
             if (_selected == null) return;
 
-            Int2 targetPos = _selected.data.position;
-            var targetLayerUid = _selected.data.gridLayerUID;
-
-            var (x, y) = _selected.GetRotated90Size();
+            var gridLayrUid = _selected.data.gridLayerUID;
+            var pos = _selected.data.position;
 
             var (rawX, rawY) = _selected.GetCurSize();
-            HashSet<Int2> rawOccupiedPositions = GridUtility.CalculateOccpiedPos(rawX, rawY, targetPos);
-            var rawUids = RoomSystem.currentRoom.GridState.GetGridUids(targetLayerUid, rawOccupiedPositions);
+            HashSet<Int2> rawOccupiedPositions = GridUtility.CalculateOccpiedPos(rawX, rawY, pos);
+            var rawUids = RoomSystem.currentRoom.GridState.GetGridUids(_selected.data.gridLayerUID, rawOccupiedPositions);
+            RoomSystem.currentRoom.GridState.SetOccupied(_selected.data.gridLayerUID, rawOccupiedPositions, false);
+            EvtDsp.TriggerEvt<List<string>, MGridState>(EvtNames.Update_GridView_Occupy, rawUids, MGridState.Normal);
 
-            RoomSystem.currentRoom.GridState.SetOccupied(targetLayerUid, rawOccupiedPositions, false);
-
-            bool isVaild = GridObjectSystem.CheckGridObjectVaildAfterRotate(_selected, RoomSystem.currentRoom, targetLayerUid, targetPos);
+            bool isVaild = GridObjectSystem.CheckGridObjectVaildAfterRotate(_selected, RoomSystem.currentRoom, _selected.data.gridLayerUID, pos);
 
             if (isVaild)
             {
                 _selected.Rotate90();
 
-                HashSet<Int2> occupiedPositions = GridUtility.CalculateOccpiedPos(x, y, targetPos);
-                RoomSystem.currentRoom.GridState.SetOccupied(targetLayerUid, occupiedPositions, true);
+                // 旋转后重新获取当前尺寸（Rotate90 已更新 data.rotation）
+                var (x, y) = _selected.GetCurSize();
+                HashSet<Int2> occupiedPositions = GridUtility.CalculateOccpiedPos(x, y, pos);
+                RoomSystem.currentRoom.GridState.SetOccupied(gridLayrUid, occupiedPositions, true);
             }
             else
             {
-                RoomSystem.currentRoom.GridState.SetOccupied(targetLayerUid, rawOccupiedPositions, true);
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不足，无法旋转！");
+                RoomSystem.currentRoom.GridState.SetOccupied(_selected.data.gridLayerUID, rawOccupiedPositions, true);
+                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "旋转后位置不合法，无法旋转!");
             }
         }
 

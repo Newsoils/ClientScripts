@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Kernel;
+using Cmd;
 using EnhancedUI.EnhancedScroller;
+using Google.Protobuf;
 using UnityEngine;
 
 namespace CLIP.Project_Mouse.UI
@@ -19,55 +20,65 @@ namespace CLIP.Project_Mouse.UI
         {
             if (scroller != null)
                 scroller.Delegate = this;
-            EvtDsp.AddEvt(EvtNames.Task_ClaimableChanged, OnClaimableChanged);
-        }
-
-        private void OnDestroy()
-        {
-            EvtDsp.RemoveEvt(EvtNames.Task_ClaimableChanged, OnClaimableChanged);
-        }
-
-        private void OnClaimableChanged()
-        {
-            if (!gameObject.activeInHierarchy)
-                return;
-            ReloadData();
         }
 
         public void ReloadData()
         {
-            int? firstVisibleTaskId = null;
-            if (scroller != null && _dataList.Count > 0)
-            {
-                int firstDataIndex = scroller.StartDataIndex;
-                if (firstDataIndex >= 0 && firstDataIndex < _dataList.Count)
-                    firstVisibleTaskId = _dataList[firstDataIndex].model.taskId;
-            }
-
             _dataList.Clear();
 
-            var taskRuntimeDatas = TaskManager.Instance._taskRuntimeDatas;
+            var taskRuntimeDatas = MissionManager.Instance.missionRuntimeDic;
 
             foreach (var kvp in taskRuntimeDatas)
             {
-                if (kvp.Value.IsFinish)
-                    continue;
-
-                if (TaskManager.Instance.taskModelsDic.TryGetValue(kvp.Key, out var model))
+                if (kvp.Value.status == 2) continue;
+                if (MissionManager.Instance.missionStaticDic.TryGetValue(kvp.Value.missionId, out var model))
                     _dataList.Add(new ScrollData_Task(model, kvp.Value));
             }
 
-            if (scroller != null)
+            // 加载未解锁的任务（存在于静态表但不在运行时表中）
+            foreach (var staticKvp in MissionManager.Instance.missionStaticDic)
             {
-                scroller.ReloadData();
-
-                if (firstVisibleTaskId.HasValue)
+                bool hasRuntime = false;
+                foreach (var runtimeKvp in taskRuntimeDatas)
                 {
-                    int newIndex = _dataList.FindIndex(d => d.model.taskId == firstVisibleTaskId.Value);
-                    if (newIndex >= 0)
-                        scroller.JumpToDataIndex(newIndex, 0, 0, true, EnhancedScroller.TweenType.immediate, 0);
+                    if (runtimeKvp.Value.missionId == staticKvp.Key)
+                    {
+                        hasRuntime = true;
+                        break;
+                    }
                 }
+                if (!hasRuntime)
+                    _dataList.Add(new ScrollData_Task(staticKvp.Value, true));
             }
+
+            _dataList.Sort((a, b) =>
+            {
+                int GetCategory(ScrollData_Task item)
+                {
+                    if (item.isLocked)
+                        return 2; // 未解锁，最后
+
+                    if (item.runtime.status == 1)
+                        return 0; // 可领取，最前
+
+                    if (item.runtime.status == 0)
+                        return 1; // 未完成，中间
+
+                    return 3; // 其他状态兜底，放最后
+                }
+
+                int aCategory = GetCategory(a);
+                int bCategory = GetCategory(b);
+
+                if (aCategory != bCategory)
+                    return aCategory.CompareTo(bCategory);
+
+                // 同类内部按解锁等级从低到高排列
+                return a.model.unlockExp.CompareTo(b.model.unlockExp);
+            });
+
+            if (scroller != null)
+                scroller.ReloadData();
         }
 
         public void ClearData() => _dataList.Clear();
@@ -90,16 +101,18 @@ namespace CLIP.Project_Mouse.UI
 
             var data = _dataList[dataIndex];
             cellView.SetData(data, OnClaimClicked);
-            _ = cellView.SetRewardIcons(data.model.RewardNames);
+            cellView.SetRewardIcons();
 
             return cellView;
         }
 
         #endregion
 
-        private void OnClaimClicked(int taskId)
+        private void OnClaimClicked(ulong taskUId)
         {
-            EvtDsp.TriggerEvt<int>(EvtNames.Task_ClaimReward, taskId);
+            var req = new MissionRewardsReq() { GroupID = 0, MissionType = 0, MissionUID = taskUId, ModuleID = 0 };
+            //EvtDsp.TriggerEvt<int>(EvtNames.Task_ClaimReward, missionId);
+            EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, req);
         }
     }
 }

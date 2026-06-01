@@ -4,7 +4,9 @@ using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
-using CLIP.Project_Mouse.Kernel.Inventory;
+using CLIP.Project_Mouse.Network;
+using Cmd;
+using Common;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,8 +17,7 @@ namespace CLIP.Project_Mouse.UI
         [Header("商店数据")]
         public GameObject shopItemPrefab;
         public Transform shopItemRoot;
-        public DailyShoppingPrimaryCategory currentPrimaryCategory = DailyShoppingPrimaryCategory.None;
-        public DailyShoppingSecondaryCategory currentSecondaryCategory = DailyShoppingSecondaryCategory.None;
+        public DailyShoppingTab currentTab = DailyShoppingTab.None;
         public Game_Item_Info currentSelectedShopItem = null;
         public ShoppingItemUnit currentSelectedShopItemUI = null;
 
@@ -56,14 +57,18 @@ namespace CLIP.Project_Mouse.UI
         public Texture shoppingDispatchItemTexture;
         public Transform dispatchItemTransRoot;
 
+        private readonly Dictionary<long, UserShop> serverShopsByID = new Dictionary<long, UserShop>();
+        private UserShop serverShop;
+        private const int DailyFreeRefreshTimesMax = 2;
+        private const int ManualRefreshCostFishCoin = 50;
         private ShoppingPanel _shoppingPanel;
         private ShoppingPanel shoppingPanel => _shoppingPanel ??= UIManager.Instance.GetPanel<ShoppingPanel>();
 
         private void Start()
         {
             InitButtons();
-            shoppingPanel.shopListDB.refreshCount = 0;
-            OnPrimaryCategoryButtonClick(DailyShoppingPrimaryCategory.Clothes);
+
+            OnTabButtonClick(DailyShoppingTab.Clothes);
         }
 
         private void InitButtons()
@@ -71,6 +76,7 @@ namespace CLIP.Project_Mouse.UI
             btnClothes.onClick.RemoveAllListeners();
             btnFurniture.onClick.RemoveAllListeners();
             btnPlanting.onClick.RemoveAllListeners();
+            btnBelonging.onClick.RemoveAllListeners();
             btnPot.onClick.RemoveAllListeners();
             btnSeed.onClick.RemoveAllListeners();
             btnFertilizer.onClick.RemoveAllListeners();
@@ -78,40 +84,33 @@ namespace CLIP.Project_Mouse.UI
             btnSnack.onClick.RemoveAllListeners();
             btnTape.onClick.RemoveAllListeners();
 
-            btnClothes.onClick.AddListener(() => OnPrimaryCategoryButtonClick(DailyShoppingPrimaryCategory.Clothes));
-            btnFurniture.onClick.AddListener(() => OnPrimaryCategoryButtonClick(DailyShoppingPrimaryCategory.Furniture));
-            btnPlanting.onClick.AddListener(() => OnPrimaryCategoryButtonClick(DailyShoppingPrimaryCategory.Planting));
-            btnBelonging.onClick.AddListener(() => OnPrimaryCategoryButtonClick(DailyShoppingPrimaryCategory.Belonging));
+            btnClothes.onClick.AddListener(() => OnTabButtonClick(DailyShoppingTab.Clothes));
+            btnFurniture.onClick.AddListener(() => OnTabButtonClick(DailyShoppingTab.Furniture));
+            btnPlanting.onClick.AddListener(() => OnTabGroupButtonClick(btnPot, DailyShoppingTab.Pot));
+            btnBelonging.onClick.AddListener(() => OnTabGroupButtonClick(btnFood, DailyShoppingTab.Food));
 
-            btnPot.onClick.AddListener(() => OnSecondaryCategoryButtonClick(DailyShoppingSecondaryCategory.Pot));
-            btnSeed.onClick.AddListener(() => OnSecondaryCategoryButtonClick(DailyShoppingSecondaryCategory.Seed));
-            btnFertilizer.onClick.AddListener(() => OnSecondaryCategoryButtonClick(DailyShoppingSecondaryCategory.Fertilizer));
+            btnPot.onClick.AddListener(() => OnTabButtonClick(DailyShoppingTab.Pot));
+            btnSeed.onClick.AddListener(() => OnTabButtonClick(DailyShoppingTab.Seed));
+            btnFertilizer.onClick.AddListener(() => OnTabButtonClick(DailyShoppingTab.Fertilizer));
 
-            btnFood.onClick.AddListener(() => OnSecondaryCategoryButtonClick(DailyShoppingSecondaryCategory.Food));
-            btnSnack.onClick.AddListener(() => OnSecondaryCategoryButtonClick(DailyShoppingSecondaryCategory.Snack));
-            btnTape.onClick.AddListener(() => OnSecondaryCategoryButtonClick(DailyShoppingSecondaryCategory.Tape));
+            btnFood.onClick.AddListener(() => OnTabButtonClick(DailyShoppingTab.Food));
+            btnSnack.onClick.AddListener(() => OnTabButtonClick(DailyShoppingTab.Snack));
+            btnTape.onClick.AddListener(() => OnTabButtonClick(DailyShoppingTab.Tape));
 
             refreshShop.onClick.AddListener(RefreshItemButton);
         }
 
-        public void AddItemToCart()
+        public void ApplyServerShopData(IEnumerable<UserShop> shops)
         {
-            if (currentSelectedShopItem == null)
+            if (shops != null)
             {
-                PromptMessage.Instance.ShowUpPrompt("当前没有选中的物品");
-                return;
+                foreach (var shop in shops)
+                {
+                    if (shop != null && shop.ShopID >= 1 && shop.ShopID <= 8)
+                        serverShopsByID[shop.ShopID] = shop;
+                }
             }
-
-            var existingItem = shoppingPanel.shoppingCartItems.Find(cartItem => cartItem.shoppingCartItem.name == currentSelectedShopItem.name);
-
-            if (existingItem != null)
-            {
-                return;
-            }
-            else
-            {
-                shoppingPanel.CreateCartItem(currentSelectedShopItem);
-            }
+            UpdateDailyShopItems();
         }
 
         public void OnSelectItem(ShoppingItemUnit shoppingItemUnit)
@@ -174,8 +173,88 @@ namespace CLIP.Project_Mouse.UI
             CharacterClothesManager.Instance.ChangeClothes(CharacterType.Shopping, shoppingItemUnit.itemInShop.name);
         }
 
-        public void OnSelectFurnitureOrPot(ShoppingItemUnit shoppingItemUnit)
+        private bool isLoadingModel;
+
+        public async void OnSelectFurnitureOrPot(ShoppingItemUnit shoppingItemUnit)
         {
+            if (isLoadingModel) return;
+            isLoadingModel = true;
+
+            rawImage.gameObject.SetActive(true);
+            rawImage.texture = shoppingPanel.furnitureRT;
+
+            if (currentModel != null)
+                currentModel.SetActive(false);
+
+            string itemName = shoppingItemUnit.itemInShop.name;
+
+            if (models.TryGetValue(itemName, out currentModel))
+            {
+                currentModel.SetActive(true);
+                StartCoroutine(FitModelToViewCoroutine(currentModel));
+                isLoadingModel = false;
+                return;
+            }
+
+            GameObject prefab = null;
+            if (shoppingItemUnit.itemInShop.type == Item_Type.Room_Placement)
+            {
+                var info = GridObjectSystem.GetPlacementInfo(itemName);
+                if (info != null)
+                    prefab = await GameAssets.LoadAsyncByPath<GameObject>(info.res_url);
+            }
+            else if (shoppingItemUnit.itemInShop.type == Item_Type.Pot)
+            {
+                var data = GridObjectSystem.GetPotData(itemName);
+                if (data != null)
+                    prefab = await GameAssets.LoadAsyncByPath<GameObject>(data.resUrl);
+            }
+
+            if (prefab == null)
+            {
+                Debug.LogWarning($"[DailyMagazinePanel] 无法加载模型: {itemName}");
+                isLoadingModel = false;
+                return;
+            }
+
+            currentModel = Instantiate(prefab, modelRootTransform);
+            ApplyLayerRecursive(currentModel, 14);
+            models[itemName] = currentModel;
+            StartCoroutine(FitModelToViewCoroutine(currentModel));
+            isLoadingModel = false;
+        }
+
+        private System.Collections.IEnumerator FitModelToViewCoroutine(GameObject model)
+        {
+            yield return null;
+
+            var renderers = model.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) yield break;
+
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = Vector3.one;
+
+            Bounds bounds = new Bounds(renderers[0].bounds.center, Vector3.zero);
+            foreach (var r in renderers)
+                bounds.Encapsulate(r.bounds);
+
+            float maxDimension = Mathf.Max(bounds.size.x, bounds.size.y, bounds.size.z);
+            if (maxDimension < 0.001f) maxDimension = 1f;
+            float targetSize = 1.5f;
+            float scale = targetSize / maxDimension;
+
+            model.transform.localScale = Vector3.one * scale;
+
+            Vector3 offset = bounds.center - modelRootTransform.position;
+            model.transform.localPosition = -offset * scale;
+        }
+
+        private void ApplyLayerRecursive(GameObject obj, int layer)
+        {
+            obj.layer = layer;
+            foreach (Transform child in obj.transform)
+                ApplyLayerRecursive(child.gameObject, layer);
         }
 
         public void AlignColliderCenterToModel(GameObject gameObject, BoxCollider targetCollider)
@@ -255,125 +334,117 @@ namespace CLIP.Project_Mouse.UI
             }
         }
 
-        public void OnPrimaryCategoryButtonClick(DailyShoppingPrimaryCategory primaryCategory)
+        public void OnTabButtonClick(DailyShoppingTab tab)
         {
-            if (currentPrimaryCategory == primaryCategory) return;
-            RefreshSecondaryCategoryButtons(primaryCategory);
-
-            currentPrimaryCategory = primaryCategory;
-
-            var secondaries = DailyShoppingCategory.GetSecondaries(primaryCategory);
-            if (secondaries.Count > 0)
-            {
-                currentSecondaryCategory = secondaries[0];
-                UpdateDailyShopItems();
-            }
-            else
-            {
-                currentSecondaryCategory = DailyShoppingSecondaryCategory.None;
-                UpdateDailyShopItems();
-            }
-
+            if (currentTab == tab) return;
+            RefreshTabGroup(tab);
+            currentTab = tab;
+            UpdateDailyShopItems();
             DeselectItem();
         }
 
-        public void RefreshSecondaryCategoryButtons(DailyShoppingPrimaryCategory primaryCategory)
+        private void OnTabGroupButtonClick(Button defaultButton, DailyShoppingTab defaultTab)
+        {
+            shoppingPanel.ChooseMagazineOrCategory(defaultButton);
+            OnTabButtonClick(defaultTab);
+        }
+
+        private void RefreshTabGroup(DailyShoppingTab tab)
         {
             clothes.SetActive(false);
             furniture.SetActive(false);
             planting.SetActive(false);
             belonging.SetActive(false);
-            switch (primaryCategory)
+
+            switch (tab)
             {
-                case DailyShoppingPrimaryCategory.Clothes:
+                case DailyShoppingTab.Clothes:
                     clothes.SetActive(true);
                     break;
-                case DailyShoppingPrimaryCategory.Furniture:
+                case DailyShoppingTab.Furniture:
                     furniture.SetActive(true);
                     break;
-                case DailyShoppingPrimaryCategory.Planting:
+                case DailyShoppingTab.Pot:
+                case DailyShoppingTab.Seed:
+                case DailyShoppingTab.Fertilizer:
                     planting.SetActive(true);
-                    shoppingPanel.ChooseMagazineOrCategory(btnPot);
                     break;
-                case DailyShoppingPrimaryCategory.Belonging:
+                case DailyShoppingTab.Food:
+                case DailyShoppingTab.Snack:
+                case DailyShoppingTab.Tape:
                     belonging.SetActive(true);
-                    shoppingPanel.ChooseMagazineOrCategory(btnFood);
-                    break;
-                default:
                     break;
             }
-        }
-
-        public void OnSecondaryCategoryButtonClick(DailyShoppingSecondaryCategory secondaryCategory)
-        {
-            if (currentSecondaryCategory == secondaryCategory) return;
-            currentSecondaryCategory = secondaryCategory;
-
-            UpdateDailyShopItems();
-
-            DeselectItem();
         }
 
         public void UpdateDailyShopItems()
         {
-            var shopItems = shoppingPanel.shopListDB._daily_shop_list;
-
-            var filteredItems = shopItems.FindAll(item =>
+            long shopID = (long)currentTab;
+            if (!serverShopsByID.TryGetValue(shopID, out serverShop))
             {
-                var gameItem = Global_Inventory_Manager.GameItem_DB.Find(dbItem => dbItem.name == item.item_name);
-                if (gameItem == null) return false;
-
-                if (!DailyShoppingCategory.MatchesPrimary(gameItem.type, currentPrimaryCategory)) return false;
-
-                if (currentSecondaryCategory != DailyShoppingSecondaryCategory.None
-                    && !DailyShoppingCategory.MatchesSecondary(gameItem.type, currentSecondaryCategory)) return false;
-
-                return true;
-            });
-
-            if (DailyShoppingCategory.LimitDailyListToFourSlots(currentPrimaryCategory))
-            {
-                if (filteredItems.Count > 4)
-                {
-                    filteredItems = filteredItems.GetRange(0, 4);
-                }
+                RefreshShopItemUI(new List<ShopGoodsViewData>());
+                return;
             }
 
-            RefreshShopItemUI(filteredItems);
+            var items = new List<ShopGoodsViewData>();
+            foreach (var goods in serverShop.Goodss)
+            {
+                if (ShopConfigResolver.TryCreateGoodsViewData(goods, out var viewData))
+                    items.Add(viewData);
+            }
+
+            items.Sort((a, b) =>
+            {
+                int orderCompare = ShopConfigResolver.GetSortOrder(a).CompareTo(ShopConfigResolver.GetSortOrder(b));
+                return orderCompare != 0 ? orderCompare : ShopConfigResolver.GetStableId(a).CompareTo(ShopConfigResolver.GetStableId(b));
+            });
+            RefreshShopItemUI(items);
         }
 
         public void RefreshItemButton()
         {
-            int count = shoppingPanel.shopListDB.refreshCount;
-            int cost = 0;
-            if (count >= 2) cost = 50;
-            PromptMessage.Instance.ShowPrompt("是否花费" + cost + "鱼币刷新商店？", () =>
+            if (serverShop == null || serverShop.ShopUID == 0UL)
             {
-                MoneyManager.Instance.ChangeCurrency("鱼币", -50, "刷新商店", RefreshItem);
+                PromptMessage.Instance.ShowUpPrompt("商店数据未同步，请重新打开商店");
+                return;
+            }
+
+            int freeRefreshTimesLeft = GetFreeRefreshTimesLeft();
+            if (freeRefreshTimesLeft > 0)
+            {
+                PromptMessage.Instance.ShowPrompt(
+                    $"是否花费一次免费刷新次数刷新商店？还剩{freeRefreshTimesLeft}次",
+                    SendManualRefreshShopReq);
+                return;
+            }
+
+            PromptMessage.Instance.ShowPrompt(
+                $"是否花费{ManualRefreshCostFishCoin}鱼币刷新商店？",
+                SendManualRefreshShopReq);
+        }
+
+        private int GetFreeRefreshTimesLeft()
+        {
+            var roleInfo = Global_Game_Manager.Instance.get_current_player_role_info();
+            int usedTimes = roleInfo != null ? roleInfo.TodayShopRefreshTimes : 0;
+            return Mathf.Max(0, DailyFreeRefreshTimesMax - usedTimes);
+        }
+
+        private void SendManualRefreshShopReq()
+        {
+            NetWork_Center_WSS.SendMsg(new ManualRefreshShopReq
+            {
+                ShopUID = serverShop.ShopUID
             });
         }
 
-        private void RefreshItem(string result)
-        {
-            if (result == "success")
-            {
-                shoppingPanel.shopListDB.refreshCount++;
-                shoppingPanel.shopListDB.get_daily_shop_list();
-                UpdateDailyShopItems();
-            }
-            else
-            {
-                PromptMessage.Instance.ShowUpPrompt(result);
-            }
-        }
-
-        public void RefreshShopItemUI(List<shop_item> items)
+        public void RefreshShopItemUI(List<ShopGoodsViewData> items)
         {
             int existingItemCount = shopItemRoot.childCount;
 
             for (int i = 0; i < items.Count; i++)
             {
-                var item = items[i];
+                var goods = items[i];
                 GameObject itemUnit;
 
                 if (i < existingItemCount)
@@ -387,12 +458,9 @@ namespace CLIP.Project_Mouse.UI
                 }
 
                 var shoppingItemUnit = itemUnit.GetComponent<ShoppingItemUnit>();
-                var gameItem = Global_Inventory_Manager.GameItem_DB.Find(dbItem => dbItem.name == item.item_name);
-                if (gameItem != null)
-                {
-                    shoppingItemUnit.InitGameItemUnit(gameItem);
-                    shoppingItemUnit.itemButton.onClick.AddListener(() => OnSelectItem(shoppingItemUnit));
-                }
+                shoppingItemUnit.itemButton.onClick.RemoveAllListeners();
+                shoppingItemUnit.InitShopGoodsUnit(goods, serverShop.ShopUID);
+                shoppingItemUnit.itemButton.onClick.AddListener(() => OnSelectItem(shoppingItemUnit));
             }
 
             for (int i = items.Count; i < existingItemCount; i++)

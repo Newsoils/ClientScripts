@@ -11,6 +11,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 {
     public class GridObjectSystem : SingletonMono<GridObjectSystem>
     {
+        protected override bool PersistAcrossScenes => true;
         public Placement_SO Placement_SO;
         public static Dictionary<int, Room_Placement_Info> InfoIdDic => Instance.Placement_SO.placementDic;
         public static Dictionary<string, Room_Placement_Info> InfoNameDic => Instance.Placement_SO.placementNameDic;
@@ -109,18 +110,21 @@ namespace CLIP.Project_Mouse.Game_Play_System
             {
                 if (obj is PlacementRuntime placement)
                 {
-                    Global_Inventory_Manager.Change_Item_Count(placement.ID, -1);
+                    // TODO zhaorui
+                    // Global_Inventory_Manager.Change_Item_Count(placement.ID, -1);
                     EvtDsp.TriggerEvt(EvtNames.ReloadPlacementData);
 
                 }
                 if (obj is Pot pot)
                 {
-                    Global_Inventory_Manager.Change_Item_Count(pot.info.id, -1);
+                    // TODO zhaorui
+                    // Global_Inventory_Manager.Change_Item_Count(pot.info.id, -1);
                     EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
                 }
                 RegisterGridObject(obj, room, gridLayerUId, pos);
                 AudioManager.Instance.PlayAudioByRefKey("setPlacement");
                 EvtDsp.TriggerEvt<GridObject>(EvtNames.OnPutPlacement, obj);
+                RoomSystem.Instance.Upload_Data_To_Server();
 
                 return true;
             }
@@ -156,7 +160,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 room.AddPotToRoom(pot, gridLayerUId);
             }
             obj.room = room;
-            Global_Home_Room_Manager._instance.re_bake_navmesh();
+            Global_Home_Room_Manager.Instance.re_bake_navmesh();
         }
 
         /// <summary>
@@ -191,16 +195,16 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public static bool TryMoveObject(GridObject obj, Room room, string gridLayerUId, Int2 newPos, string originalLayerUid, Int2 originalPosition)
         {
-            //更新家具位置
-            obj.data.position = newPos;
-            obj.data.gridLayerUID = gridLayerUId;
-
             //更新网格状态
             //占据新位置
             HashSet<Int2> occupiedPositions = CalculateOccpiedPos(obj, newPos);
             bool canOccupy = room.GridState.CheckVaild(gridLayerUId, occupiedPositions);
             if (canOccupy)
             {
+                //更新家具位置
+                obj.data.position = newPos;
+                obj.data.gridLayerUID = gridLayerUId;
+
                 var uids = room.GridState.SetOccupied(gridLayerUId, occupiedPositions, true);
                 EvtDsp.TriggerEvt<List<string>, MGridState>(EvtNames.Update_GridView_Occupy, uids, MGridState.Occupied);
 
@@ -214,7 +218,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     SyncMovedObjectLayerCache(obj, room, originalLayerUid, gridLayerUId);
                 }
 
-                Global_Home_Room_Manager._instance.re_bake_navmesh();
+                Global_Home_Room_Manager.Instance.re_bake_navmesh();
             }
              return canOccupy;
         }
@@ -262,6 +266,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     newPots.Add(pot);
                 }
             }
+
         }
 
         public static HashSet<Int2> CalculateOccpiedPos(GridObject placement, Int2 pos)
@@ -286,7 +291,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
             if (obj is Pot potBlocked && PlantManager.Instance != null && PlantManager.Instance.GetPlantByPot(potBlocked) != null)
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "花盆里有植物时不能删除花盆，请先收获或铲除植物");
+                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "花盆里有植物时不能删除花盆，请先收获或铲除植物！");
                 return false;
             }
             HashSet<Int2> occupiedPositions = CalculateOccpiedPos(obj, pos);
@@ -300,26 +305,28 @@ namespace CLIP.Project_Mouse.Game_Play_System
             if(obj is PlacementRuntime placement)
             {
                 room.RemovePlacementFromRoom(placement, gridLayerUId);
-                Global_Inventory_Manager.Change_Item_Count(placement.ID, 1);
+                // TODO zhaorui
+                // Global_Inventory_Manager.Change_Item_Count(placement.ID, 1);
                 EvtDsp.TriggerEvt(EvtNames.ReloadPlacementData);
 
             }
             if (obj is Pot pot)
             {
                 room.RemovePotFromRoom(pot, gridLayerUId);
-                Global_Inventory_Manager.Change_Item_Count(pot.info.id, 1);
+                // TODO zhaorui
+                // Global_Inventory_Manager.Change_Item_Count(pot.info.id, 1);
                 EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
 
             }
 
             Destroy(obj.gameObject);
-            Global_Home_Room_Manager._instance.re_bake_navmesh();
+            Global_Home_Room_Manager.Instance.re_bake_navmesh();
             return true;
         }
 
         public static void RotatePlacement()
         {
-            Global_Home_Room_Manager._instance.re_bake_navmesh();
+            Global_Home_Room_Manager.Instance.re_bake_navmesh();
         }
 
         /// <summary>
@@ -350,11 +357,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
 
         }
-        public void ConfirmModification()
-        {
-            //Upload_Data_To_Server();
-            Global_Inventory_Manager._instance.Send_inventory_to_server();
-        }
+        // public void ConfirmModification()
+        // {
+        //     //Upload_Data_To_Server();
+        //     Global_Inventory_Manager.Instance.Send_inventory_to_server();
+        // }
     }
 
 

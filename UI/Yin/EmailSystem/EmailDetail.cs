@@ -53,7 +53,6 @@ namespace CLIP.Project_Mouse.UI
             emailPanel.ReceiveAwards(new List<Mail_Record> { record });
             emailPanel.UploadAfterOpenGifts();
             receive.interactable = false;
-            record.isGetReward = true;
 
             // 重新显示一键领取按钮
             emailPanel.ShowGetAllRewardsButton();
@@ -70,7 +69,7 @@ namespace CLIP.Project_Mouse.UI
                 Receive();
             }
 
-            List<int> readId = new List<int>
+            List<ulong> readId = new List<ulong>
                     {
                         record.mail_id
                     };

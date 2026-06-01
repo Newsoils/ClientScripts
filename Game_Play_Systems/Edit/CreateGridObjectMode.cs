@@ -84,7 +84,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public void OnTap(Vector2 screenPos)
         {
             var curP = GridObjectRaycastUtility.RaycastPlacement(screenPos, placementMask, out var hitpos);
-            if (curP != null)
+            if (curP != null && curP != _selected)
             {
                 EditManager.Instance.SetMode(new MoveGridObjectMode(curP));
             }
@@ -122,7 +122,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 _curGPosition = gPos;
 
                 // 切换墙层时，自动将墙面家具对齐到新墙的默认朝向
-                if (_lastLayerType != GridLayerType.None && _lastLayerType != gridLayerTag.gridLayerType)
+                // SnapToWallDefaultRotation 内部会判断是否已经是该墙的朝向，不会重复旋转
+                if (_lastLayerType != gridLayerTag.gridLayerType)
                 {
                     _selected.SnapToWallDefaultRotation(gridLayerTag.gridLayerType, animate:false);
                 }
@@ -171,7 +172,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             _lastPreviewGirdViews.Clear();
             if (!GridObjectSystem.TryAddGridObject(_selected, RoomSystem.currentRoom, _curGridTag.LayerUID, _curGPosition))
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不够，无法放置");
+                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不够，无法放置！");
                 GameObject.Destroy(_selected.gameObject);
             }
             else
@@ -196,12 +197,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
             if (_selected == null) return;
 
             var gridLayrUid = _selected.data.gridLayerUID;
-
             var pos = _selected.data.position;
 
-
-            var (rawX, raxY) = _selected.GetCurSize();
-            HashSet<Int2> rawOccupiedPositions = GridUtility.CalculateOccpiedPos(rawX, raxY, pos);
+            var (rawX, rawY) = _selected.GetCurSize();
+            HashSet<Int2> rawOccupiedPositions = GridUtility.CalculateOccpiedPos(rawX, rawY, pos);
             var rawUids = RoomSystem.currentRoom.GridState.GetGridUids(_selected.data.gridLayerUID, rawOccupiedPositions);
             RoomSystem.currentRoom.GridState.SetOccupied(_selected.data.gridLayerUID, rawOccupiedPositions, false);
             EvtDsp.TriggerEvt<List<string>, MGridState>(EvtNames.Update_GridView_Occupy, rawUids, MGridState.Normal);
@@ -210,29 +209,19 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             if (isVaild)
             {
-                // 更新枚举 + 旋转模型
-
-
-                var (x, y) = _selected.GetRotated90Size();
-
                 _selected.Rotate90();
 
-                //EvtDsp.TriggerEvt<List<string>, MGridState?>(EvtNames.Update_GridView_Preview_Occupy, _lastPreviewGirdViews, null);
+                // 旋转后重新获取当前尺寸（Rotate90 已更新 data.rotation）
+                var (x, y) = _selected.GetCurSize();
                 HashSet<Int2> occupiedPositions = GridUtility.CalculateOccpiedPos(x, y, pos);
                 RoomSystem.currentRoom.GridState.SetOccupied(gridLayrUid, occupiedPositions, true);
-
-                //var uids = RoomSystem.currentRoom.GridState.GetGridUids(_curGridTag.LayerUID, occupiedPositions);
-                //EvtDsp.TriggerEvt<List<string>, MGridState?>(EvtNames.Update_GridView_Preview_Occupy, uids, isVaild ? MGridState.Highlight : MGridState.Occupied);
-                //_lastPreviewGirdViews = uids;
             }
             else
             {
                 RoomSystem.currentRoom.GridState.SetOccupied(_selected.data.gridLayerUID, rawOccupiedPositions, true);
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "旋转后位置不合法，无法旋转!");
+                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不足，无法旋转!");
             }
         }
-
-
 
     }
 }

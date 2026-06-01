@@ -1,9 +1,6 @@
-using System.Collections;
-using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -31,21 +28,22 @@ namespace CLIP
                 #region 生命周期
                 private void Start()
                 {
-                    EvtDsp.AddEvt(EvtNames.Dispatch_On_Start, OnDispatchStart);
-                    EvtDsp.AddEvt(EvtNames.Dispatch_On_End, OnDispatchEnd);
-                    EvtDsp.AddEvt(EvtNames.Dispatch_VisualsSync, ApplyDispatchVisualsFromManagerState);
-                    ApplyDispatchVisualsFromManagerState();
+                    RefreshCharacterIconVisibility();
                 }
                 private void Update()
                 {
-                    UpdateMousePosition();
+                    if (isOpen)
+                        UpdateMousePosition();
+                }
+
+                private void LateUpdate()
+                {
+                    // 晚于一帧内其它脚本对 UI 的改动，避免 panelObj 启用时子节点被还原为默认激活导致头像闪显。
+                    RefreshCharacterIconVisibility();
                 }
                 public override void OnDestroy()
                 {
                     base.OnDestroy();
-                    EvtDsp.RemoveEvt(EvtNames.Dispatch_On_Start, OnDispatchStart);
-                    EvtDsp.RemoveEvt(EvtNames.Dispatch_On_End, OnDispatchEnd);
-                    EvtDsp.RemoveEvt(EvtNames.Dispatch_VisualsSync, ApplyDispatchVisualsFromManagerState);
                 }
                 #endregion
                 #region 面板开关
@@ -53,6 +51,7 @@ namespace CLIP
                 {
                     panelObj.SetActive(!isOpen);
                     isOpen = !isOpen;
+                    RefreshCharacterIconVisibility();
                 }
                 public override void ClosePanel()
                 {
@@ -63,7 +62,10 @@ namespace CLIP
                 #region 位置
                 private void UpdateMousePosition()
                 {
+                    if (!(Global_Game_Manager.Instance?.ShouldShowIndoorMainCharacter() ?? false))
+                        return;
                     if (IndoorMainCharacter._instance == null) return;
+                    if (!IndoorMainCharacter._instance.gameObject.activeInHierarchy) return;
                     var room = IndoorMainCharacter._instance._current_room;
                     if (room == null) return;
 
@@ -140,21 +142,17 @@ namespace CLIP
                     ClosePanel();
                 }
                 #endregion
-                #region 派遣
-                private void ApplyDispatchVisualsFromManagerState()
+                #region 派遣 / 小地图头像（ShouldShowIndoorMainCharacter，每帧轮询）
+                /// <summary>小地图上的小猫头像（规则与 <see cref="Global_Game_Manager.ShouldShowIndoorMainCharacter"/> 一致）。</summary>
+                private void RefreshCharacterIconVisibility()
                 {
-                    bool onDispatch = Dispatch_Manager._instance._player_dispatch_state.player_state == "On_Dispatch";
-                    characterIcon.gameObject.SetActive(!onDispatch);
+                    if (characterIcon == null)
+                        return;
+                    bool show = Global_Game_Manager.Instance?.ShouldShowIndoorMainCharacter() ?? false;
+                    characterIcon.gameObject.SetActive(show);
+                    Global_Game_Manager.Instance?.LogCatPresenceMapPanelIfChanged(show, characterIcon.gameObject.activeSelf);
                 }
 
-                private void OnDispatchStart()
-                {
-                    ApplyDispatchVisualsFromManagerState();
-                }
-                private void OnDispatchEnd()
-                {
-                    ApplyDispatchVisualsFromManagerState();
-                }
                 #endregion
             }
         }

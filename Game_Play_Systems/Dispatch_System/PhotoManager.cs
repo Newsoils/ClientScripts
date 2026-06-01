@@ -1,134 +1,37 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
-using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Project_Mouse.Kernel;
-using CLIP.Project_Mouse.Kernel.Dispatch;
+using CLIP.Project_Mouse.Network;
 using Newtonsoft.Json;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.SceneManagement;
-using PM_RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
 
+/// <summary>
+/// 目前没用，拍照看Global_Photo_Manager
+/// </summary>
 public class PhotoManager : SingletonMono<PhotoManager>
 {
     public RenderTexture dispatchPhotoTexture;
     public Dictionary<PhotoData, Texture2D> photos = new Dictionary<PhotoData, Texture2D>();
+
     public List<PhotoData> localData = new List<PhotoData>();
-    private List<Photo_Info> photoInfos;
-    [SerializeField] private string photoPath;
+
+    [SerializeField] 
+    private string photoPath;
     private void Start()
     {
         dispatchPhotoTexture = RenderTextureCompatUtility.EnsureCompatible(dispatchPhotoTexture, "DispatchPhotoTexture");
 
-        string info = JsonData_Manager.Load_Single_JsonData("project_mouse_tb_photo_info");
-        photoInfos = JsonConvert.DeserializeObject<List<Photo_Info>>(info);
         DontDestroyOnLoad(gameObject);
-        photoPath = Path.Combine(Application.persistentDataPath, "photo", NetWork_Center_WSS.instance._player_name);
+        photoPath = Path.Combine(Application.persistentDataPath, "photo",NetWork_Center_WSS.Instance?._player_name ?? "Default_Player");
+            
         _ = LoadPhoto();
     }
-    private void Update()
-    {
-        if(Keyboard.current.digit9Key.wasPressedThisFrame)
-        {
-            StartCoroutine(CapturePhotoCoroutine("奶茶店_普通1"));
-        }
-    }
-    public IEnumerator CapturePhotoCoroutine(string photoName)
-    {
-        var info = photoInfos.Find(x => x.photo_name == photoName);
-        yield return SceneManager.LoadSceneAsync(info.sceneName);
 
-        var photo_Camera_ID = info.camera_id;
-        var photoRoot = GameObject.Find("PhotoRoot")?.transform;
 
-        if (photoRoot == null)
-        {
-            Log.Error("Photo_Root not found in the scene.");
-            yield return null;
-        }
-
-        if (photo_Camera_ID < 0 || photo_Camera_ID > photoRoot.childCount)
-        {
-            Log.Error("photo_Camera_ID is out of range.");
-            yield return null;
-        }
-
-        Transform currentCameraT = null;
-
-        for (int i = 0; i < photoRoot.childCount; i++)
-        {
-            var cameraGroup = photoRoot.GetChild(i);
-            if (i != photo_Camera_ID)
-                cameraGroup.gameObject.SetActive(false);
-            else
-            {
-                currentCameraT = cameraGroup;
-                cameraGroup.gameObject.SetActive(true);
-            }
-        }
-
-        var camera = currentCameraT.GetComponentInChildren<Camera>();
-
-        var characterPoint = currentCameraT.GetComponentInChildren<Model_Placeholder>();
-
-        var characterOB = Instantiate(GameAssets.Instance.mainCharacter_Dispatch, characterPoint.transform.position, characterPoint.transform.rotation);
-        Unity_Tools.IdentityGameObject(characterOB);
-        var animator = characterOB.GetComponentInChildren<Animator>();
-        var aniName = info.main_character_pose_name;
-        if (animator != null && string.IsNullOrEmpty(aniName))
-        {
-            bool hasAnim = false;
-
-            foreach (var clip in animator.runtimeAnimatorController.animationClips)
-            {
-                if (clip.name == aniName)
-                {
-                    hasAnim = true;
-                    break;
-                }
-            }
-            if (hasAnim)
-                animator.Play(aniName);
-        }
-
-        yield return new WaitForSeconds(1f);
-
-        camera.targetTexture = dispatchPhotoTexture;
-        camera.gameObject.SetActive(true);
-
-        yield return null;
-
-        string fileName = $"{info.photo_name}_{info.camera_id}_{System.DateTime.Now:yyyyMMdd_HHmmss}.png";
-        
-        SaveImage(fileName, photoName,TimeManager.Instance.currentTime, GetTextureFromRT(dispatchPhotoTexture));
-
-        yield return new WaitForEndOfFrame();
-
-        string photoPath = Path.Combine(Application.persistentDataPath, $"{fileName}");
-        Global_Photo_Manager.Instance.AddDispatchPhoto(photoPath, fileName);
-
-        yield return null;
-
-        yield return SceneManager.LoadSceneAsync("MainScene");
-        //yield return SceneManager.UnloadSceneAsync(info.sceneName);
-        //Global_Game_Manager.Instance.load_scene("MainScene", (loadedScene) =>
-        //{
-        //    CommonInteractManager.Instance.phoneUIs = FindObjectOfType<UI_Control_Main_Phone>() != null ? new List<UI_Control_Main_Phone>(FindObjectsOfType<UI_Control_Main_Phone>()) : new List<UI_Control_Main_Phone>();
-        //});
-        //CommonInteractManager.Instance.SetMainFunctionActive(true);
-        //CommonInteractManager.Instance.SetPhoneButtonActive(true);
-        //Save_Dispatch_PhotoList();
-        //Debug.Log($"Photo saved to: {photoPath}");
-        //lastPhotoPath = photoPath;
-    }
     private void SaveImage(string fileName, string photoName, string obtainTime,  Texture2D tex)
     {
         PhotoData data = new PhotoData(photoName, fileName, obtainTime);
@@ -138,7 +41,8 @@ public class PhotoManager : SingletonMono<PhotoManager>
         Directory.CreateDirectory(photoPath);
         string path = Path.Combine(photoPath, fileName);
         File.WriteAllBytes(path, bytes);
-        EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "SavePhoto", SavePhotoTask(data, bytes), null);
+        // TODO zhaorui
+        // await EvtDsp.ReturnEvt<int, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, 60009, SavePhotoTask(data, bytes), null);
     }
     public bool TryGetPhotoByIndex(int index, out Texture2D texture)
     {
@@ -164,7 +68,9 @@ public class PhotoManager : SingletonMono<PhotoManager>
     public ServerTask SavePhotoTask(PhotoData newData, byte[] bytes)
     {
         string msg = JsonConvert.SerializeObject((newData, bytes));
-        ServerTask task = new ServerTask(msg, (string data, ServerTask task) =>
+        //TODO zhaorui
+        var req = new Cmd.GetAllClothesReq();
+        ServerTask task = new ServerTask(req, (string data, ServerTask task) =>
         {
             if(data == "success")
             {
@@ -173,9 +79,11 @@ public class PhotoManager : SingletonMono<PhotoManager>
         });
         return task;
     }
+
     public async Task LoadPhoto()
     {
-        await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "LoadPhoto", LoadPhotoTask(), null);
+        // TODO zhaorui2
+        // await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "LoadPhoto", LoadPhotoTask(), null);
         foreach(var data in localData)
         {
             string path = Path.Combine(photoPath, data.fileName);
@@ -200,7 +108,9 @@ public class PhotoManager : SingletonMono<PhotoManager>
             fileNames.Add(fileName);
         }
         string send = JsonConvert.SerializeObject(fileNames);
-        ServerTask task = new ServerTask(send, async (string data, ServerTask task) =>
+        //TODO zhaorui
+        var req = new Cmd.GetAllClothesReq();
+        ServerTask task = new ServerTask(req, async (string data, ServerTask task) =>
         {
             if (data != "nodata")
             {

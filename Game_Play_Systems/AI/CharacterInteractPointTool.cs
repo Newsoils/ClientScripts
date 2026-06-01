@@ -29,9 +29,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
         private GameObject furnitureInstance;
         private void Start()
         {
-            string info = JsonData_Manager.Load_Single_JsonData("project_mouse_tb_interact_info");
+            string info = JsonDataManager.Load_Single_JsonData("project_mouse_tb_interact_info");
             infos = JsonConvert.DeserializeObject<List<InteractInfo>>(info);
-            string placement_Info = JsonData_Manager.Load_Single_JsonData("project_mouse_tb_room_placement_info");
+            string placement_Info = JsonDataManager.Load_Single_JsonData("project_mouse_tb_room_placement_info");
             placement_Infos = JsonConvert.DeserializeObject<List<Room_Placement_Info>>(placement_Info);
         }
         public void ChangeInteract()

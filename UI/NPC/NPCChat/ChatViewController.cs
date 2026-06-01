@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
@@ -93,9 +92,9 @@ namespace CLIP.Project_Mouse.UI
 
         private Coroutine _playbackCoroutine;
         private int _currentNpcId;
-        private int _currentFavorLevel;
         private bool _messageFinished = false;
         private bool _optionHandled = false;
+        private int _pendingNextDialogueId = -1;
 
         #endregion
 
@@ -134,11 +133,11 @@ namespace CLIP.Project_Mouse.UI
             ClearAllMessages();
 
             _currentNpcId = info._npc_Base.npc_id;
-            _currentFavorLevel = info._npc_RuntimeData.favor_level;
+           
             _onNoPendingDialogue = onNoPendingDialogue;
 
-            LoadFinishedParagraphs(_currentNpcId, _currentFavorLevel);
-            PlayPendingDialogues(_currentNpcId, info._npc_RuntimeData);
+            LoadFinishedParagraphs(_currentNpcId);
+            PlayPendingDialogues(_currentNpcId);
         }
 
         /// <summary>
@@ -202,20 +201,20 @@ namespace CLIP.Project_Mouse.UI
 
         #region History Loading（批量，无动画）
 
-        private void LoadFinishedParagraphs(int npcId, int atFavorLevel)
+        private void LoadFinishedParagraphs(int npcId)
         {
             var mgr = NPCChatManager.Instance;
-            var finishedProgress = mgr.DialogueHistory.TryGetValue(npcId, out var history)
-                ? history.DialogueProgressList.FindAll(p => p.FavorLevel <= atFavorLevel && p.IsFinished)
+            var finishedProgress = mgr.npcDialogueHistory.TryGetValue(npcId, out var history)
+                ? history.dialogueProgressList.FindAll(p => p.isFinished)
                 : new List<DialogueProgress>();
 
             var allCells = new List<CellData>();
 
             foreach (var progress in finishedProgress)
             {
-                if (!mgr.paragraphsDic.TryGetValue(progress.ParagraphId, out var para))
+                if (!mgr.paragraphsDic.TryGetValue(progress.paragraphId, out var para))
                 {
-                    Debug.LogWarning($"[ChatViewController] 段落 {progress.ParagraphId} 未加载。");
+                    Debug.LogWarning($"[ChatViewController] 段落 {progress.paragraphId} 未加载。");
                     continue;
                 }
                 BuildParagraphHistoryCells(para, npcId, allCells);
@@ -230,32 +229,31 @@ namespace CLIP.Project_Mouse.UI
             var dialogue = para.GetDialogueById(para.FirstDialogueId);
             while (dialogue != null)
             {
-                if (dialogue.IsOptionDialogue)
+                if (dialogue.isOptionDialogue)
                 {
-                    if (!NPCChatManager.Instance.TryGetChoiceRecord(npcId, dialogue.DialogueId, out var choice))
+                    if (!NPCChatManager.Instance.TryGetChoiceRecord(npcId, dialogue.dialogueId, out int choiceIndex))
                     {
-                        dialogue = dialogue.NextDialogueId != -1
-                            ? para.GetDialogueById(dialogue.NextDialogueId)
+                        dialogue = dialogue.nextDialogueId != -1
+                            ? para.GetDialogueById(dialogue.nextDialogueId)
                             : null;
                         continue;
                     }
-                    dialogue.SetNextDialogueId(dialogue.Options[choice]);
 
                     cells.Add(BuildCell(
                         isCharacter: true,
                         speakerName: "小苔",
-                        text: dialogue.Options.Keys.First(),
-                        favorHint: dialogue.ChatHints));
+                        text: dialogue.optionsLookup[choiceIndex].content,
+                        favorHint: dialogue.chatHints));
                 }
                 else
                 {
-                    bool isChar = dialogue.Speaker == EnumDialogueSpeaker.Character;
-                    string name = isChar ? "小苔" : NPCManager.Instance.NPC_Info_Dict[npcId]._npc_Base.npc_name;
-                    cells.Add(BuildCell(isChar, name, dialogue.Contents, dialogue.ChatHints));
+                    bool isChar = dialogue.speaker == EnumDialogueSpeaker.Character;
+                    string name = isChar ? "小苔" : NPCManager.Instance.NPC_Info_Dic[npcId]._npc_Base.npc_name;
+                    cells.Add(BuildCell(isChar, name, dialogue.contents, dialogue.chatHints));
                 }
 
-                dialogue = dialogue.NextDialogueId != -1
-                    ? para.GetDialogueById(dialogue.NextDialogueId)
+                dialogue = dialogue.nextDialogueId != -1
+                    ? para.GetDialogueById(dialogue.nextDialogueId)
                     : null;
             }
         }
@@ -264,29 +262,28 @@ namespace CLIP.Project_Mouse.UI
 
         #region Dialogue Playback（逐条，有动画）
 
-        private void PlayPendingDialogues(int npcId, NPC_RuntimeData runtimeData)
+        private void PlayPendingDialogues(int npcId)
         {
             var mgr = NPCChatManager.Instance;
 
-            if (mgr.TryGetPendingParagraphId(npcId, runtimeData, out int paraId, out int favorLevel))
+            if (mgr.TryGetNextPendingParagraphId(npcId, out int paraId))
             {
-                _currentFavorLevel = favorLevel;
-                Debug.Log($"[ChatViewController] 开始播放待触发段落 {paraId}（FavorLevel={favorLevel}）。");
+                Debug.Log($"[ChatViewController] 开始播放待触发段落 {paraId}。");
 
-                _playbackCoroutine = StartCoroutine(PlayParagraphRoutine(paraId, npcId, favorLevel, () =>
+                _playbackCoroutine = StartCoroutine(PlayParagraphRoutine(paraId, npcId, () =>
                 {
-                    mgr.MarkParagraphFinished(npcId, favorLevel);
-                    PlayPendingDialogues(npcId, runtimeData);
+                    mgr.MarkParagraphFinished(npcId, paraId);
+                    PlayPendingDialogues(npcId);
                 }));
             }
             else
             {
-                Debug.Log($"[ChatViewController] NPC {npcId} 当前无待触发对话。");
+                Debug.Log($"[ChatViewController] NPC {npcId} 当前无待触发段落。");
                 _onNoPendingDialogue?.Invoke();
             }
         }
 
-        private IEnumerator PlayParagraphRoutine(int paraId, int npcId, int favorLevel, UnityAction onComplete)
+        private IEnumerator PlayParagraphRoutine(int paraId, int npcId, UnityAction onComplete)
         {
             var mgr = NPCChatManager.Instance;
 
@@ -297,57 +294,102 @@ namespace CLIP.Project_Mouse.UI
                 yield break;
             }
 
-            int resumeFromId = mgr.GetProgressLastDialogueId(npcId, favorLevel);
-            int startDialogueId = resumeFromId != -1 ? resumeFromId : para.FirstDialogueId;
+            int resumeFromId = mgr.GetLastDialogueId(npcId);
+            int startDialogueId = para.FirstDialogueId;
+            if (resumeFromId != -1)
+            {
+                if (para.TryGetDialogueById(resumeFromId, out _))
+                {
+                    startDialogueId = resumeFromId;
+                }
+                else
+                {
+                    Debug.LogWarning($"[ChatViewController] NPC {npcId} 的 lastDialogueId={resumeFromId} 不属于段落 {paraId}，将从段落首句 {startDialogueId} 开始播放。");
+                }
+            }
 
-            var dialogue = para.GetDialogueById(startDialogueId);
+            if (!para.TryGetDialogueById(startDialogueId, out var dialogue))
+            {
+                Debug.LogError($"[ChatViewController] 段落 {paraId} 的起始对话 {startDialogueId} 不存在，终止播放。");
+                yield break;
+            }
 
             while (dialogue != null)
             {
-                if (dialogue.IsOptionDialogue)
-                    yield return PlayOptionRoutine(dialogue, npcId, favorLevel);
+                if (dialogue.isOptionDialogue)
+                    yield return PlayOptionRoutine(dialogue, npcId);
                 else
-                    yield return PlayNormalRoutine(dialogue, npcId, favorLevel);
+                    yield return PlayNormalRoutine(dialogue, npcId);
 
-                mgr.RecordProgress(npcId, favorLevel, dialogue.DialogueId);
+                mgr.RecordProgress(npcId, dialogue.dialogueId);
 
-                dialogue = dialogue.NextDialogueId != -1
-                    ? para.GetDialogueById(dialogue.NextDialogueId)
-                    : null;
+                int nextId = _pendingNextDialogueId != -1 ? _pendingNextDialogueId : dialogue.nextDialogueId;
+                _pendingNextDialogueId = -1;
+
+                if (nextId == -1)
+                {
+                    dialogue = null;
+                }
+                else if (!para.TryGetDialogueById(nextId, out dialogue))
+                {
+                    Debug.LogError($"[ChatViewController] 段落 {paraId} 中不存在下一句对话 id={nextId}，终止播放。");
+                    yield break;
+                }
             }
 
             onComplete?.Invoke();
         }
 
-        private IEnumerator PlayNormalRoutine(DialogueModel dialogue, int npcId, int favorLevel)
+        private IEnumerator PlayNormalRoutine(DialogueModel dialogue, int npcId)
         {
-            bool isChar = dialogue.Speaker == EnumDialogueSpeaker.Character;
-            string name = isChar ? "小苔" : NPCManager.Instance.NPC_Info_Dict[npcId]._npc_Base.npc_name;
+            bool isChar = dialogue.speaker == EnumDialogueSpeaker.Character;
+            string name = isChar ? "小苔" : NPCManager.Instance.NPC_Info_Dic[npcId]._npc_Base.npc_name;
             Sprite icon = ResolveHeadIcon(isChar, name);
 
             _messageFinished = false;
             if (isChar)
-                CharacterSendMsg(icon, name, dialogue.Contents, dialogue.ChatHints, OnMessageFinished);
+                CharacterSendMsg(icon, name, dialogue.contents, dialogue.chatHints, OnMessageFinished);
             else
-                NPCSendMsg(icon, name, dialogue.Contents, dialogue.ChatHints, OnMessageFinished);
+                NPCSendMsg(icon, name, dialogue.contents, dialogue.chatHints, OnMessageFinished);
 
             yield return new WaitUntil(() => _messageFinished);
         }
 
-        private IEnumerator PlayOptionRoutine(DialogueModel option, int npcId, int favorLevel)
+        private IEnumerator PlayOptionRoutine(DialogueModel option, int npcId)
         {
-            yield return WaitForOptionChoice(option, npcId, favorLevel);
+            var mgr = NPCChatManager.Instance;
+            _pendingNextDialogueId = -1;
+
+            if (mgr.TryGetChoiceRecord(npcId, option.dialogueId, out int recordedChoiceIndex))
+            {
+                _messageFinished = false;
+                if (option.optionsLookup.TryGetValue(recordedChoiceIndex, out var recordedOpt))
+                    _pendingNextDialogueId = recordedOpt.nextDialogueId;
+
+                CharacterSendMsg(
+                    xiaoTaiHeadIcon,
+                    "小苔",
+                    option.optionsLookup[recordedChoiceIndex].content,
+                    option.chatHints,
+                    OnMessageFinished);
+
+                yield return new WaitUntil(() => _messageFinished);
+                yield break;
+            }
+
+            yield return WaitForOptionChoice(option, npcId);
         }
 
-        private IEnumerator WaitForOptionChoice(DialogueModel option, int npcId, int favorLevel)
+        private IEnumerator WaitForOptionChoice(DialogueModel option, int npcId)
         {
             var handlers = new List<UnityAction>();
 
-            foreach (var kv in option.Options)
+            for (int i = 0; i < option.options.Count; i++)
             {
+                var opt = option.options[i];
                 handlers.Add(() =>
                 {
-                    StartCoroutine(HandleOptionSelected(kv.Key, kv.Value, option, npcId, favorLevel));
+                    StartCoroutine(HandleOptionSelected(opt, option, npcId));
                 });
             }
 
@@ -359,12 +401,12 @@ namespace CLIP.Project_Mouse.UI
             _optionHandled = false;
         }
 
-        private IEnumerator HandleOptionSelected(string selectedText, int nextDialogueId, DialogueModel option, int npcId, int favorLevel)
+        private IEnumerator HandleOptionSelected(OptionInfo optionInfo, DialogueModel dialogue, int npcId)
         {
             var mgr = NPCChatManager.Instance;
 
-            mgr.RecordChoice(npcId, option.DialogueId, selectedText);
-            option.SetNextDialogueId(nextDialogueId);
+            mgr.RecordChoice(npcId, dialogue.dialogueId, optionInfo.optionIndex);
+            _pendingNextDialogueId = optionInfo.nextDialogueId;
 
             EvtDsp.TriggerEvt(EvtNames.Evt_NPCChat_CloseOption);
 
@@ -372,8 +414,8 @@ namespace CLIP.Project_Mouse.UI
             CharacterSendMsg(
                 xiaoTaiHeadIcon,
                 "小苔",
-                selectedText,
-                option.ChatHints,
+                optionInfo.content,
+                dialogue.chatHints,
                 OnMessageFinished);
 
             yield return new WaitUntil(() => _messageFinished);

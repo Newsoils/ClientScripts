@@ -139,7 +139,7 @@ namespace CLIP.Project_Mouse.UI
         }
         private void BtnSetFavor()
         {
-            Global_Inventory_Manager._instance.Set_Favorite(item.item_id, !item.is_favorite);
+            Global_Inventory_Manager.Instance.Set_Favorite(item.item_id, !item.is_favorite);
             favor.sprite = favors[((int)item.item_info.rarity - 1) * 2 + (item.is_favorite ? 1 : 0)];
         }
     }

@@ -1,3 +1,4 @@
+using CLIP.Framework_Core.Event;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -38,7 +39,7 @@ namespace CLIP.Project_Mouse.UI
             if (isGroupChat)
             {
                 // 兜底：保持旧的关键字匹配（可能会误命中）
-                GameAssets.Instance.LoadAndSet<Sprite>(ResKeys.ASSET_QUN_ICON, s => icon.sprite = s);
+                GameAssets.Instance.LoadAndSetByKey<Sprite>(ResKeys.ASSET_QUN_ICON, s => icon.sprite = s);
                 avatarButton.interactable = false;
                 intimacy.SetActive(false);
                 return;
@@ -47,7 +48,7 @@ namespace CLIP.Project_Mouse.UI
             chatNameText.text = info._npc_Base.npc_name;
             // 头像
             // chatText
-            GameAssets.Instance.LoadAndSet<Sprite>(info._npc_Base.icon_resource_name, s => icon.sprite = s);
+            GameAssets.Instance.LoadAndSetByKey<Sprite>(info._npc_Base.icon_resource_name, s => icon.sprite = s);
             intimacy.SetActive(true);
             intimacyText.text = info._npc_RuntimeData.favor_level.ToString();
         }
@@ -64,6 +65,11 @@ namespace CLIP.Project_Mouse.UI
         public void OpenChatPanel()
         {
             UIManager.Instance.GetPanel<SocialPanel>().OpenNPCChatPanel(info, isGroupChat);
+            //if (!isGroupChat)
+            //{
+            //    // 通过事件总线触发对话数据加载与播放
+            //    EvtDsp.TriggerEvt<NPC_Info>(EvtNames.Evt_NPCChat_Open, info);
+            //}
         }
     }
 

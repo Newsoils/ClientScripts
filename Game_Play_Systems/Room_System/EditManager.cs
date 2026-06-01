@@ -29,9 +29,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             InputManager.Instance.OnLongPress -= HandleLongPress;
             InputManager.Instance.OnRotate -= HandleRotate;
             InputManager.Instance.OnLongPress -= HandleLongPress;
-        
         }
-
 
         public void SetMode(IEditMode newMode)
         {
@@ -90,34 +88,5 @@ namespace CLIP.Project_Mouse.Game_Play_System
             _currentMode?.OnRotate();
         }
 
-        //private MoveGridObjectMode _moveMode;
-
-        //private CreateGridObjectMode _createMode;
-
-        //public void EnterMovePlacementMode(GridObject placement = null)
-        //{
-        //    if (_moveMode == null)
-        //        _moveMode = new MoveGridObjectMode();
-
-        //    if (_currentMode != _moveMode)
-        //    {
-        //        _currentMode?.Exit();
-        //        _currentMode = _moveMode;
-        //    }
-        //    _currentMode.Enter();
-
-        //}
-
-        //public void EnterCreatePlacementMode(GridObject selected)
-        //{
-        //    if (_createMode == null)
-        //        _createMode = new CreateGridObjectMode(selected);
-        //    if (_currentMode != _createMode)
-        //    {
-        //        _currentMode?.Exit();
-        //        _currentMode = _createMode;
-        //    }
-        //    _currentMode.Enter();
-        //}
     }
 }

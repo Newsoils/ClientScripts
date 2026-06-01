@@ -15,7 +15,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         private float clickTimer;
         private void Start()
         {
-            string data = JsonData_Manager.Load_Single_JsonData("project_mouse_tb_click_info");
+            string data = JsonDataManager.Load_Single_JsonData("project_mouse_tb_click_info");
             datas = JsonConvert.DeserializeObject<List<ClickInteractData>>(data);
         }
         private void Update()
@@ -33,7 +33,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         }
         private ClickInteractData SelectData()
         {
-            List<ClickInteractData> canSlect = datas.Where(x => x.favorLevel <= ExpManager.Instance.curLevel).ToList();
+            List<ClickInteractData> canSlect = datas.Where(x => x.favorLevel <= ExpManager.instance.curLevel).ToList();
             return canSlect[Random.Range(0, canSlect.Count)];
         }
     }

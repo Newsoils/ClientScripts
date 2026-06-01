@@ -16,15 +16,9 @@ namespace CLIP
                 public TMP_Text numText;
                 public TMP_Text priceText;
                 public Image icon;
-                [Tooltip("可选：显示每日剩余次数的文本")]
-                public TMP_Text limitText;
-
                 private int num;
                 private float price;
-                private bool isGetDiamond;
-                private int optionIndex;
-
-                public void Init(int num, int reward, float price, Sprite icon, bool isGetDiamond, int optionIndex)
+                public void Init(int num, int reward, float price, Sprite icon, bool isGetDiamond)
                 {
                     if (reward == 0)
                     {
@@ -45,11 +39,7 @@ namespace CLIP
                     this.icon.sprite = icon;
                     this.num = num + reward;
                     this.price = price;
-                    this.isGetDiamond = isGetDiamond;
-                    this.optionIndex = optionIndex;
-
-                    button.onClick.RemoveAllListeners();
-                    if (isGetDiamond)
+                    if (isGetDiamond )
                     {
                         button.onClick.AddListener(ShowPromptDiamond);
                     }
@@ -58,13 +48,6 @@ namespace CLIP
                         button.onClick.AddListener(ShowPromptCoin);
                     }
                 }
-
-                public void UpdateDailyLimit(int remaining)
-                {
-                    if (limitText != null)
-                        limitText.text = $"今日剩余 {remaining}/30";
-                }
-
                 public void ShowPromptDiamond()
                 {
                     string text = "是否要花费" + price + "元购买" + num + "罐罐？";
@@ -77,7 +60,7 @@ namespace CLIP
                 }
                 public void PayToGetDiamond()
                 {
-                    PayPanel.Instance.PayToGetDiamond(num, price, optionIndex);
+                    PayPanel.Instance.PayToGetDiamond(num, price);
                 }
                 public void PayDiamondToGetCoin()
                 {

@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 namespace CLIP.Project_Mouse.Kernel
 {
 
+    /// <summary>房间内一件摆放物的存档字段（隶属于某个 <see cref="RoomData"/> 的 <c>placementDatas</c>）。</summary>
     [System.Serializable]
     public class PlacementData
     {

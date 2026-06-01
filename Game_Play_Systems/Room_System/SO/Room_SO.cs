@@ -1,39 +1,34 @@
 using System.Collections.Generic;
 using CLIP.Project_Mouse.ENUM;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "Room_SO", menuName = "Project_Mouse/Room_SO")]
-public class Room_SO : ScriptableObject
+public class Room_SO : SerializedScriptableObject
 {
-    [System.Serializable]
-    public class RoomConfig
-    {
-        //public string houseName;
-        public string RoomName;
-        public RoomType RoomType;
-    }
-
+    // ======================= 房间配置 =======================
+    [Title("房间配置", Bold = true, TitleAlignment = TitleAlignments.Left)]
+    
+    [ListDrawerSettings(
+        ShowFoldout = true,          // 每个房间可折叠
+        ListElementLabelName = nameof(RoomConfig.RoomName), // 显示房间名
+        DraggableItems = true,       // 可拖拽排序
+        ShowIndexLabels = false
+    )]
     public List<RoomConfig> roomConfigs;
 
-    [System.Serializable]
-    public class LayerSize
-    {
-        public string layer_Name;
-        public int id;
-        public string layer_UId;
-        public string room_Name;
-        public RoomType room_Type;
-        public GridLayerType layerType;
-        public int width;
-        public int height;
-    }
-
-    /// <summary>
-    /// 这里存的是每个房间里面的GridLayer的尺寸信息，比如地板，墙和天花板的网格信息
-    /// </summary>
+    // ======================= 网格层尺寸 =======================
+    [Title("网格层尺寸配置", Bold = true)]
+    //[ListDrawerSettings(
+    //    //ShowFoldout = true,
+    //    //ListElementLabelName = nameof(LayerSize.layer_Name),
+    //    DraggableItems = true,
+    //    ShowIndexLabels = false
+    //)]
     public List<LayerSize> sizes = new List<LayerSize>();
 
-
+    // ======================= 方法 =======================
+    [GUIColor(1, 0.8f, 0.2f)]
     public bool TryGetSize(GridLayerType type, out int w, out int h)
     {
         foreach (var s in sizes)
@@ -49,4 +44,50 @@ public class Room_SO : ScriptableObject
         w = h = 0;
         return false;
     }
+
+
+    // ======================= 子结构体 =======================
+    [System.Serializable]
+    public class RoomConfig
+    {
+        [GUIColor(0.1f, 0.8f, 1f)]
+        [Required]
+        [LabelText("房间名称")]
+        public string RoomName;
+
+        [LabelText("房间类型")]
+        public RoomType RoomType;
+    }
+
+    [System.Serializable]
+    public class LayerSize
+    {
+        [LabelText("层名称")]
+        public string layer_Name;
+
+        [LabelText("层 ID")]
+        public int id;
+
+        [Required]
+        [GUIColor("green")]
+        [LabelText("层 UID")]
+        public string layer_UId;
+
+        [LabelText("归属房间")]
+        public string room_Name;
+
+        [LabelText("房间类型")]
+        public RoomType room_Type;
+
+        [LabelText("网格层类型")]
+        public GridLayerType layerType;
+
+        [LabelText("宽度")]
+        public int width;
+
+        [LabelText("高度")]
+        public int height;
+    }
+
 }
+

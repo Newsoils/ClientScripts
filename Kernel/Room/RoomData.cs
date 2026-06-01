@@ -7,6 +7,10 @@ using Newtonsoft.Json;
 
 namespace CLIP.Project_Mouse.Kernel
 {
+    /// <summary>
+    /// 单房间存档与运行态：类型/名称/<see cref="roomUID"/>、可 JSON 序列化的家具与花盆（<see cref="PlacementData"/>）、墙地门槽位 ID。
+    /// <see cref="GridState"/> 仅内存（<c>[JsonIgnore]</c>），读档后由场景内的 Room 配置与 <c>Room_SO</c> 重建网格。
+    /// </summary>
     [System.Serializable]
     public class RoomData
     {
@@ -68,6 +72,7 @@ namespace CLIP.Project_Mouse.Kernel
 
     }
 
+    /// <summary>房间内多层网格的运行时索引（不参与 JSON；由场景布置与 <c>Room_SO</c> 生成）。</summary>
     public class RoomGridState
     {
         private Dictionary<int, GridLayer> _idDic;

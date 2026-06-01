@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
@@ -10,19 +8,31 @@ public class FertilizePlantMode : IEditMode
     private LayerMask placementMask = LayerMask.GetMask("Placement");
     private string curFertilizerName;
     private bool canInteract;
+    private static FertilizePlantMode current;
     public FertilizePlantMode(string fertilizerName)
     {
         curFertilizerName = fertilizerName;
     }
     public void Enter()
     {
+        current = this;
         EvtDsp.TriggerEvt(EvtNames.ShowFertilizerPop);
         canInteract = true;
     }
 
     public void Exit()
     {
+        if (current == this)
+            current = null;
         EvtDsp.TriggerEvt(EvtNames.ClosePlantPop);
+    }
+
+    public static void HandleFertilizeCompleted()
+    {
+        if (current == null)
+            return;
+        current.canInteract = true;
+        EvtDsp.TriggerEvt(EvtNames.ShowFertilizerPop);
     }
 
     public void OnDrag(Vector2 screenPos)
@@ -50,55 +60,33 @@ public class FertilizePlantMode : IEditMode
         if (canInteract)
         {
             canInteract = false;
-            _ = TapToFertilize(screenPos);
+            TapToFertilize(screenPos);
         }
 
     }
 
-    public async Task TapToFertilize(Vector2 screenPos)
+    public void TapToFertilize(Vector2 screenPos)
     {
-        try
+        var pot = RaycastPot(screenPos);
+        if (pot != null)
         {
-            var pot = RaycastPot(screenPos);
-            if (pot != null)
+            Plant plant = PlantManager.Instance.GetPlantByPot(pot);
+            if (plant != null && !plant.data.isFertilize && plant.data.growStage == 1)
             {
-                Plant plant = PlantManager.Instance.GetPlantByPot(pot);
-                if (plant != null && !plant.data.isFertilize)
+                var fertItem = Global_Inventory_Manager.GetItem(curFertilizerName);
+                int fertCount = fertItem != null ? fertItem._item_count : 0;
+                if (fertCount <= 0)
                 {
-                    var fertItem = Global_Inventory_Manager.GetItem(curFertilizerName);
-                    int fertCount = fertItem != null ? fertItem._item_count : 0;
-                    if (fertCount <= 0)
-                    {
-                        EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "肥料数量不足");
-                        EditManager.Instance.ExitCurrentMode();
-                        return;
-                    }
-
-                    await PlantManager.Instance.FertilizePlant(plant, curFertilizerName);
-
-                    if (plant.data.isFertilize)
-                    {
-                        Global_Inventory_Manager.Change_Items_Count(
-                            new List<(string, int)> { (curFertilizerName, -1) }, "施肥");
-                        EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
-
-                        var fertAfter = Global_Inventory_Manager.GetItem(curFertilizerName);
-                        int fertCountAfter = fertAfter != null ? fertAfter._item_count : 0;
-                        if (fertCountAfter <= 0)
-                        {
-                            EditManager.Instance.ExitCurrentMode();
-                            return;
-                        }
-                    }
-
-                    EvtDsp.TriggerEvt(EvtNames.ShowFertilizerPop);
+                    EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "肥料数量不足！");
+                    EditManager.Instance.ExitCurrentMode();
+                    return;
                 }
+
+                PlantManager.Instance.FertilizePlant(plant, curFertilizerName);
+                return;
             }
         }
-        finally
-        {
-            canInteract = true;
-        }
+        canInteract = true;
     }
     private Pot RaycastPot(Vector2 screenPos)
     {

@@ -7,16 +7,17 @@ using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Kernel;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace CLIP.Project_Mouse.Game_Play_System
 {
     public class RoomSystem : SingletonMono<RoomSystem>
     {
+        protected override bool PersistAcrossScenes => true;
         public Room_SO Room_SO;
 
         public Dictionary<string, RoomData> roomDataDic = new Dictionary<string, RoomData>();
         public Dictionary<string, RoomData> roomDataNameDic = new Dictionary<string, RoomData>();
-
         public List<RoomData> RoomDatas => roomDataDic.Values.ToList();
 
         public static Room currentRoom = null;
@@ -26,15 +27,28 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public List<Room> rooms = new List<Room>();
 
-        public Action Update_Data_From_Server;
         public Action Upload_Data_To_Server;
 
         public bool canSwitchRoom = true;
+        private bool _hasStarted;
+        private bool _isResettingState;
 
-        string testMsg = "{\"rooms\":[{\"roomType\":2,\"roomName\":\"娴村\",\"roomUID\":\"291fa79b-74f9-46f0-a11f-7cf8526cace9\",\"placementDatas\":[]}," +
-            "{\"roomType\":0,\"roomName\":\"鍗у\",\"roomUID\":\"5df5ff7a-008c-4639-a850-085615c8fa49\",\"placementDatas\":[]},{\"roomType\":1," +
-            "\"roomName\":\"瀹㈠巺\",\"roomUID\":\"09a813bb-da54-4987-a5ee-7b579fcd789a\",\"placementDatas\":[{\"UID\":\"f19a603b-015b-4743-937c-47c0b876fd20\"," +
-            "\"name\":\"鍘熸湪绠€鏄撳簥\",\"placementId\":10070,\"position\":{\"x\":2,\"y\":8},\"rotation\":\"Deg0\",\"gridLayerUID\":\"7ee20510-310b-4d76-bbd0-32be9f8acc86\",\"subInstanceIds\":[]}]}]}";
+        protected override void Awake()
+        {
+            base.Awake();
+            Upload_Data_To_Server -= CacheCurrentRoomDataToMemory;
+            Upload_Data_To_Server += CacheCurrentRoomDataToMemory;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            Global_Game_Manager.Instance?.ScheduleApplyPendingRoomSaveAfterRoomSystemStart();
+        }
+
+        protected override void OnDestroy()
+        {
+            Upload_Data_To_Server -= CacheCurrentRoomDataToMemory;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            base.OnDestroy();
+        }
 
         void Start()
         {
@@ -58,6 +72,29 @@ namespace CLIP.Project_Mouse.Game_Play_System
             GenerateGridData();
             BindRoomMonos();
             SwitchRoom(RoomType.LivingRoom);
+            _hasStarted = true;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (!_hasStarted)
+                return;
+
+            if (scene.name != SceneLoadHelper.MainSceneName)
+                return;
+
+            Global_Game_Manager.Instance?.ScheduleApplyPendingRoomSaveAfterRoomSystemStart();
+        }
+
+        private void CacheCurrentRoomDataToMemory()
+        {
+            if (!SceneLoadHelper.IsMainScene)
+                return;
+
+            if (RoomDatas == null || RoomDatas.Count == 0)
+                return;
+
+            Global_Game_Manager.Instance?.CacheRoomSaveData(new RoomSaveData { rooms = RoomDatas });
         }
 
         private void GenerateGridData()
@@ -97,9 +134,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
             Debug.Log("[RoomSystem] BindRoomMonos finished");
         }
 
-        /// <summary>
-        /// 浠庢暟鎹腑鍔犺浇鎴块棿鐘舵€侊紙寮傛锛夈€傝皟鐢ㄦ柟鍔″繀 await 瀹屾垚鍚庡啀鎵ц涓婁紶绛変緷璧栧満鏅氨缁殑閫昏緫銆?
-        /// </summary>
         public async Task ResetStateFromData(RoomSaveData saveData)
         {
             if (saveData == null || saveData.rooms == null)
@@ -107,6 +141,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 Debug.LogError("SaveData invalid");
                 return;
             }
+
+            if (_isResettingState)
+                return;
+
+            _isResettingState = true;
+            try
+            {
+            string previousRoomUID = currentRoom != null ? currentRoom.RoomUID : null;
 
             GridObjectSystem.runtimeDic.Clear();
 
@@ -162,6 +204,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
                         roomMono.RestoreSpecialDecoration(Placement_Second_Category.Door, loadedRoom.doorPlacementId.Value, info.res_url);
                 }
             }
+
+            ResetRoomObjectRenderer();
 
             foreach (var loadedRoom in saveData.rooms)
             {
@@ -226,9 +270,25 @@ namespace CLIP.Project_Mouse.Game_Play_System
             if (initPlantTask != null)
                 await initPlantTask;
 
+
             ResetRoomObjectRenderer();
-            Global_Home_Room_Manager._instance.re_bake_navmesh();
-            SwitchRoom(RoomType.LivingRoom);
+            Global_Home_Room_Manager.Instance.re_bake_navmesh();
+            if (!string.IsNullOrEmpty(previousRoomUID) && roomDic.TryGetValue(previousRoomUID, out var previousRoom))
+            {
+                SwitchRoom(previousRoom);
+            }
+            else
+            {
+                SwitchRoom(RoomType.LivingRoom);
+            }
+
+            Global_Game_Manager.Instance?.CacheRoomSaveData(new RoomSaveData { rooms = RoomDatas });
+            }
+            finally
+            {
+                _isResettingState = false;
+            }
+            Upload_Data_To_Server();
         }
 
         public bool TryGetRoomData(string roomUID, out RoomData roomData)
@@ -329,7 +389,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             var allGridUids = currentRoom.GridState.GetAllGridUids();
             EvtDsp.TriggerEvt<List<string>, MGridState>(EvtNames.Update_GridView_Occupy, allGridUids, MGridState.Normal);
 
-            Global_Home_Room_Manager._instance.re_bake_navmesh();
+            Global_Home_Room_Manager.Instance.re_bake_navmesh();
 
             Debug.Log($"[RoomSystem] Cleared all placements in room: {currentRoom.RoomName}");
         }

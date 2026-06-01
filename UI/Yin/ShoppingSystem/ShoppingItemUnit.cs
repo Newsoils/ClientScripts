@@ -1,9 +1,10 @@
-using System;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity.Asset;
-using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Kernel;
+using CLIP.Project_Mouse.Network;
+using Cmd;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -22,7 +23,9 @@ namespace CLIP
                 [Header("图标UI")]
                 public Image icon;
                 public TMP_Text itemName;
+                [Tooltip("可选：抽奖奖池预览格没有价格标签时可留空")]
                 public TMP_Text itemPrice;
+                [Tooltip("可选：抽奖奖池预览格没有价格图标时可留空")]
                 public Image priceIcon;
                 public List<Sprite> priceIconSprites;
                 public Image background;
@@ -33,6 +36,7 @@ namespace CLIP
 
                 [Header("选择状态")]
                 public Button itemButton;
+                [Tooltip("可选：抽奖奖池预览格没有购买按钮时可留空")]
                 public Button buyButton;
                 public Image bgImage;
                 public Color selectedColor;
@@ -52,6 +56,11 @@ namespace CLIP
                 [Tooltip("可购买时显示的文案；不可购买时固定为「已购买」")]
                 public string purchasableBuyButtonLabel = "购买";
 
+                private ulong shopUID;
+                private long goodsID;
+                private int leftBuyTimes = -1;
+                private ShopGoodsViewData shopGoodsData;
+
                 private const string PurchasedButtonLabel = "已购买";
                 private static readonly Color32 BuyButtonTextColorPurchasable = new Color32(0x89, 0x89, 0x89, 0xFF);
                 private static readonly Color32 BuyButtonTextColorUnavailable = new Color32(0xCE, 0xCE, 0xCE, 0xFF);
@@ -61,15 +70,19 @@ namespace CLIP
                     EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshBuyButtonState);
                     RefreshBuyButtonState();
 
-                    detailButton.onClick.AddListener(() =>
-                        UIManager.Instance.OpenPanel<ItemDescriptionPanel>(itemInShop)
-                    );
+                    if (detailButton != null)
+                    {
+                        detailButton.onClick.AddListener(() =>
+                            UIManager.Instance.OpenPanel<ItemDescriptionPanel>(itemInShop)
+                        );
+                    }
                 }
 
                 private void OnDestroy()
                 {
                     EvtDsp.RemoveEvt(EvtNames.RefreshUI, RefreshBuyButtonState);
-                    detailButton.onClick.RemoveAllListeners();
+                    if (detailButton != null)
+                        detailButton.onClick.RemoveAllListeners();
                 }
 
                 /// <summary>根据当前数据刷新购买按钮图与 interactable；限购杂志在生成后设 useLimitMagazineBuyRule 再调一次。</summary>
@@ -84,7 +97,10 @@ namespace CLIP
 
                 private bool ComputeCanPurchase()
                 {
-                    if (itemInShop.sell_price < 0)
+                    if (leftBuyTimes == 0)
+                        return false;
+
+                    if (shopGoodsData == null && itemInShop.sell_price < 0)
                         return false;
 
                     if (itemInShop.type == ENUM.Item_Type.Cloth || itemInShop.type == ENUM.Item_Type.Tape)
@@ -113,11 +129,37 @@ namespace CLIP
                     }
                 }
 
-                public void InitGameItemUnit(Game_Item_Info itemInShop)
+                public void InitGameItemUnit(Game_Item_Info itemInShop, ulong serverShopUID = 0UL, long serverGoodsID = 0L, int serverLeftBuyTimes = -1)
                 {
+                    InitGameItemUnit(itemInShop, null, serverShopUID, serverGoodsID, serverLeftBuyTimes);
+                }
+
+                public void InitShopGoodsUnit(ShopGoodsViewData goodsData, ulong serverShopUID)
+                {
+                    InitGameItemUnit(goodsData.ItemInfo, goodsData, serverShopUID, goodsData.GoodsID, goodsData.LeftBuyTimes);
+                }
+
+                public void InitGachaPoolPreviewUnit(Game_Item_Info itemInfo)
+                {
+                    InitGameItemUnit(itemInfo);
+                    if (itemPrice != null)
+                        itemPrice.gameObject.SetActive(false);
+                    if (priceIcon != null)
+                        priceIcon.gameObject.SetActive(false);
+                    if (buyButton != null)
+                        buyButton.gameObject.SetActive(false);
+                }
+
+                private void InitGameItemUnit(Game_Item_Info itemInShop, ShopGoodsViewData goodsData, ulong serverShopUID, long serverGoodsID, int serverLeftBuyTimes)
+                {
+                    shopGoodsData = goodsData;
                     this.itemInShop = itemInShop;
+                    shopUID = serverShopUID;
+                    goodsID = serverGoodsID;
+                    leftBuyTimes = serverLeftBuyTimes;
                     itemName.text = itemInShop.name;
-                    itemPrice.text = $"{itemInShop.sell_price.ToString()}";
+                    if (itemPrice != null)
+                        itemPrice.text = goodsData != null ? goodsData.CostCount.ToString() : itemInShop.sell_price.ToString();
 
                     if (itemInShop.res_url != null && itemInShop.res_url.Length != 0)
                     {
@@ -136,8 +178,11 @@ namespace CLIP
                     if (buyButtonText == null && buyButton != null)
                         buyButtonText = buyButton.GetComponentInChildren<TMP_Text>(true);
                     itemButton.onClick.RemoveAllListeners();
-                    buyButton.onClick.RemoveAllListeners();
-                    buyButton.onClick.AddListener(OnClick);
+                    if (buyButton != null)
+                    {
+                        buyButton.onClick.RemoveAllListeners();
+                        buyButton.onClick.AddListener(OnClick);
+                    }
                     DeSelectItem();
                     RefreshBuyButtonState();
                 }
@@ -145,60 +190,71 @@ namespace CLIP
                 {
                     if (!ComputeCanPurchase())
                         return;
-                    int price = itemInShop.sell_price;
-                    List<(string, int)> items = new List<(string, int)> { (itemInShop.name, 1) };
-                    string message = $"是否要花费{price}{itemInShop.currency_unit}购买{itemInShop.name}?";
+                    if (shopUID == 0UL || goodsID == 0L)
+                    {
+                        PromptMessage.Instance.ShowUpPrompt("商店数据未同步，请重新打开商店");
+                        return;
+                    }
+
+                    int price = shopGoodsData != null ? shopGoodsData.CostCount : itemInShop.sell_price;
+                    string currencyName = shopGoodsData != null && !string.IsNullOrEmpty(shopGoodsData.CurrencyName)
+                        ? shopGoodsData.CurrencyName
+                        : itemInShop.currency_unit;
+                    string message = $"是否要花费{price}{currencyName}购买{itemInShop.name}?";
 
                     PromptMessage.Instance.ShowPrompt(message, () =>
                     {
-                        Action<string> onPayComplete = (string result) =>
+                        var req = new BuyGoodsReq
                         {
-                            if (result == "success")
-                            {
-                                PromptMessage.Instance.ShowUpPrompt("购买成功");
-                                Global_Inventory_Manager.Change_Items_Count(items, "商店购买");
-                                ExpManager.TempAddExpForRoomPlacementGains(items);
-                                EvtDsp.TriggerEvt(EvtNames.RefreshUI);
-
-                                TaskEvent.TriggerByCategory(itemInShop.type);
-
-                            }
-                            else
-                            {
-                                PromptMessage.Instance.ShowUpPrompt(result);
-                            }
+                            ShopUID = shopUID,
+                            GoodsID = goodsID,
+                            BuyAmount = 1
                         };
-                        MoneyManager.Instance.ChangeCurrency(itemInShop.currency_unit, -price, "购买物品", onPayComplete);
+                        NetWork_Center_WSS.SendMsg(req);
                     });
                 }
                 public void SetPriceIcon()
                 {
-                    if (itemInShop.currency_unit == "鱼币")
+                    string currencyName = shopGoodsData != null && !string.IsNullOrEmpty(shopGoodsData.CurrencyName)
+                        ? shopGoodsData.CurrencyName
+                        : itemInShop.currency_unit;
+
+                    if (priceIcon == null || priceIconSprites == null || priceIconSprites.Count == 0)
+                        return;
+
+                    if (currencyName == "鱼币")
                     {
-                        priceIcon.sprite = priceIconSprites[0];
+                        if (priceIconSprites.Count > 0)
+                            priceIcon.sprite = priceIconSprites[0];
                     }
                     else
                     {
-                        priceIcon.sprite = priceIconSprites[1];
+                        if (priceIconSprites.Count > 1)
+                            priceIcon.sprite = priceIconSprites[1];
                     }
                 }
                 public void SetIcon(Sprite sprite)
                 {
-                    icon.sprite = sprite;
+                    if (icon != null)
+                        icon.sprite = sprite;
                 }
                 public void SetBackgroundSprite()
                 {
-                    if(background == null) return;
-                    background.sprite = backgroundIcons[((int)itemInShop.rarity)-1];
+                    if(background == null || backgroundIcons == null || backgroundIcons.Count == 0) return;
+                    int index = ((int)itemInShop.rarity) - 1;
+                    if (index < 0 || index >= backgroundIcons.Count) return;
+                    background.sprite = backgroundIcons[index];
                 }
 
                 public void SelectItem()
                 {
-                    bgImage.color = selectedColor;
+                    if (bgImage != null)
+                        bgImage.color = selectedColor;
                 }
                 public void DeSelectItem()
                 {
-                    bgImage.color = deselectedColor;
+                    if (bgImage != null)
+                        bgImage.color = deselectedColor;
                 }
             }
         }

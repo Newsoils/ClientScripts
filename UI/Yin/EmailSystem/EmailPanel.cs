@@ -130,7 +130,7 @@ namespace CLIP.Project_Mouse.UI
         {
             var allMails = Email_And_Announcement_Manager.instance._mail_record;
             var toReceive = new List<Mail_Record>();
-            List<int> mailId = new List<int>();
+            List<ulong> mailId = new List<ulong>();
             foreach (var mail in allMails)
             {
                 if (!mail.isGetReward && mail.item_list.Count > 0)
@@ -148,19 +148,13 @@ namespace CLIP.Project_Mouse.UI
             UploadAfterOpenGifts();
         }
 
-        // 显示奖励面板
+        // 向服务器请求领取邮件奖励；奖励展示由 MailRewardRes -> Show_Reward 统一弹出
         public void ReceiveAwards(List<Mail_Record> mailRecords)
         {
-            awardPanel.SetActive(true);
-            var itemDb = Global_Inventory_Manager.GameItem_DB;
-
-            var allAwards = new List<item_in_mail>();
             var presentRecords = Player_Social_Manager._instance._current_social_info._present_records;
-            List<int> mailId = new List<int>();
+            List<ulong> mailId = new List<ulong>();
             foreach (var mail in mailRecords)
             {
-                allAwards.AddRange(mail.item_list);
-
                 if (mail._send_present_msg_id_related != -1)
                 {
                     presentRecords.RemoveAll(r => r._msg_id == mail._send_present_msg_id_related);
@@ -171,38 +165,11 @@ namespace CLIP.Project_Mouse.UI
                     mailId.Add(mail.mail_id);
                 }
             }
+
+            if (mailId.Count == 0)
+                return;
+
             Email_And_Announcement_Manager.instance.on_get_mail_reward(mailId);
-
-            int awardCount = 0;
-            int childCount = awardRoot.childCount;
-            List<(string, int)> list = new List<(string, int)>();
-            foreach (var item in allAwards)
-            {
-                GameObject awardObj;
-                if (awardCount < childCount)
-                {
-                    awardObj = awardRoot.GetChild(awardCount).gameObject;
-                    awardObj.SetActive(true);
-                }
-                else
-                {
-                    awardObj = Instantiate(awardUnitPrefab, awardRoot);
-                }
-
-                var awardUnit = awardObj.GetComponent<EmailItem>();
-                if (awardUnit != null)
-                {
-                    var dbItem = itemDb.Find(db => db.name == item.item_name);
-                    awardUnit.InitItem(dbItem, item.item_quantity);
-                    list.Add((item.item_name, item.item_quantity));
-                }
-                awardCount++;
-            }
-            Global_Inventory_Manager.Change_Items_Count(list, "邮件");
-            for (int i = awardCount; i < childCount; i++)
-            {
-                awardRoot.GetChild(i).gameObject.SetActive(false);
-            }
         }
 
         // 奖励面板关闭后上传数据
@@ -216,7 +183,8 @@ namespace CLIP.Project_Mouse.UI
 
                 yield return new WaitForSeconds(1f);
 
-                Global_Inventory_Manager._instance.Send_inventory_to_server();
+                // TODO zhaorui
+                //Global_Inventory_Manager.Instance.Send_inventory_to_server();
             }
         }
 

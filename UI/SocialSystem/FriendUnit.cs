@@ -16,11 +16,13 @@ namespace CLIP.Project_Mouse.UI
         public TMP_Text nameText;
         public Image hot;
         public TMP_Text hotText;
+        public Button button;
         //public List<Image> achievementIconList = new List<Image>();
 
         public void InitFriendUnit()
         {
-            nameText.text = record._brief_info._player_nick_name;
+            button.onClick.AddListener(OpenChatPanel);
+            nameText.text = record.DisplayName;
             if (record.hot_daily_count > 3)
             {
                 hot.gameObject.SetActive(true);

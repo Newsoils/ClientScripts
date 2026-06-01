@@ -1,6 +1,7 @@
 using CLIP.Project_Mouse.UI;
 using UnityEngine;
 using UnityEngine.UI;
+
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Framework_Core.Event;
@@ -32,7 +33,7 @@ public class MainFunctionPanel : MonoBehaviour
     {
         if (taskClaimableRedDot == null)
             return;
-        var mgr = TaskManager.Instance;
+        var mgr = MissionManager.Instance;
         bool show = mgr != null && mgr.HasClaimableReward();
         taskClaimableRedDot.gameObject.SetActive(show);
     }
@@ -73,15 +74,7 @@ public class MainFunctionPanel : MonoBehaviour
             if (Dispatch_Manager.IsDispatching)
             {
                 TicketConfirmObj.SetActive(false);
-                if(Global_Inventory_Manager.ReduceItemCount("爱心车票", 1, "让小苔回家"))
-                {
-                    Dispatch_Manager._instance.force_dispatch_end();
-                    RefreshTicketNum();
-                }
-                else
-                {
-                    PromptMessage.Instance.ShowUpPrompt("爱心车票不足");
-                }
+                Dispatch_Manager._instance.SendCatBackImmediatelyRequest();
             }
             else
             {
@@ -126,7 +119,7 @@ public class MainFunctionPanel : MonoBehaviour
     }
     private void RefreshTicketNum()
     {
-        TicketNum.text = Global_Inventory_Manager._instance.GetItemNum("爱心车票").ToString();
+        TicketNum.text = Global_Inventory_Manager.Instance.GetItemNum("爱心车票").ToString();
     }
 
 }

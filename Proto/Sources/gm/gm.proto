@@ -1,0 +1,149 @@
+syntax = "proto3";
+package gm;
+option go_package = "github.com/xcompany/xgame/proto/gm";
+
+import "common/error.proto";
+import "common/common.proto";
+
+//SEQ[63001,65535]
+//Central、Route模块向GM注册请求
+message RegisterModuleReq {
+  int32 moduleID = 1;                 //moduleID
+  int32 moduleType = 2;               //模块类型 只有central和route两种类型
+  repeated int32 servers = 3;         //服务的区服
+}
+
+//Central、Route模块向GM注册响应
+message RegisterModuleRes {
+  common.Error error = 1;
+}
+
+//拉取公告
+message GameNoticeGetReq {
+}
+
+message GameNoticeGetRes {
+  repeated GmGameNoticeInfo Infos = 1;
+}
+
+//改公告
+message GameNoticeChangeReq {
+  repeated GmGameNoticeInfo Infos = 1;
+}
+
+message GameNoticeChangeRes {
+  common.Error error = 1;
+}
+
+//公告结构体
+message GmGameNoticeInfo {
+  int64 NoticeID = 1;
+  int32 OperateType = 2;//1增 2改 3删
+  int64 StartTime = 3;
+  int64  EndTime = 4;
+  int32 NoticeType = 5;
+  int32 TagType = 6;
+  repeated int64  ServerIDs = 7;
+  string NoticeTitle = 8;
+  string  NoticeContent = 9;
+  string NoticePic = 10;
+  int32 New = 11;
+  int32  Top = 12;
+  int32  Hot = 13;
+  int32 Status = 14;
+}
+
+//改公告
+message SysMarqueeS2S {
+  repeated int32 AboutServerIDs = 1;
+}
+
+message SystemMailS2S{
+  repeated int32 ServerIDs = 1;
+}
+
+message GetRoleAllInfoS2S{
+  int32 TargetServer = 1;
+  uint64 TargetRole = 2;
+  GmRoleBaseInfo Base = 3;
+  GmRoleItemInfo Item = 4;
+  GmRolePVEInfo Dungeon = 5;
+  GmRoleRankInfo Ranks = 6;
+}
+
+//后台玩家个人信息展示
+message GmRoleBaseInfo {
+  string NickName = 1;//昵称
+  uint64 RoleID = 2;//uid
+  int64 UserID = 3;//账号ID
+  int32 RoleLv = 4;//等级
+  int64 CreateTime = 5;//创建时间
+  int64 LastOfflineTime = 6;//最后下线时间
+  int64 MaxPower = 7;//最大战力
+  int32 VIPLv = 8;//vip等级
+  int64 Recharge = 9;//累计充值
+  int64 DailyRecharge = 10;//今日充值
+  int32 ServerID = 11;//所属服务器
+}
+
+//玩家资源数据
+message GmRoleItemInfo {
+  map<int64, int64> Items = 1;
+}
+//玩家pve数据
+message GmRolePVEInfo {
+  int64 MainDungeon = 1;//主线进度
+  map<int64, int64> TrialTower = 2;//塔
+  map<int64, int64> TrialDungeon = 3;//材料本
+  int64 SingleChainDungeon = 4;//北伐(单
+  int64 TeamChainDungeon = 5;//北伐(群
+  int64 ConquerCityDungeon = 6;//征讨四方
+  int64 ConquerWorldDungeon = 7;//平定天下
+}
+//玩家排行榜数据
+message GmRoleRankInfo {
+  map<int64, GmRoleSingleRankInfo> Infos = 1;
+}
+message GmRoleSingleRankInfo{
+  int64 RankID = 1;//排行榜ID
+  int64 RankType = 2;//排行榜类型
+  int32 RankOrder = 3;//排名
+  int32 Level = 4;//玩法中等级
+  int64 Score = 5;//玩法中分数
+  int32 GroupID = 6;//玩法中分组ID
+}
+
+//删除聊天频道内的聊天记录
+message DelChatChannelMsgsS2S{
+  int32 DelType = 1;  //删除类型 1 删除指定ID的发言 2 删除指定角色的发言 3 清空该频道发言
+  common.ChatChannelType ChannelType = 2;         //频道类型
+  uint64 ChannelTypeID = 3;                       //频道ID
+  uint64 ChannelUID = 4;                          //频道UID
+  repeated uint64 DelTargetIDs = 5;               //指定删除的消息的UID
+  int32 ModuleID = 6;                             //发往的模块ID(发往世界服时 填写1战区的route的moduleID)
+}
+
+message AddRedeemCodeS2S{
+  int32 ModuleID = 1; //发往的模块ID(发往世界服时 填写1战区的route的moduleID)
+}
+
+//玩家订单补单
+message RetryPlayerOrderS2S{
+  string OrderUUID = 1;
+  string TransactionID = 2;//原始订单号
+}
+
+//玩家养成记录提取
+message GetDevelopmentRecordS2S{
+  uint64 RoleID = 1;//通知目标玩家
+  repeated int32 DevTypes = 2;//养成模块
+  int32 ServerID = 11;//所属服务器
+}
+
+//玩家养成记录适用
+message SetDevelopmentRecordS2S{
+  uint64 RoleID = 1;//通知目标玩家
+  repeated int32 DevTypes = 2;//养成模块
+  uint64 SrcRoleID = 3;//数据源玩家
+  int32 ServerID = 11;//所属服务器
+}

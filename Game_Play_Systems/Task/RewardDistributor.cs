@@ -18,7 +18,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
             List<RewardData> rewardData,
             List<string> rewardNames)
         {
-            if (rewardData == null) return;
             int expValue = 0;
             foreach (var r in rewardData)
             {
@@ -31,19 +30,13 @@ namespace CLIP.Project_Mouse.Game_Play_System
             if (expValue > 0)
                 itemsToAdd.Add(("亲密度", expValue));
 
-            if (Global_Inventory_Manager._instance != null)
+            foreach (var (itemId, amount) in rewardItems)
             {
-                foreach (var (itemId, amount) in rewardItems)
-                {
-                    var name = Global_Inventory_Manager.GetItemInfo(itemId).name;
-                    itemsToAdd.Add((name, amount));
-                }
-                Global_Inventory_Manager.Change_Items_Count(itemsToAdd, "任务奖励");
+                var name = Global_Inventory_Manager.GetItemInfo(itemId).name;
+                itemsToAdd.Add((name, amount));
             }
-            else
-            {
-                Debug.LogWarning("Global_Inventory_Manager._instance 为空，没有办法添加道具");
-            }
+            // TODO zhaorui
+            // Global_Inventory_Manager.Change_Items_Count(itemsToAdd, "任务奖励");
 
             EvtDsp.ReturnEvt<List<(string, int)>, bool>(EvtNames.Show_Reward, itemsToAdd);
         }

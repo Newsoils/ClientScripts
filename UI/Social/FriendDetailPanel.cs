@@ -99,9 +99,9 @@ public class FriendDetailPanel : MonoBehaviour
 
     private void RefreshDetail()
     {
-        txtFriendName.text = _record._brief_info._player_nick_name;
-        txtFriendID.text = _record.friend_id;
-        txtIntimacy.text = _record._brief_info._affinity_with_main_character.ToString();
+        txtFriendName.text = _record.DisplayName;
+        txtFriendID.text = _record.FriendId;
+        txtIntimacy.text = _record.Info.RoleLv.ToString();
 
         var socialPanel = UIManager.Instance.GetPanel<SocialPanel>();
 
@@ -109,10 +109,9 @@ public class FriendDetailPanel : MonoBehaviour
         //if (socialPanel != null && avatarIcon != null)
         //    avatarIcon.sp = socialPanel.GetDefaultAvatar();
 
-        bool isPending = SM._current_social_info._friend_pending_info_record
-            .Exists(f => f.friend_id == _record.friend_id);
+        bool isPending = SM.IsInApplyList(_record.RoleId);
         bool isAccepted = SM._current_social_info._friend_accepted_info_record
-            .Exists(f => f.friend_id == _record.friend_id);
+            .Exists(f => f.RoleId == _record.RoleId);
 
         isFriend = isAccepted;
 
@@ -159,12 +158,12 @@ public class FriendDetailPanel : MonoBehaviour
 
         if (isFriend)
         {
-            socialPanel.RemoveFriend(_record. friend_name);
+            socialPanel.RemoveFriend(_record);
             ClosePanel();
         }
         else
         {
-            socialPanel.AddFriend(_record.friend_name);
+            socialPanel.AddFriend(_record.FriendId);
             ClosePanel();
         }
     }
@@ -173,7 +172,7 @@ public class FriendDetailPanel : MonoBehaviour
     {
         if (_record == null) return;
         var socialPanel = UIManager.Instance.GetPanel<SocialPanel>();
-        socialPanel?.VisitFriend(_record.friend_name);
+        socialPanel?.VisitFriend(_record.DisplayName);
         ClosePanel();
     }
 
@@ -203,8 +202,8 @@ public class FriendDetailPanel : MonoBehaviour
     private void OnCopyID()
     {
         if (_record == null) return;
-        GUIUtility.systemCopyBuffer = _record.friend_id;
-        Debug.Log($"已复制ID到剪贴板: {_record.friend_id}");
+        GUIUtility.systemCopyBuffer = _record.FriendId;
+        Debug.Log($"已复制ID到剪贴板: {_record.FriendId}");
     }
 
     #endregion

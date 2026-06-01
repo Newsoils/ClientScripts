@@ -33,7 +33,7 @@ namespace CLIP
 
                     float t = Mathf.InverseLerp(minSize, maxSize, size);
                     float curRadius = Mathf.Lerp(maxRadius, minRadius, t);
-                    //Debug.Log($"Size: {size}, t: {t}, Current Radius: {curRadius}");
+                    //Debug.Log($"Size: {size}, t: {t}, Dispatch Radius: {curRadius}");
 
                     float distance = Vector3.Distance(mainCamera.transform.position, centerObject.position);
                     //Debug.Log(distance);

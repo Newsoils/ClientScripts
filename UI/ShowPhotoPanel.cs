@@ -1,14 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Project_Mouse.Kernel;
-using DG.Tweening.Plugins.Core.PathCore;
 using UnityEngine;
 using UnityEngine.UI;
-using static UnityEngine.GraphicsBuffer;
 
 namespace CLIP.Project_Mouse.UI
 {
@@ -28,7 +23,7 @@ namespace CLIP.Project_Mouse.UI
         public Button btnCancelDelete;
 
         // 当前查看的照片元数据
-        private photo_info_saved _currentPhotoInfo;
+        private PhotoRecordInfo _currentPhotoInfo;
         private string _currentPhotoPath;
 
         private void Start()
@@ -37,7 +32,7 @@ namespace CLIP.Project_Mouse.UI
             btnDeletePhoto.onClick.AddListener(BtnDeletePhoto);
             btnConfirmDelete.onClick.AddListener(BtnConfirmDelete);
             btnCancelDelete.onClick.AddListener(BtnCancelDelete);
-            save.onClick.AddListener(() => Global_Photo_Manager.Instance.SaveToGallery(_currentPhotoPath, _currentPhotoInfo._photo_name));
+            save.onClick.AddListener(() => Global_Photo_Manager.Instance.SaveToGallery(_currentPhotoPath, _currentPhotoInfo.FileName));
         }
 
 
@@ -52,30 +47,30 @@ namespace CLIP.Project_Mouse.UI
         }
 
         /// <summary>
-        /// 支持传 photo_info_saved 或照片路径。新逻辑优先传元数据，路径仍保留给旧调用兼容。
+        /// 支持传 PhotoRecordInfo 或照片路径。新逻辑优先传元数据，路径仍保留给旧调用兼容。
         /// </summary>
         public override void OpenPanel(params object[] data)
         {
-            if (data.Length > 0 && data[0] is photo_info_saved photoInfo)
+            if (data.Length > 0 && data[0] is PhotoRecordInfo photoInfo)
             {
                 _currentPhotoInfo = photoInfo;
-                _currentPhotoPath = photoInfo._local_path;
+                _currentPhotoPath = photoInfo.localPath;
             }
             else if (data.Length > 0 && data[0] is string photoPath && !string.IsNullOrEmpty(photoPath))
             {
-                _currentPhotoInfo = Global_Photo_Manager.Instance.GetPhotoInfoByPath(photoPath);
+                _currentPhotoInfo = Global_Photo_Manager.Instance.ResolvePhotoInfo(photoPath);
                 if (_currentPhotoInfo == null)
                 {
                     Log.Error($"ShowPhotoPanel: 未找到照片元数据: {photoPath}");
                     return;
                 }
-                _currentPhotoPath = photoPath;
+                _currentPhotoPath = _currentPhotoInfo.localPath;
             }
             else
             {
                 _currentPhotoPath = Global_Photo_Manager.Instance.Last_Photo_Path;
                 if (!string.IsNullOrEmpty(_currentPhotoPath))
-                    _currentPhotoInfo = Global_Photo_Manager.Instance.GetPhotoInfoByPath(_currentPhotoPath);
+                    _currentPhotoInfo = Global_Photo_Manager.Instance.ResolvePhotoInfo(_currentPhotoPath);
             }
 
             if (_currentPhotoInfo == null)
@@ -147,7 +142,7 @@ namespace CLIP.Project_Mouse.UI
             Global_Photo_Manager.Instance.DeletePhoto(_currentPhotoInfo);
             UIManager.Instance.GetPanel<DispatchPhotoPanel>()?.RefreshAfterDelete(); // 刷新列表
 
-            Debug.Log($"照片已删除: {_currentPhotoInfo._photo_name}");
+            Debug.Log($"照片已删除: {_currentPhotoInfo.photoName}");
             _currentPhotoInfo = null;
             photo.texture = null;
 

@@ -1,9 +1,11 @@
 using System;
+using System.ComponentModel;
+using System.Threading.Tasks;
 using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
 using UnityEngine.SceneManagement;
 
-public static class SceneLoadHelper 
+public class SceneLoadHelper : SingletonMono<SceneLoadHelper>
 {
     public static string DispatchSceneName = "Dispatch_Demo";
     public static string MainSceneName = "MainScene";
@@ -11,7 +13,7 @@ public static class SceneLoadHelper
 
     public static bool IsLoginScene
     {
-        get { return SceneManager.GetActiveScene().name ==LoginScene; }
+        get { return SceneManager.GetActiveScene().name == LoginScene; }
     }
     public static bool IsMainScene
     {
@@ -23,11 +25,11 @@ public static class SceneLoadHelper
         get { return SceneManager.GetActiveScene().name == DispatchSceneName; }
     }
 
-    public static void Load_MainScene( Action<Scene> callback = null)
+    public static void Load_MainScene(Action<Scene> callback = null)
     {
         if (SceneManager.GetActiveScene().name != MainSceneName)
         {
-            Project_Mouse_Resource_Management.load_scene_async(MainSceneName, (loadedScene) =>
+            LoadSceneAsync(MainSceneName, (loadedScene) =>
             {
                 callback?.Invoke(loadedScene);
             });
@@ -36,12 +38,12 @@ public static class SceneLoadHelper
 
     public static void Load_DispatchScene(Action<Scene> callback = null)
     {
-        if(SceneManager.GetActiveScene().name != DispatchSceneName)
+        if (SceneManager.GetActiveScene().name != DispatchSceneName)
         {
-            Project_Mouse_Resource_Management.load_scene_async(DispatchSceneName, (loadedScene) =>
+            LoadSceneAsync(DispatchSceneName, (loadedScene) =>
             {
                 callback?.Invoke(loadedScene);
-            } );
+            });
         }
     }
 
@@ -50,11 +52,30 @@ public static class SceneLoadHelper
 
         if (SceneManager.GetActiveScene().name != LoginScene)
         {
-            Project_Mouse_Resource_Management.load_scene_async(LoginScene, (loadedScene) =>
+            LoadSceneAsync(LoginScene, (loadedScene) =>
             {
                 callback?.Invoke(loadedScene);
             });
         }
     }
+
+    public static UnityEngine.AsyncOperation LoadSceneAsync(string name)
+    {
+        return SceneManager.LoadSceneAsync(name, LoadSceneMode.Single);
+    }
+
+    public static void LoadSceneAsync(string path, Action<Scene> _callback)
+    {
+        var async_loader = SceneManager.LoadSceneAsync(path, LoadSceneMode.Single);
+        async_loader.completed += (async_operation) =>
+        {
+            if (async_loader.isDone)
+            {
+                Scene loadedScene = SceneManager.GetSceneByName(path);
+                _callback(loadedScene);
+            }
+        };
+    }
+
 
 }

@@ -1,0 +1,58 @@
+[
+  {
+    "id": 63003,
+    "name": "Gm.RegisterModuleReq"
+  },
+  {
+    "id": 63004,
+    "name": "Gm.RegisterModuleRes"
+  },
+  {
+    "id": 63005,
+    "name": "Gm.GameNoticeGetReq"
+  },
+  {
+    "id": 63006,
+    "name": "Gm.GameNoticeGetRes"
+  },
+  {
+    "id": 63007,
+    "name": "Gm.GameNoticeChangeReq"
+  },
+  {
+    "id": 63008,
+    "name": "Gm.GameNoticeChangeRes"
+  },
+  {
+    "id": 63010,
+    "name": "Gm.SysMarqueeS2S"
+  },
+  {
+    "id": 63012,
+    "name": "Gm.SystemMailS2S"
+  },
+  {
+    "id": 63014,
+    "name": "Gm.GetRoleAllInfoS2S"
+  },
+  {
+    "id": 63016,
+    "name": "Gm.DelChatChannelMsgsS2S"
+  },
+  {
+    "id": 63018,
+    "name": "Gm.AddRedeemCodeS2S"
+  },
+  {
+    "id": 63020,
+    "name": "Gm.RetryPlayerOrderS2S"
+  },
+  {
+    "id": 63022,
+    "name": "Gm.GetDevelopmentRecordS2S"
+  },
+  {
+    "id": 63024,
+    "name": "Gm.SetDevelopmentRecordS2S"
+  }
+]

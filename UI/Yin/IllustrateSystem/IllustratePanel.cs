@@ -126,15 +126,15 @@ namespace CLIP.Project_Mouse.UI
                 bigIllustrateItem.obtainedItems = obtainedGameItemList;
 
 
-                foreach (var inventoryItem in Global_Inventory_Manager.New_Obtain_Items)
-                {
-                    var inventory = Global_Inventory_Manager.GameItem_DB.Find(x => x.name == inventoryItem);
-                    if (inventory.type == item_Type)
-                    {
-                        SmallIllustrateItem item = smallItemDict[inventory.item_id];
-                        item.redPoint.SetActive(true);
-                    }
-                }
+                // foreach (var inventoryItem in Global_Inventory_Manager.New_Obtain_Items)
+                // {
+                //     var inventory = Global_Inventory_Manager.GameItem_DB.Find(x => x.name == inventoryItem);
+                //     if (inventory.type == item_Type)
+                //     {
+                //         SmallIllustrateItem item = smallItemDict[inventory.item_id];
+                //         item.redPoint.SetActive(true);
+                //     }
+                // }
             }
             else if (illustrateSlider.currentStep == 0.5f)
             {
@@ -179,15 +179,15 @@ namespace CLIP.Project_Mouse.UI
 
                 bigIllustrateItem.obtainedItems = obtainedGameItemList;
 
-                foreach (var inventoryItem in Global_Inventory_Manager.New_Obtain_Items)
-                {
-                    var inventory = Global_Inventory_Manager.GameItem_DB.Find(x => x.name == inventoryItem);
-                    if (inventory.type == item_Type)
-                    {
-                        MediumIllustrateItem item = mediumItemDict[inventory.item_id];
-                        item.redPoint.SetActive(true);
-                    }
-                }
+                // foreach (var inventoryItem in Global_Inventory_Manager.New_Obtain_Items)
+                // {
+                //     var inventory = Global_Inventory_Manager.GameItem_DB.Find(x => x.name == inventoryItem);
+                //     if (inventory.type == item_Type)
+                //     {
+                //         MediumIllustrateItem item = mediumItemDict[inventory.item_id];
+                //         item.redPoint.SetActive(true);
+                //     }
+                // }
             }
             else if (illustrateSlider.currentStep == 1)
             {
@@ -342,7 +342,7 @@ namespace CLIP.Project_Mouse.UI
             var newOBts = Global_Inventory_Manager.New_Obtain_Items;
             if (newOBts != null )
             {
-                newOBts.Remove(itemName);
+                // newOBts.Remove(itemName);
             }
             if (Dispatch_Manager._instance != null && Dispatch_Manager._instance._player_dispatch_state != null)
             {

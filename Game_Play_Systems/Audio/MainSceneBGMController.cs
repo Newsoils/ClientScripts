@@ -9,7 +9,7 @@ public class MainSceneBGMController : MonoBehaviour
     private void Start()
     {
         EvtDsp.AddEvt(EvtNames.On_Set_Time, PlaySong);
-        
+        PlaySong();
     }
     private void OnDestroy()
     {

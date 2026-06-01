@@ -1,10 +1,19 @@
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 
 [CreateAssetMenu(menuName = "Project_Mouse/Camera/Room Camera Database")]
-public class RoomCameraDatabase : ScriptableObject
+public class RoomCameraDatabase : SerializedScriptableObject
 {
+    [Title("房间相机配置列表", Bold = true)]
+    [LabelWidth(150)]
+    [ListDrawerSettings(
+     //ShowFoldout = true,                // 每个元素可单独折叠
+     ListElementLabelName = nameof(RoomCameraData.roomName), // 折叠条显示 roomName
+     ShowIndexLabels = false,           // 不显示0,1,2…
+     DraggableItems = true              // 允许拖拽排序
+ )]
     public List<RoomCameraData> rooms = new();
 
     private Dictionary<string, RoomCameraData> _cache;

@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
-using UnityEngine;
-using UnityEngine.SceneManagement;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
+using Cmd;
+using Google.Protobuf;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace CLIP.Project_Mouse.Game_Play_System
 {
@@ -14,6 +16,23 @@ namespace CLIP.Project_Mouse.Game_Play_System
     public class SceneLoadingHelper : SingletonMono<SceneLoadingHelper>
     {
         private Action _onSceneLoaded;
+
+        private void Start()
+        {
+            EvtDsp.AddEvt(EvtNames.OnTransitionVideoFinished, OnTransitionVideoFinished);
+        }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            EvtDsp.RemoveEvt(EvtNames.OnTransitionVideoFinished, OnTransitionVideoFinished);
+        }
+
+        private void OnTransitionVideoFinished()
+        {
+            EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, new ReportFirstLoginVideoFinishReq());
+            Load_MainScene();
+        }
 
         public void LoadScene(string sceneName, Action onLoaded = null)
         {

@@ -29,13 +29,14 @@ namespace CLIP.Project_Mouse.UI
 
         // 当前页面展示的路径列表（始终只有当前页的两条）
         private string[] _displayedPaths = new string[2];
+        private PhotoRecordInfo[] _displayedPhotos = new PhotoRecordInfo[2];
         private string _viewingPath;
         private int _viewingIndex = -1;
         // 记录 ShowPhotoPanel 删除时对应的缩略图路径（用于 RefreshAfterDelete 正确释放纹理引用）
         private string _deletedThumbnailPath;
 
-        // 获取当前所有派遣照片（从 _local_image_list 过滤）
-        private List<photo_info_saved> _dispatchPhotos => Global_Photo_Manager.Instance.GetDispatchPhotos();
+        // 获取当前所有派遣照片（从 imageList 过滤）
+        private List<PhotoRecordInfo> _dispatchPhotos => Global_Photo_Manager.Instance.GetDispatchPhotos();
         private int TotalCount => _dispatchPhotos.Count;
 
         private void Start()
@@ -112,8 +113,10 @@ namespace CLIP.Project_Mouse.UI
         private void LoadCurrentPage()
         {
             int start = currentPage * 2;
-            _displayedPaths[0] = start < TotalCount ? _dispatchPhotos[start]._local_path : null;
-            _displayedPaths[1] = (start + 1) < TotalCount ? _dispatchPhotos[start + 1]._local_path : null;
+            _displayedPhotos[0] = start < TotalCount ? _dispatchPhotos[start] : null;
+            _displayedPhotos[1] = (start + 1) < TotalCount ? _dispatchPhotos[start + 1] : null;
+            _displayedPaths[0] = _displayedPhotos[0]?.localPath;
+            _displayedPaths[1] = _displayedPhotos[1]?.localPath;
 
             LoadThumbnail(0, _displayedPaths[0]);
             LoadThumbnail(1, _displayedPaths[1]);
@@ -145,6 +148,8 @@ namespace CLIP.Project_Mouse.UI
             }
             _displayedPaths[0] = null;
             _displayedPaths[1] = null;
+            _displayedPhotos[0] = null;
+            _displayedPhotos[1] = null;
         }
 
         // ================================================================
@@ -160,10 +165,10 @@ namespace CLIP.Project_Mouse.UI
             _viewingIndex = currentPage * 2 + slot;
             _deletedThumbnailPath = path; // 记录缩略图路径，删除时需要用到
 
-            //string photoName = _dispatchPhotos[slot]?._photo_name;
+            //string photoName = _dispatchPhotos[slot]?.photoName;
             //if (string.IsNullOrEmpty(photoName)) return;
 
-            UIManager.Instance.GetPanel<ShowPhotoPanel>().OpenPanel(path);
+            UIManager.Instance.GetPanel<ShowPhotoPanel>().OpenPanel(_displayedPhotos[slot]);
         }
 
         private void ReleaseViewingTexture()

@@ -1,7 +1,10 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Kernel;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
@@ -342,12 +345,12 @@ class RoomSystem_Editor : Editor
 
     private void UploadCurrentLayoutAsDefault()
     {
-        var receiver = _obj.GetComponent<RoomSystem_Receiver>();
-        if (receiver == null)
-        {
-            Debug.LogError("RoomSystem_Receiver 未挂载，无法上传");
-            return;
-        }
+        // var receiver = _obj.GetComponent<RoomSystem_Receiver>();
+        // if (receiver == null)
+        // {
+        //     Debug.LogError("RoomSystem_Receiver 未挂载，无法上传");
+        //     return;
+        // }
 
         int totalPlacements = 0;
         int totalPots = 0;
@@ -368,7 +371,7 @@ class RoomSystem_Editor : Editor
 
         if (!confirm) return;
 
-        receiver.UploadDefaultRoomData();
+       SaveDefaultRoomData();
     }
 
     private void ExportCurrentLayoutToJson()
@@ -397,6 +400,51 @@ class RoomSystem_Editor : Editor
         System.IO.File.WriteAllText(path, json, System.Text.Encoding.UTF8);
         Debug.Log($"默认家具数据已导出到: {path}");
         AssetDatabase.Refresh();
+    }
+
+    /// <summary>
+    /// 将当前场上所有房间的家具布局作为「新玩家默认家具」上传到服务器。
+    /// 服务器收到 Room_Default_Data 后应存为模板，新玩家首次登录时下发此数据。
+    /// 仅在编辑器运行时由 Inspector 按钮调用。
+    /// </summary>
+    public void SaveDefaultRoomData()
+    {
+        if (RoomSystem.Instance == null || RoomSystem.Instance.RoomDatas == null)
+        {
+            Debug.LogError($"RoomSystem not ready, cannot upload default data");
+            return;
+        }
+
+        RoomSaveData saveData = new RoomSaveData
+        {
+            rooms = RoomSystem.Instance.RoomDatas
+        };
+
+        string json = JsonConvert.SerializeObject(saveData, Formatting.Indented);
+
+        // 获取 TextAsset 在项目中的实际路径
+        TextAsset ta = Resources.Load<TextAsset>("Config/RoomDefaultConfig");
+        if (ta == null)
+        {
+            Debug.LogError("RoomDefaultConfig not found in Resources/Config");
+            return;
+        }
+
+        string assetPath = AssetDatabase.GetAssetPath(ta);
+        if (string.IsNullOrEmpty(assetPath))
+        {
+            Debug.LogError("Failed to get asset path");
+            return;
+        }
+
+        // 覆盖文件内容
+        File.WriteAllText(assetPath, json);
+        // 刷新资源数据库，使修改生效
+        AssetDatabase.Refresh();
+        // 重新导入资源（可选，确保 Unity 识别变更）
+        AssetDatabase.ImportAsset(assetPath);
+
+        Debug.Log($"Default room data saved to {assetPath}");
     }
 
     #endregion

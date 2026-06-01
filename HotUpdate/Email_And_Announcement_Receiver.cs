@@ -1,16 +1,19 @@
 using System;
 using System.Collections;
-using CLIP.Framework_Core.Network;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
 using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
+using Google.Protobuf;
+using CLIP.Project_Mouse.Network;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
-public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcement_Receiver> , IMsg_Receiver
+public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcement_Receiver>
 {
     public Email_And_Announcement_Manager  _manager;
-    private NetWork_Center_WSS _networkCenter;
-    private string receiver_name = "Email_And_Announcement_Receiver";
+    private int receiver_msg_id = 60000;
 
     #region Unity Life Cycle
 
@@ -23,15 +26,7 @@ public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcem
             return;
         }
 
-        _networkCenter = NetWork_Center_WSS.instance;
-        if (_networkCenter == null)
-        {
-            Debug.LogError("Email_Receiver: NetworkCenter not initialized");
-            return;
-        }
-
         BindUnityEvents();
-        RegisterToNetwork();
 
         Log.Info($"Email_And_Announcement_Receiver initialized on {_manager.gameObject.name}");
     }
@@ -39,7 +34,6 @@ public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcem
     private void OnDestroy()
     {
         UnbindUnityEvents();
-        UnregisterFromNetwork();
     }
 
     #endregion
@@ -49,7 +43,6 @@ public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcem
     private void BindUnityEvents()
     {
         _manager._update_mail_from_server.AddListener(UpdateMailFromServer);
-        _manager._update_annoncement_from_server.AddListener(UpdateAnnoFromServer);
         _manager._on_read_mail.AddListener(OnReadMail);
         _manager._on_delete_mail.AddListener(OnDeleteMail);
         _manager._on_get_mail_reward.AddListener(OnGetMailReward);
@@ -58,7 +51,6 @@ public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcem
     private void UnbindUnityEvents()
     {
         _manager._update_mail_from_server.RemoveListener(UpdateMailFromServer);
-        _manager._update_annoncement_from_server.RemoveListener(UpdateAnnoFromServer);
         _manager._on_read_mail.RemoveListener(OnReadMail);
         _manager._on_delete_mail.RemoveListener(OnDeleteMail);
         _manager._on_get_mail_reward.RemoveListener(OnGetMailReward);
@@ -68,22 +60,21 @@ public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcem
 
     #region Network Send Helpers
 
-    private void SendMsg(string action, string detail)
-    {
-        if (_networkCenter == null || !_networkCenter._connect_to_player_server)
-            return;
+    // private void SendMsg(int msg_id, string detail)
+    // {
+    //     if (_networkCenter == null || !_networkCenter._connect_to_player_server)
+    //         return;
 
-        Network_Msg msg = new Network_Msg
-        {
-            sender = receiver_name,
-            action_target = "Player_Server",
-            action = action,
-            detail_info = detail,
-            _sending_mode = Msg_Sending_Mode.Client_to_Server
-        };
+    //     Network_Msg msg = new Network_Msg
+    //     {
+    //         msg_id = msg_id,
+    //         action_target = "Player_Server",
+    //         detail_info = detail,
+    //         _sending_mode = Msg_Sending_Mode.Client_to_Server
+    //     };
 
-        _networkCenter.send_via_wss(msg);
-    }
+    //     _networkCenter.send_via_wss(msg);
+    // }
 
     #endregion
 
@@ -91,74 +82,136 @@ public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcem
 
     private void UpdateMailFromServer()
     {
-        SendMsg("Get_Mail", string.Empty);
+        if (NetWork_Center_WSS.IsConnectedToPlayerServer)
+            NetWork_Center_WSS.SendMsg(new Cmd.MailListReq());
     }
 
-    private void UpdateAnnoFromServer()
+    private async Task UpdateAnnoFromServer()
     {
-        SendMsg("Get_Anno", string.Empty);
+        var reqBody = new
+        {
+            cmd = 5,
+            payload = new
+            {
+                ModuleType = 2,
+                ServerID = 1
+            }
+        };
+        string reqJson = JsonConvert.SerializeObject(reqBody);
+
+        string respJson = await TapTapLoginManager.PostJsonAsync(
+            TapTapLoginManager.Instance.accountLoginPostUrl, reqJson);
+        if (string.IsNullOrWhiteSpace(respJson))
+        {
+            Debug.LogError("[Email_And_Announcement_Receiver] 获取公告 POST 返回为空");
+            return;
+        }
+
+        try
+        {
+            var root = JObject.Parse(respJson);
+            int errorCode = root.Value<int?>("ErrorCode") ?? -1;
+            if (errorCode != 0)
+            {
+                Debug.LogError(
+                    $"[Email_And_Announcement_Receiver] 获取公告失败 ErrorCode={errorCode} resp={respJson}");
+                return;
+            }
+
+            var syss = root.SelectToken("Payload.Syss") as JArray;
+            if (syss == null)
+            {
+                Debug.LogWarning(
+                    "[Email_And_Announcement_Receiver] 回包中无 Payload.Syss，已清空公告列表");
+                syss = new JArray();
+            }
+
+            var manager = _manager != null ? _manager : Email_And_Announcement_Manager.instance;
+            if (manager == null)
+            {
+                Debug.LogError("[Email_And_Announcement_Receiver] Email_And_Announcement_Manager 为空，无法写入公告");
+                return;
+            }
+
+            manager.load_announcement_list_from_syss(syss);
+
+            try
+            {
+                manager.on_refresh_announcement();
+            }
+            catch (Exception refreshEx)
+            {
+                Debug.LogError(
+                    $"[Email_And_Announcement_Receiver] 公告列表已写入，刷新 UI 失败: {refreshEx.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError(
+                $"[Email_And_Announcement_Receiver] 解析公告回包失败: {ex.Message}\nresp={respJson}");
+        }
     }
 
     private void OnReadMail()
     {
-        SendMailIdList("On_Read_Mail");
+        if (NetWork_Center_WSS.IsConnectedToPlayerServer){
+
+            var req = new Cmd.MailReadReq();
+            foreach(var mail_id in _manager._temp_mail_id_list)
+            {
+                req.MailID.Add(mail_id);
+                _manager._mail_record.Find(x => x.mail_id == mail_id).mail_state = "read";
+            }
+            NetWork_Center_WSS.SendMsg(req);
+        }
     }
 
     private void OnDeleteMail()
     {
-        SendMailIdList("On_Delete_Mail");
+        if (NetWork_Center_WSS.IsConnectedToPlayerServer){
+
+            var req = new Cmd.MailDeleteReq();
+            foreach(var mail_id in _manager._temp_mail_id_list)
+            {
+                req.MailIDs.Add(mail_id);
+                _manager._mail_record.Find(x => x.mail_id == mail_id).mail_state = "deleted";
+            }
+            NetWork_Center_WSS.SendMsg(req);
+        }
     }
 
     private void OnGetMailReward()
     {
-        SendMailIdList("On_Get_Mail_Reward");
+        if (NetWork_Center_WSS.IsConnectedToPlayerServer){
+
+            var req = new Cmd.MailRewardReq();
+            foreach(var mail_id in _manager._temp_mail_id_list)
+            {
+                req.MailIDs.Add(mail_id);
+            }
+            NetWork_Center_WSS.SendMsg(req);
+        }
     }
 
-    private void SendMailIdList(string action)
+    private void SendMailIdList(int msg_id)
     {
         if (_manager == null)
             return;
 
-        var list = _manager._temp_mail_id_list;
-        if (list == null || list.Count == 0)
-            return;
+        // var list = _manager._temp_mail_id_list;
+        // if (list == null || list.Count == 0)
+        //     return;
 
-        string json = GF_SP.SerializeObject(list);
-        SendMsg(action, json);
+        // string json = GF_SP.SerializeObject(list);
+        // SendMsg(msg_id, json);
+        // TODO zhaorui
+        if (NetWork_Center_WSS.IsConnectedToPlayerServer)
+            NetWork_Center_WSS.SendMsg(new Cmd.EmptyReq());
     }
 
     #endregion
 
-    #region IMsg_Receiver (Server -> Client)
-
-    public string get_receiver_name()
-    {
-        return receiver_name;
-    }
-
-    public void receive_msg(Network_Msg msg)
-    {
-        if (_manager == null)
-            return;
-        Log.Custom($"Receive Message : action = {msg.action},detail = {msg.detail_info}", receiver_name);
-
-        switch (msg.action)
-        {
-            case "Response_Mail":
-                _manager.load_mail_list_from_json(msg.detail_info);
-                _manager.on_refresh_mail();
-                break;
-
-            case "Response_Anno":
-                _manager.load_announcement_list_from_json(msg.detail_info);
-                _manager.on_refresh_announcement();
-                break;
-
-            default:
-                Debug.LogWarning($"Email_Receiver: Unknown action {msg.action}");
-                break;
-        }
-    }
+    #region Init bootstrap
 
     public void Init_Data()
     {
@@ -172,21 +225,11 @@ public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcem
         UpdateMailFromServer();
 
         yield return new WaitForSeconds(1f);
-        UpdateAnnoFromServer();
-    }
-
-    #endregion
-
-    #region Network Register
-
-    private void RegisterToNetwork()
-    {
-        _networkCenter?.Add_Receiver(receiver_name, this);
-    }
-
-    private void UnregisterFromNetwork()
-    {
-        _networkCenter?.Remove_Receiver(receiver_name);
+        var annoTask = UpdateAnnoFromServer();
+        while (!annoTask.IsCompleted)
+            yield return null;
+        if (annoTask.IsFaulted && annoTask.Exception != null)
+            Debug.LogError(annoTask.Exception);
     }
 
     #endregion

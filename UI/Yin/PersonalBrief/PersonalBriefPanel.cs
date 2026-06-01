@@ -4,6 +4,8 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
+using CLIP.Project_Mouse.Network;
+using Cmd;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -37,7 +39,7 @@ namespace CLIP.Project_Mouse.UI
         public RawImage imageToChange;
         public int imageToChangeIndex;
         public List<RawImage> imageList = new List<RawImage>();
-        public List<photo_info_saved> photoInfoList = new List<photo_info_saved>();
+        public List<PhotoRecordInfo> photoInfoList = new List<PhotoRecordInfo>();
         public avatar_icon_info currentIcon;
         public avatar_icon_info currentIconFrame;
 
@@ -71,6 +73,7 @@ namespace CLIP.Project_Mouse.UI
 
         private void Start()
         {
+            obj.SetActive(false);
             //friendListIconPath = FriendsCanvasInteractManager.Instance.ChangeClothesAndTakePhotoForPlayer(FriendsCanvasInteractManager.Instance.photoRT, "FriendList");
             //friendDetailIconPath = FriendsCanvasInteractManager.Instance.ChangeClothesAndTakePhotoForPlayer(FriendsCanvasInteractManager.Instance.bigPhotoRT, "FriendList");
             changeNameInputField.onSubmit.AddListener(value =>
@@ -97,6 +100,14 @@ namespace CLIP.Project_Mouse.UI
                 currentCoroutine = StartCoroutine(DebouncedValidate(filterString));
 
             });
+
+            EvtDsp.AddEvt(EvtNames.RefreshUI, OnRefreshUi);
+        }
+
+        public override void OnDestroy()
+        {
+            EvtDsp.RemoveEvt(EvtNames.RefreshUI, OnRefreshUi);
+            base.OnDestroy();
         }
 
         protected override void OnEnable()
@@ -159,7 +170,7 @@ namespace CLIP.Project_Mouse.UI
             var brief = ggm?._player_brief;
             if (brief != null)
             {
-                if (nameText != null) nameText.text = brief._player_nick_name ?? "";
+                if (nameText != null) nameText.text = ggm?.GetPlayerNickName() ?? "";
                 if (idText != null) idText.text = ggm._current_player_id ?? "";
                 currentIcon = brief._icon_info;
                 currentIconFrame = brief._icon_frame_info;
@@ -171,7 +182,7 @@ namespace CLIP.Project_Mouse.UI
             }
 
             RefreshExpUi();
-            if (ExpManager.Instance == null)
+            if (ExpManager.instance == null)
                 StartCoroutine(RefreshExpUiWhenReady());
 
             InitAchievements();
@@ -180,30 +191,52 @@ namespace CLIP.Project_Mouse.UI
 
         private void RefreshExpUi()
         {
-            var exp = ExpManager.Instance;
+            var exp = ExpManager.instance;
             if (expLevelText != null)
                 expLevelText.text = exp != null ? exp.curLevel.ToString() : "-";
+
+            var nextLevelExpCap = GetNextLevelExpCap(exp);
 
             if (expSlider != null)
             {
                 expSlider.value = 0f;
-                if (exp != null && exp.curLevelInfo != null && exp.curLevelInfo.nextLevelExp > 0)
-                    expSlider.value = exp.curExp * 1f / exp.curLevelInfo.nextLevelExp;
+                if (exp != null && nextLevelExpCap > 0)
+                    expSlider.value = exp.curExp * 1f / nextLevelExpCap;
             }
 
             if (expText != null)
             {
-                if (exp != null && exp.curLevelInfo != null)
-                    expText.text = $"{exp.curExp}/{exp.curLevelInfo.nextLevelExp}";
+                if (exp != null && nextLevelExpCap > 0)
+                    expText.text = $"{exp.curExp}/{nextLevelExpCap}";
                 else
                     expText.text = "-/-";
             }
         }
 
+        private static int GetNextLevelExpCap(ExpManager exp)
+        {
+            if (exp?.levels == null)
+                return 0;
+            if (exp.levels.TryGetValue(exp.curLevel + 1, out var nextInfo) && nextInfo != null)
+                return nextInfo.nextLevelExp;
+            return 0;
+        }
+
+        private void OnRefreshUi()
+        {
+            if (obj == null || !obj.activeSelf)
+                return;
+
+            var ggm = Global_Game_Manager.Instance;
+            if (nameText != null)
+                nameText.text = ggm?.GetPlayerNickName() ?? "";
+            RefreshExpUi();
+        }
+
         private IEnumerator RefreshExpUiWhenReady()
         {
             int guard = 0;
-            while (ExpManager.Instance == null && guard++ < 300)
+            while (ExpManager.instance == null && guard++ < 300)
                 yield return null;
             RefreshExpUi();
         }
@@ -307,10 +340,17 @@ namespace CLIP.Project_Mouse.UI
                     return;
                 }
 
-                Global_Game_Manager.Instance.on_upload_player_brief_to_server();
+                var newName = changeNameInputField.text;
+                if (NetWork_Center_WSS.IsConnectedToPlayerServer)
+                {
+                    NetWork_Center_WSS.SendMsg(new SetRoleInfoReq
+                    {
+                        Type = 1,
+                        StrChange = newName
+                    });
+                }
 
-                Global_Game_Manager.Instance._player_brief._player_nick_name = changeNameInputField.text;
-                nameText.text = changeNameInputField.text;
+                nameText.text = newName;
                 changeName.SetActive(false);
             }
         }
@@ -405,7 +445,7 @@ namespace CLIP.Project_Mouse.UI
                         imageList[i].texture = null;
                         continue;
                     }
-                    string path = info._local_path;
+                    string path = info.localPath;
                     if (!string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
                     {
                         bool isLoaded = false;

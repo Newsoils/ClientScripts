@@ -1,0 +1,48 @@
+syntax = "proto3";
+package cross;
+option go_package = "github.com/xcompany/xgame/proto/cross";
+
+import "common/error.proto";
+import "common/common.proto";
+
+//SEQ[64001,65000]
+//Cross向Cross模块注册自己请求
+message RegisterModuleReq {
+  int32 moduleID = 1;
+  int32 pID = 2;
+  int32 currentStatus = 3;
+  int32 servers = 4; //服务的服务器ID
+}
+
+//Route向Cross模块注册自己响应
+message RegisterModuleRes {
+  common.Error error = 1;                         //错误码
+}
+
+//同步排行榜角色积分信息到cross
+message SyncRankScoreDataToCrossS2S {
+  uint64 RankUID = 1; //排行榜ID
+  common.SimpleRoleInfo Role = 2; //角色信息
+  int64 Score = 3; //排行榜积分
+}
+
+message SyncRankDataToCrossS2S {
+  uint64 RankUID = 1; //排行榜ID
+  common.SimpleRoleInfo Role = 2; //角色信息
+}
+
+//通用榜活动结算
+message CrossCommonRankActivityInfoSyncS2S {
+  int64 ActivityID = 1;                         //活动ID
+  repeated common.SingleRoleRankInfo Ranks = 2; //排名情况
+  int32 Op = 3; //操作行为 1 结算  2 活动榜信息同步
+  common.NormalRankInfo RankInfo = 4;
+  map<string,int64> OrderMap = 5;//个人积分排名信息
+}
+
+//竞技场积分
+message RoleArenaScore {
+  uint64 RoleID = 1;  //角色信息
+  int64 Score = 2;    //当前积分
+  int32 Order = 3;    //当前排名
+}

@@ -157,6 +157,7 @@ public class DispatchPanel : UIPanelBase
         });
 
         EvtDsp.TriggerEvt(EvtNames.OnDispatchPanelOpen);
+        EvtDsp.AddEvt<int>(EvtNames.Dispatch_Package_Bag_Res, OnPackageBagRes);
         SwitchProcedure(Procedure_Dispatch.SelectBag, false);
 
     }
@@ -177,14 +178,28 @@ public class DispatchPanel : UIPanelBase
         selectSnackButton.onClick.RemoveAllListeners();
         selectCDButton.onClick.RemoveAllListeners();
         UIManager.Instance.UnregisterPanel(typeof(DispatchPanel).Name);
+        EvtDsp.RemoveEvt<int>(EvtNames.Dispatch_Package_Bag_Res, OnPackageBagRes);
         EvtDsp.TriggerEvt(EvtNames.OnDispatchPanelClose);
     }
 
     private void SwitchBag(int bagIndex)
     {
-        //Dispatch_Manager.Instance.SwitchBag(bagIndex);
         curBagIndex = bagIndex;
-        var src = Dispatch_Manager._instance.dispatch_Bags[bagIndex];
+        CopyBagInfoFromManager(bagIndex);
+        Dispatch_Manager._instance.SetDispatchModelPreview(curBagIndex, curBagInfo);
+        SwitchProcedure(Procedure_Dispatch.SelectFood);
+    }
+
+    private void CopyBagInfoFromManager(int bagIndex)
+    {
+        var bags = Dispatch_Manager._instance.dispatch_Bags;
+        if (bags == null || bagIndex < 0 || bagIndex >= bags.Count)
+        {
+            curBagInfo = new DispatchBagInfo();
+            return;
+        }
+
+        var src = bags[bagIndex];
         curBagInfo = src == null
             ? new DispatchBagInfo()
             : new DispatchBagInfo
@@ -194,8 +209,43 @@ public class DispatchPanel : UIPanelBase
                 tapeName = src.tapeName,
                 isPacked = src.isPacked
             };
-        Dispatch_Manager._instance.SetDispatchModelPreview(curBagIndex, curBagInfo);
-        SwitchProcedure(Procedure_Dispatch.SelectFood);
+        curBagInfo.SyncPackedFlag();
+    }
+
+    /// <summary><see cref="PackageBagRes"/> 回包后同步列表与详情界面。</summary>
+    private void OnPackageBagRes(int bagIndex)
+    {
+        var mgr = Dispatch_Manager._instance;
+        if (mgr?.dispatch_Bags == null || bagIndex < 0 || bagIndex >= mgr.dispatch_Bags.Count)
+            return;
+
+        if (bagIndex == curBagIndex)
+        {
+            CopyBagInfoFromManager(bagIndex);
+            mgr.SetDispatchModelPreview(curBagIndex, curBagInfo);
+        }
+
+        RefreshAllBagListStates();
+
+        if (procedureSelectFood.activeSelf)
+        {
+            RefreshPanel();
+            RefreshDispatchModel();
+            scrollerController_Dispatch_Food?.ReloadCurrentIfLoaded();
+        }
+        else if (procedureSelectCD.activeSelf)
+        {
+            RefreshPanel();
+            RefreshDispatchModel();
+            scrollerController_CD?.ReloadData();
+        }
+    }
+
+    private void RefreshAllBagListStates()
+    {
+        GetBagState(0);
+        GetBagState(1);
+        GetBagState(2);
     }
 
     /// <summary>选物界面预览 / CD 高亮：与 <see cref="Dispatch_Manager.GetBagForModelPreview"/> 一致。</summary>
@@ -268,9 +318,7 @@ public class DispatchPanel : UIPanelBase
                 });
                 lastBagButton.gameObject.SetActive(false);
                 nextBagButton.gameObject.SetActive(false);
-                Bag1State.text = GetBagState(0);
-                Bag2State.text = GetBagState(1);
-                Bag3State.text = GetBagState(2);
+                RefreshAllBagListStates();
                 break;
             case Procedure_Dispatch.SelectFood:
                 procedureSelectFood.SetActive(true);
@@ -561,16 +609,16 @@ public class DispatchPanel : UIPanelBase
 
     private string GetBagState(int index)
     {
-        var info = Dispatch_Manager._instance.dispatch_Bags[index];
-        SetBagState(index, info.isPacked);
-        if (info.isPacked)
+        var bags = Dispatch_Manager._instance.dispatch_Bags;
+        if (bags == null || index < 0 || index >= bags.Count)
         {
+            SetBagState(index, false);
             return "";
         }
-        else
-        {
-            return "";
-        }
+
+        var info = bags[index];
+        SetBagState(index, info != null && info.HasAnyFilledSlot());
+        return "";
     }
     private void SetPackState()
     {
@@ -579,8 +627,8 @@ public class DispatchPanel : UIPanelBase
             return;
         }
 
-        ShowPopUp("打包​完毕，​小苔随时​可能​出门​哦！");
-        Dispatch_Manager._instance.SetBagContent(curBagIndex, curBagInfo);
+        ShowPopUp("打包完毕，小苔随时可能出门哦！");
+        Dispatch_Manager._instance.SendPackageBagRequest(curBagIndex, curBagInfo);
 
         if (CountFilledDispatchSlots(curBagInfo) >= 3)
         {

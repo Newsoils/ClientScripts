@@ -1,7 +1,8 @@
-using System.Collections;
 using System.Collections.Generic;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Kernel.Social;
 using CLIP.Project_Mouse.UI;
+using Common;
 using UnityEngine;
 
 public class FriendRequestPanel : MonoBehaviour
@@ -11,6 +12,10 @@ public class FriendRequestPanel : MonoBehaviour
     [Header("Request List")]
     public Transform requestListRoot;
     public GameObject requestUnitPrefab;
+
+    [Header("Empty State")]
+    [Tooltip("无好友请求时显示，文案在预制体上自行配置")]
+    public GameObject emptyRequestHint;
 
     Player_Social_Manager SM => Player_Social_Manager._instance;
 
@@ -27,11 +32,12 @@ public class FriendRequestPanel : MonoBehaviour
 
     public void RefreshPanel()
     {
-        var requests = SM._current_social_info._friend_pending_info_record;
-        RebuildList(requestListRoot, requestUnitPrefab, requests.Count, (go, i) =>
+        var applyInfos = SM.ApplyInfos ?? new List<PlayerDetailedInfo>();
+        emptyRequestHint.SetActive(applyInfos.Count == 0);
+        RebuildList(requestListRoot, requestUnitPrefab, applyInfos.Count, (go, i) =>
         {
             var unit = go.GetComponent<FriendRequestUnit>();
-            unit.record = requests[i];
+            unit.record = Friend_Social_Record.Create(applyInfos[i]);
             unit.InitFriendUnit();
         });
     }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Kernel;
+using Cmd;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -31,7 +32,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         }
         private void Start()
         {
-            JsonData_Manager.Load_Currency_Data(out idDic, out nameDic);
+            JsonDataManager.Load_Currency_Data(out idDic, out nameDic);
 
             //EvtDsp.AddEvt<int>(EvtNames.GetCoin, (int changeAmount) => _ = ChangeCoin(changeAmount));
             //EvtDsp.AddEvt<int>(EvtNames.GetDiamond, (int changeAmount) => _ = ChangeDiamond(changeAmount));
@@ -49,12 +50,15 @@ namespace CLIP.Project_Mouse.Game_Play_System
         }
         private async Task Test()
         {
-            await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "ChangeCurrencyMulti", ChangeCurrencyTask("123",123,""), null);
+            // TODO zhaorui2
+            // await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "ChangeCurrencyMulti", ChangeCurrencyTask("123",123,""), null);
             Debug.Log("123");
+            await Task.CompletedTask;
         }
         public void LoadCurrency()
         {
-            EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "LoadCurrency", LoadCurrencyTask(), null);
+            // TODO zhaorui2
+            // EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "LoadCurrency", LoadCurrencyTask(), null);
         }
         public void GetMoneyCount(string currencyName)
         {
@@ -88,7 +92,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public async Task ChangeCurrencyMulti(List<(string, int)> change, string source, Action<string> onTaskComplete = null)
         {
             if(change == null || change.Count == 0) return;
-            await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "ChangeCurrency", ChangeCurrencyMultiTask(change, source), onTaskComplete);
+            // TODO zhaorui2
+            // await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "ChangeCurrency", ChangeCurrencyMultiTask(change, source), onTaskComplete);
+            await Task.CompletedTask;
         }
         public ServerTask LoadCurrencyTask()
         {
@@ -97,7 +103,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 { "鱼币", 0 },
                 { "罐罐", 0 }
             });
-            ServerTask task = new ServerTask(defaultData, (string data, ServerTask task) =>
+            ServerTask task = new ServerTask(new Cmd.EmptyReq(), (string data, ServerTask task) =>
             {
                 if (data == null || data == "nodata")
                 {
@@ -130,9 +136,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public ServerTask ChangeCurrencyMultiTask(List<(string, int)> change, string source)
         {
-            string changeData = JsonConvert.SerializeObject(change);
-            string data = JsonConvert.SerializeObject(new List<string> { source, changeData });
-            ServerTask task = new ServerTask(data, (string data, ServerTask task) =>
+            ServerTask task = new ServerTask(new Cmd.EmptyReq(), (string data, ServerTask task) =>
             {
                 if (data == null || data == "nodata")
                 {
@@ -148,10 +152,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 }
                 task.result = "success";
                 SaveToLocal(data);
-
                 EvtDsp.TriggerEvt(EvtNames.RefreshUI);
-                TaskEvent.TriggerCostCoin(change);
-
             });
             return task;
         }

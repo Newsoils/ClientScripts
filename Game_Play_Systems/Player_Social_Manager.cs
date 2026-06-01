@@ -1,7 +1,12 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
+using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Kernel.Social;
+using CLIP.Project_Mouse.UI;
+using Cmd;
+using Common;
 using UnityEngine;
 using UnityEngine.Events;
 using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
@@ -15,6 +20,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public static Player_Social_Manager _instance;
         public Player_Social_Setting _social_setting;
         public Current_Player_Social_Info _current_social_info;
+        [Header("Friend Apply")]
+        /// <summary>好友申请列表（原 <see cref="Current_Player_Social_Info._friend_pending_info_record"/>）。</summary>
+        public List<PlayerDetailedInfo> ApplyInfos = new List<PlayerDetailedInfo>();
+
         [Header("Temp_Data")]
         public List<Friend_Social_Record> _temp_search_result;
         public string _current_chat_friend_name = "";
@@ -66,6 +75,18 @@ namespace CLIP.Project_Mouse.Game_Play_System
         ///  For Chat
         /// </summary>
         [Header("For_Chat")]
+        /// <summary>私聊频道，key 为好友 <see cref="PlayerDetailedInfo.RoleID"/>（与 He.RoleInfo.RoleID 一致）。</summary>
+        public Dictionary<ulong, PrivateChatChannel> PrivateChatChannelMap =
+            new Dictionary<ulong, PrivateChatChannel>();
+
+        /// <summary><see cref="common.ChatChannelType"/> 私聊（SINGLE_PRIVATE = 5），用于 ChatSend / SyncChatChannelMsg。</summary>
+        public const ChatChannelType PrivateChatChannelType = ChatChannelType.SinglePrivate;
+
+        /// <summary><see cref="OpenOrCloseChatChannelS2C"/> 专用：int32 ChannelType，2 = 私人频道（与枚举 5 不同）。</summary>
+        public const int OpenOrCloseChatPrivateChannelType = 2;
+
+        [HideInInspector]
+        public ulong _current_chat_friend_role_id;
 
         [HideInInspector]
         public UnityEvent _on_send_social_chat_msg = new UnityEvent();
@@ -85,14 +106,12 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public UnityEvent _upload_present_records_to_server = new UnityEvent();
         [HideInInspector]
         public UnityEvent _on_refresh_present_view = new UnityEvent();
-        void Start()
+        private void Awake()
         {
             if (_instance == null)
             {
                 _instance = this;
-                // tex = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
                 DontDestroyOnLoad(this.gameObject);
-                _social_chat_msg_so.load_chat_msg_from_json();
             }
             else
             {
@@ -105,11 +124,22 @@ namespace CLIP.Project_Mouse.Game_Play_System
 #endif
                 }
             }
+        }
+
+        void Start()
+        {
+            if (_instance != this)
+                return;
+
+            _social_chat_msg_so.load_chat_msg_from_json();
             _on_refresh_present_view.AddListener(ReceivePresent);
+            EnsureSocialInfo();
         }
         private void OnDestroy()
         {
             _on_refresh_present_view.RemoveListener(ReceivePresent);
+            if (_instance == this)
+                _instance = null;
         }
 
 
@@ -232,8 +262,41 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public void on_send_social_chat_msg(string _friend_name, int _chat_msg_id)
         {
             _current_chat_friend_name = _friend_name;
+            _current_chat_friend_role_id = ResolveFriendRoleId(_friend_name);
             _current_chat_msg = _social_chat_msg_so.chat_msg_db.Find(_m => _m.msg_id == _chat_msg_id);
             _on_send_social_chat_msg.Invoke();
+        }
+
+        public void SetCurrentChatFriend(Friend_Social_Record record)
+        {
+            if (record == null)
+            {
+                _current_chat_friend_role_id = 0;
+                _current_chat_friend_name = string.Empty;
+                return;
+            }
+
+            _current_chat_friend_role_id = record.RoleId;
+            _current_chat_friend_name = record.DisplayName;
+            SyncFriendChatFromMap(record.RoleId);
+        }
+
+        public ulong ResolveFriendRoleId(string friendKey)
+        {
+            if (string.IsNullOrWhiteSpace(friendKey))
+                return 0;
+
+            if (ulong.TryParse(friendKey.Trim().TrimStart('#'), out var roleId) && roleId > 0)
+                return roleId;
+
+            var friend = _current_social_info?._friend_accepted_info_record
+                ?.Find(f => f.MatchesRoleKey(friendKey) || f.DisplayName == friendKey.Trim());
+            return friend?.RoleId ?? 0;
+        }
+
+        public static ulong GetPrivateChatRoleId(PrivateChatChannel channel)
+        {
+            return channel?.He?.RoleInfo?.RoleID ?? 0;
         }
 
         public void update_social_chat_msg_from_server(string friend_name)
@@ -251,41 +314,67 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public void load_chat_msg_from_json(string _json)
         {
             var _data = GF_SP.DeserializeObject<List<string>>(_json);
-            var _friend_info = _current_social_info.
-                _friend_accepted_info_record.Find(_f => _f.friend_name == _data[0]);
-            if (_friend_info != null)
-            {
-                _friend_info._chat_msg = GF_SP.DeserializeObject<List<Social_Chat_Msg_Record>>(_data[1]);
-            }
+            if (_data == null || _data.Count < 2)
+                return;
 
+            var _friend_info = _current_social_info._friend_accepted_info_record
+                .Find(_f => _f.MatchesRoleKey(_data[0]));
+            if (_friend_info == null)
+                return;
+
+            var legacy = GF_SP.DeserializeObject<List<Social_Chat_Msg_Record>>(_data[1]);
+            ApplyLegacyChatRecords(_friend_info, legacy);
+        }
+
+        static void ApplyLegacyChatRecords(Friend_Social_Record record, List<Social_Chat_Msg_Record> legacy)
+        {
+            if (record == null || legacy == null)
+                return;
+
+            record.EnsureChatInfo();
+            record.ChatInfo.Content.Clear();
+            foreach (var leg in legacy)
+            {
+                var msg = new ChatMessage
+                {
+                    Text = leg._msg_content?.res_url ?? leg._msg_good_item_name ?? string.Empty,
+                    TimeTag = leg._msg_date != default
+                        ? new DateTimeOffset(leg._msg_date).ToUnixTimeSeconds()
+                        : 0,
+                    MsgType = string.IsNullOrEmpty(leg._msg_good_item_name)
+                        ? ChatMsgType.Text
+                        : ChatMsgType.Expression,
+                };
+                if (!string.IsNullOrEmpty(leg._msg_sender))
+                {
+                    msg.Person = new Spokesman
+                    {
+                        RoleInfo = new SimpleRoleInfo
+                        {
+                            RoleID = leg._msg_sender == record.DisplayName ? record.RoleId : 0,
+                            RoleName = leg._msg_sender,
+                        }
+                    };
+                }
+
+                record.ChatInfo.Content.Add(msg);
+            }
         }
         public void load_social_info_from_json(string _json)
         {
             Debug.Log("Player_Social_Manager_load_social_info_from_json");
             var _temp_record_accepted = _current_social_info._friend_accepted_info_record;
-            var _temp_record_pending = _current_social_info._friend_pending_info_record;
             _current_social_info = GF_SP.DeserializeObject<Current_Player_Social_Info>(_json);
             if (_temp_record_accepted != null)
             {
                 foreach (var item in _current_social_info._friend_accepted_info_record)
                 {
-                    var _record = _temp_record_accepted.Find(_r => _r.friend_id == item.friend_id);
+                    var _record = _temp_record_accepted.Find(_r => _r.RoleId == item.RoleId && _r.RoleId != 0);
                     if (_record != null)
                     {
                         item._behavior_record = _record._behavior_record;
-                        item._chat_msg = _record._chat_msg;
-                    }
-                }
-            }
-            if (_temp_record_pending != null)
-            {
-                foreach (var item in _current_social_info._friend_pending_info_record)
-                {
-                    var _record = _temp_record_pending.Find(_r => _r.friend_id == item.friend_id);
-                    if (_record != null)
-                    {
-                        item._behavior_record = _record._behavior_record;
-                        item._chat_msg = _record._chat_msg;
+                        item.ChatInfo = _record.ChatInfo?.Clone() ?? item.ChatInfo;
+                        item.hot_daily_count = _record.hot_daily_count;
                     }
                 }
             }
@@ -303,7 +392,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
             _next_visit_room_friend_name = "";
         }
 
-
         public void ReceivePresent()
         {
             var presents = _current_social_info._present_records;
@@ -317,6 +405,291 @@ namespace CLIP.Project_Mouse.Game_Play_System
             EvtDsp.TriggerEvt(EvtNames.ReloadPlacementData);
             EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
         }
+
+        #region Protobuf (好友列表 / 搜索 / 申请)
+
+        public void EnsureSocialInfo()
+        {
+            if (_current_social_info == null)
+                _current_social_info = new Current_Player_Social_Info();
+        }
+
+        public static Friend_Social_Record FromPlayerDetailed(PlayerDetailedInfo p)
+        {
+            return Friend_Social_Record.Create(p?.Clone());
+        }
+
+        static List<Friend_Social_Record> ToFriendRecords(
+            IEnumerable<PlayerDetailedInfo> src,
+            List<Friend_Social_Record> previous)
+        {
+            var list = new List<Friend_Social_Record>();
+            if (src == null)
+                return list;
+
+            foreach (var p in src)
+            {
+                var r = FromPlayerDetailed(p);
+                if (r != null)
+                    list.Add(r);
+            }
+
+            return MergeChatAndBehavior(list, previous);
+        }
+
+        static List<Friend_Social_Record> MergeChatAndBehavior(
+            List<Friend_Social_Record> incoming,
+            List<Friend_Social_Record> previous)
+        {
+            if (previous == null || incoming == null)
+                return incoming ?? new List<Friend_Social_Record>();
+
+            foreach (var item in incoming)
+            {
+                var old = previous.Find(r => r.RoleId == item.RoleId && r.RoleId != 0);
+                if (old == null) continue;
+                item._behavior_record = old._behavior_record;
+                item.ChatInfo = old.ChatInfo?.Clone() ?? item.ChatInfo;
+                item.hot_daily_count = old.hot_daily_count;
+            }
+
+            return incoming;
+        }
+
+        void ApplyTodayPoints(FriendshipInfo info, List<Friend_Social_Record> friends)
+        {
+            if (info?.TodayPoint == null || friends == null)
+                return;
+
+            foreach (var f in friends)
+            {
+                if (f.RoleId == 0)
+                    continue;
+                if (info.TodayPoint.TryGetValue(f.RoleId, out var pt))
+                    f.hot_daily_count = pt;
+            }
+        }
+
+        public void SetApplyInfos(IEnumerable<PlayerDetailedInfo> applications)
+        {
+            ApplyInfos ??= new List<PlayerDetailedInfo>();
+            ApplyInfos.Clear();
+            if (applications == null)
+                return;
+
+            foreach (var p in applications)
+            {
+                if (p != null && p.RoleID != 0)
+                    ApplyInfos.Add(p.Clone());
+            }
+        }
+
+        public bool IsInApplyList(ulong roleId) =>
+            roleId != 0 && ApplyInfos != null && ApplyInfos.Exists(p => p.RoleID == roleId);
+
+        public void ApplyFriendshipInfoFromProto(FriendshipInfo info)
+        {
+            if (info == null) return;
+            EnsureSocialInfo();
+
+            var prevAccepted = _current_social_info._friend_accepted_info_record;
+
+            _current_social_info._friend_accepted_info_record =
+                ToFriendRecords(info.FriendsInfo, prevAccepted);
+            SetApplyInfos(info.ApplicationList);
+
+            ApplyTodayPoints(info, _current_social_info._friend_accepted_info_record);
+            on_refresh_social_state();
+        }
+
+        public void ApplySearchResultsFromProto(IEnumerable<PlayerDetailedInfo> players)
+        {
+            _temp_search_result = ToFriendRecords(players, _temp_search_result);
+        }
+
+        public void ApplyFriendsListFromProto(IEnumerable<PlayerDetailedInfo> friends)
+        {
+            EnsureSocialInfo();
+            _current_social_info._friend_accepted_info_record = ToFriendRecords(
+                friends,
+                _current_social_info._friend_accepted_info_record);
+            on_refresh_social_state();
+        }
+
+        public void ApplyApplicationListsFromProto(
+            IEnumerable<PlayerDetailedInfo> applications,
+            IEnumerable<PlayerDetailedInfo> friends)
+        {
+            EnsureSocialInfo();
+            SetApplyInfos(applications);
+            if (friends != null)
+            {
+                _current_social_info._friend_accepted_info_record = ToFriendRecords(
+                    friends,
+                    _current_social_info._friend_accepted_info_record);
+            }
+
+            on_refresh_social_state();
+        }
+
+        public void ApplyFriendChangeS2C(FriendChangeS2C msg)
+        {
+            if (msg == null) return;
+            EnsureSocialInfo();
+            ApplyInfos ??= new List<PlayerDetailedInfo>();
+
+            if (msg.FriendAdd != null)
+            {
+                foreach (var p in msg.FriendAdd)
+                {
+                    if (p == null || p.RoleID == 0)
+                        continue;
+                    if (!_current_social_info._friend_accepted_info_record.Exists(f => f.RoleId == p.RoleID))
+                    {
+                        var record = FromPlayerDetailed(p);
+                        if (record != null)
+                            _current_social_info._friend_accepted_info_record.Add(record);
+                    }
+                }
+            }
+
+            if (msg.FriendDel != null)
+            {
+                foreach (var p in msg.FriendDel)
+                {
+                    if (p == null || p.RoleID == 0)
+                        continue;
+                    _current_social_info._friend_accepted_info_record.RemoveAll(f => f.RoleId == p.RoleID);
+                }
+            }
+
+            if (msg.FriendApplyAdd != null)
+            {
+                foreach (var p in msg.FriendApplyAdd)
+                {
+                    if (p == null || p.RoleID == 0)
+                        continue;
+                    if (!ApplyInfos.Exists(a => a.RoleID == p.RoleID))
+                        ApplyInfos.Add(p.Clone());
+                }
+            }
+
+            if (msg.FriendApplyDel != null)
+            {
+                foreach (var p in msg.FriendApplyDel)
+                {
+                    if (p == null || p.RoleID == 0)
+                        continue;
+                    ApplyInfos.RemoveAll(a => a.RoleID == p.RoleID);
+                }
+            }
+
+            on_refresh_social_state();
+        }
+
+        #endregion
+
+        #region Private Chat (Protobuf)
+
+        public void ApplySyncChatChannelInfo(SyncChatChannelInfoS2C msg)
+        {
+            if (msg?.PrivateChatChannels == null)
+                return;
+
+            foreach (var channel in msg.PrivateChatChannels)
+            {
+                var roleId = GetPrivateChatRoleId(channel);
+                if (roleId == 0)
+                    continue;
+                PrivateChatChannelMap[roleId] = channel.Clone();
+            }
+
+            SyncAllFriendRecordsChatFromMap();
+            on_refresh_social_chat_msg();
+        }
+
+        public void ApplyOpenOrCloseChatChannel(OpenOrCloseChatChannelS2C msg)
+        {
+            if (msg == null || msg.ChannelType != OpenOrCloseChatPrivateChannelType)
+                return;
+
+            var roleId = GetPrivateChatRoleId(msg.PrivateChannel);
+            if (roleId == 0)
+                return;
+
+            if (msg.OpType == 1)
+            {
+                PrivateChatChannelMap[roleId] = msg.PrivateChannel?.Clone() ?? new PrivateChatChannel();
+            }
+            else if (msg.OpType == 2)
+            {
+                PrivateChatChannelMap.Remove(roleId);
+            }
+
+            SyncAllFriendRecordsChatFromMap();
+            on_refresh_social_chat_msg();
+        }
+
+        public void ApplySyncChatChannelMsg(SyncChatChannelMsgS2C msg)
+        {
+            if (msg == null || msg.ChannelType != PrivateChatChannelType)
+                return;
+
+            ulong mapKey = msg.ChannelTypeID;
+            if (mapKey == 0)
+                return;
+
+            if (!PrivateChatChannelMap.TryGetValue(mapKey, out var channel) || channel == null)
+            {
+                channel = new PrivateChatChannel();
+                if (msg.He != null)
+                    channel.He = msg.He.Clone();
+                PrivateChatChannelMap[mapKey] = channel;
+            }
+
+            if (msg.Content != null)
+            {
+                foreach (var piece in msg.Content)
+                    channel.Content.Add(piece.Clone());
+            }
+
+            SyncAllFriendRecordsChatFromMap();
+            if (_current_chat_friend_role_id == mapKey ||
+                ResolveFriendRoleId(_current_chat_friend_name) == mapKey)
+                on_refresh_social_chat_msg();
+        }
+
+        public void SyncFriendChatFromMap(ulong friendRoleId)
+        {
+            if (friendRoleId == 0 || _current_social_info == null)
+                return;
+
+            var friend = _current_social_info._friend_accepted_info_record
+                .Find(f => f.RoleId == friendRoleId);
+            if (friend == null)
+                return;
+
+            if (PrivateChatChannelMap.TryGetValue(friendRoleId, out var channel) && channel != null)
+                friend.ChatInfo = channel.Clone();
+            else
+                friend.EnsureChatInfo();
+        }
+
+        void SyncAllFriendRecordsChatFromMap()
+        {
+            if (_current_social_info?._friend_accepted_info_record == null)
+                return;
+
+            foreach (var friend in _current_social_info._friend_accepted_info_record)
+            {
+                if (friend.RoleId == 0)
+                    continue;
+                if (PrivateChatChannelMap.TryGetValue(friend.RoleId, out var channel) && channel != null)
+                    friend.ChatInfo = channel.Clone();
+            }
+        }
+
+        #endregion
 
     }
 }

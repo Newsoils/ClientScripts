@@ -28,6 +28,7 @@ public class CinemachineCameraController : MonoBehaviour
 
     [Header("Rotation Settings")]
     [SerializeField] private float rotationSpeed = 2f;
+    [SerializeField] private Vector2 yAxisRange = new Vector2(0.1f, 1);
 
     [Header("Pan Settings")]
     [Tooltip("双指拖拽的平移速度。乘 dragDelta（像素帧增量）。")]
@@ -93,7 +94,7 @@ public class CinemachineCameraController : MonoBehaviour
         if (canRotatePitch)
         {
             float newY = freeLookCamera.m_YAxis.Value + input.y * rotationSpeed * -0.01f;
-            newY = Mathf.Clamp(newY, 0.5f, 1);
+            newY = Mathf.Clamp(newY, yAxisRange.x, yAxisRange.y);
             freeLookCamera.m_YAxis.Value = newY;
         }
     }

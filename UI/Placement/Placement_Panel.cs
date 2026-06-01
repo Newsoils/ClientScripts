@@ -4,6 +4,7 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Core.Serialization;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Scene_View_Control;
 using CLIP.Project_Mouse.UI;
 using TMPro;
@@ -98,6 +99,7 @@ public class Placement_Panel : UIPanelBase
         });
 
         EvtDsp.AddEvt(EvtNames.ReloadPlacementData, RefreshUI);
+        EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshUI);
     }
 
     public override void OnDestroy()
@@ -114,6 +116,7 @@ public class Placement_Panel : UIPanelBase
         searchInputField.onSubmit.RemoveAllListeners();
 
         EvtDsp.RemoveEvt(EvtNames.ReloadPlacementData, RefreshUI);
+        EvtDsp.RemoveEvt(EvtNames.RefreshUI, RefreshUI);
     }
 
     IEnumerator DebouncedValidate(string text)

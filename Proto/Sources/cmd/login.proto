@@ -1,0 +1,239 @@
+syntax = "proto3";
+
+package cmd;
+
+option go_package = "github.com/xcompany/xgame/proto/cmd";
+
+import "scommon/scommon.proto";
+
+//SEQ[0,1000]
+//查询设备登录信息请求
+message QueryDeviceLoginInfoReq {
+  string DeviceID = 1; //设备ID
+}
+
+//查询设备登录信息响应
+message QueryDeviceLoginInfoRes {
+  int32 LastLoginType = 1; //该设备最近一次登录类型
+}
+
+//账号登录请求
+message AccountLoginReq {
+  int32   LoginType = 1;          //登录类型 0 设备登录 1 google登录 2 fb登录 3 gamecenter登录 4 自建账号登录 5 电魂(app) 6 电魂(微信)
+  string  LoginToken = 2;         //token
+  string  LoginUID = 3;           //账号名
+  int32   IsDebug = 4;            // 1 开启debug
+  int32   ServerID = 5;           //debug模式使用
+  string  DeviceID = 6;           //资源版本号
+  string  RemoteAddr = 7;         //远程ip
+  string  AccountMail = 8;        //账号邮箱
+  string  AccountHeadIcon = 9;    //账号头像
+  string  AccountNickName = 10;   //账号昵称
+  string Pwd = 11; //密码(仅自建账号使用)
+  string Platform = 12; //平台
+}
+
+//账号登录响应
+message AccountLoginRes {
+  string  Token = 1;            //Token
+  int64   TokenVaildTime = 2;   //token失效时间
+  int64   UID = 3;              //账号UID
+  RoleShortInfo Role = 4;       //角色短信息
+  string OpenId = 5; // 用户唯一标识，微信平台用
+  string UnionId = 6; // 用户在开放平台的唯一标识符，微信平台用
+}
+
+// 角色简略信息
+message RoleShortInfo {
+  string           RoleName = 1;
+  string           HeadIcon = 2;
+  uint64           RoleID = 3;
+  int64            Power = 4;
+  int32            ServerID = 5;
+  ServerDetailInfo Server = 6;
+  int32            RoleLv = 7;
+  int64            LastLoginTime = 8;
+}
+
+// 服务器链接信息
+message ServerDetailInfo {
+  int32           ServerID = 1;
+  string          ServerName = 2;//服务器名
+  int32           ServerStatus = 3;//服务器状态
+  repeated GatewayConnInfo Gateways = 4;//游戏服网关
+  int32           FluencyStatus = 5;//服务器繁忙状态
+  int64           OpenTime = 6;//开启时间
+  repeated RoleShortInfo Role = 7;//角色简略
+  int32 IsRecommend = 8;//是否推荐
+  int32 IsNew = 9;//是否新
+  int32 CanCreateRole = 10; //是否可以创新角色 0 不可以 1 可以
+  string  ReportHost = 11;    //report地址
+  int32   ReportPort = 12;    //report端口
+  int64   ShowTime = 13;      //展示时间   
+}
+
+message GatewayConnInfo {
+  string  Host = 1;    //gateway地址
+  int32   Port = 2;    //gateway端口
+  string  ChatHost = 3;    //gatewaychat地址
+  int32   ChatPort = 4;    //gateway端口
+}
+
+//拉取公告请求
+message GetNoticesReq {
+  int64 ModuleType = 1;     //模块类型  1 登录界面  2 游戏内
+  int32 ServerID = 2;       //服务器ID ModuleType=2时携带
+}
+
+//拉取公告响应
+message GetNoticesRes {
+  repeated NoticeInfo Activities = 1; //活动公告
+  repeated NoticeInfo Syss = 2;       //系统公告
+}
+
+//公告信息
+message NoticeInfo {
+  uint64 NoticeID = 1;           //公告
+  string NoticeTitle = 2;        //公告标题
+  string NoticeContent = 3;      //公告内容
+  string NoticePic = 4;          //公告图片
+  int32 New = 5;                 //New标签
+  int32 Hot = 6;                 //热门标签
+  int32 Top = 7;                 //置顶标签
+}
+
+
+//服务器登录请求
+message QueryServerListReq {
+  int64 UID = 1; //UID
+}
+
+//服务器登录响应
+message QueryServerListRes {
+  repeated RoleShortInfo Roles = 1;
+  repeated ServerDetailInfo Servers = 2;
+}
+
+//公告刷新
+message GameNoticeRefreshReq {
+}
+
+//公告刷新
+message GameNoticeRefreshRes {
+}
+
+//生成第三方订单请求
+message GenThirdpartOrderReq{
+  string OrderUUID = 1; //我们自己的订单号
+}
+
+//生成第三方订单响应
+message GenThirdpartOrderRes{
+  string Ticket = 1; //第三方验单的票据
+}
+
+//验证第三方请求
+message VerifyThirdpartTicketsReq{
+  string Ticket = 1; //第三方票据
+  int32 PayChannel = 2; //支付渠道
+  string Ip = 3; // 玩家 ip（微信平台用）
+}
+
+//生成第三方订单响应
+message VerifyThirdpartTicketsRes{
+  string OrderUUID = 1; //第三方验单返回的订单号
+  int32 Ret = 2; //1 可发放 2 已发放,重复验单 3 验单失败
+  string TransactionID = 3; //第三方单号
+}
+
+//生成支付订单
+message GenPayOrderReq{
+  PayOrder PayOrder = 1; //支付数据
+  scommon.ResponseTicket Ticket = 2; //返回的消息票据
+}
+
+//生成支付订单
+message GenPayOrderRes{
+  int32 Ret = 1; //生成结果 1 生成成功 2 生成失败
+  string OrderUUID = 2; //第三方验单返回的订单号
+  scommon.ResponseTicket Ticket = 3; //返回的消息票据
+}
+
+//支付订单
+message PayOrder {
+  string OrderUUID = 1; //第三方验单返回的订单号
+  int64 UID = 2; //账号ID
+  int32 ServerID = 3; //服务器ID
+  uint64 RoleID = 4; //角色ID
+  int32 Platform = 5; //平台
+  int64 ProductID = 6; //商品ID
+  int32 ProductType = 7; //商品类型
+  string IapName = 8; //Iap
+  int32 Amount = 9; //支付金额
+  string Currency = 10; //支付货币类型
+  int32 IsTest = 11; //是否支付订单
+  int32 UseGoldIndex = 12; //使用金豆档位
+}
+
+//查询已验证未发放的订单
+message QueryUnsendOrdersReq{
+  int32 ServerID = 1; //服务器ID
+}
+
+//查询已验证未发放的订单响应
+message QueryUnsendOrdersRes{
+  repeated UserOrder Orders = 1; //已验证待发放的订单
+}
+
+//通知订单已发放
+message NotifyOrderSendS2S{
+  repeated string OrderUUIDs = 1; //已发放的订单
+}
+
+message UserOrder {
+  string OrderUUID = 1; //订单号
+  uint64 RoleID = 2; //角色ID
+  int32 Platform = 3; //平台
+  string DeviceOS = 4; //平台字符串
+  int32 Istest = 5; //是否自充测试单
+  int32 ProductType = 6; //产品类型
+  int64 ProductID = 7; //产品ID
+  int32 Amount = 8; //金额(分)
+  string TransactionID = 9; //第三方单号
+}
+
+//客户端查询当前版本号信息请求
+message GetClientVersionInfoReq{
+  string ClientVersion = 1; //客户端版本号
+  string DeviceCode = 2;//设备号，用以匹配设备白名单
+}
+
+//客户端查询当前版本号信息响应
+message GetClientVersionInfoRes{
+	string LoginUrl = 1;
+	map<string,string> ParamMap = 2;
+  int64 ServerTime = 3; //服务器时间戳
+}
+
+//设置客户端版本号
+message SetClientVersionInfoReq{
+}
+
+
+//内部充值接口
+message TestSendOrderReq{
+  uint64 RoleID = 1; //角色ID
+  int64 UserID = 2; //账号ID
+  int32 ProductType = 3; //产品类型
+  int64 ProductID = 4; //产品ID
+  int32 ServerID = 5; //服务器ID
+  int32 Amount = 6; //金额(分)
+}
+
+message GetWeiXinAccessTokenReq{
+}
+
+//生成第三方订单响应
+message GetWeiXinAccessTokenRes{
+  string AccessToken = 1;
+}

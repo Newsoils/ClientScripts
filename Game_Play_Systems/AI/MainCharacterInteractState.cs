@@ -25,6 +25,9 @@ public class MainCharacterInteractState : MainCharacterState
             }
             base.Enter();
 
+            if (mainCharacter.headCollider != null && mainCharacter.curInteract.isLie)
+                mainCharacter.headCollider.enabled = true;
+
             if(mainCharacter.curInteract.placement != null)
             {
                 mainCharacter.agent.enabled = false;
@@ -87,6 +90,8 @@ public class MainCharacterInteractState : MainCharacterState
         public override void Exit()
         {
             base.Exit();
+            if (mainCharacter.headCollider != null)
+                mainCharacter.headCollider.enabled = false;
             MainCharacterInteractSpecialBehavior.TryInvokeExit(info.specialBehavior);
             if (!string.IsNullOrEmpty(info.itemRequire))
             {

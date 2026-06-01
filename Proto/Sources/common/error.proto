@@ -1,0 +1,882 @@
+syntax = "proto3";
+package common;
+option go_package = "github.com/xcompany/xgame/proto/common";
+
+enum ErrorCode {
+  // 通用错误 系统错误 1000以内
+  Common_No_Error = 0;                //无错误
+  Common_Msg_Format_Error = 1;//消息格式错误
+  Common_Msg_UnMarshal_Error = 2;//消息解析错误
+  Common_Msg_Marshal_Error = 3;//消息编码错误
+  Common_UnKnown_Error = 4;//未知错误
+  Common_Msg_Decode_Error = 7;//加密编码异常
+  Common_Msg_Token_Invalid_Error = 8;//token失效
+  Common_Msg_Server_Not_Exist_Error = 10;//服务器不存在
+  Common_Msg_Clean_Error = 11;//清档失败
+  Common_Msg_Result_Error = 12;//返回错误
+  Common_Msg_Args_Error = 13;//参数错误
+  Common_System_Error = 21;              //系统错误
+  Common_UnSupport_ParamType_Error = 22;  //不支持的系统类型
+  Common_Req_TimeTooshort_Error = 23;      //发送请求过快
+  Common_Redis_Error = 24;//Redis读取错误
+  Common_DB_Error = 25;//数据库连接异常
+  Common_Fight_Report_Error = 26;//战报异常
+  Common_Validation_Token_Expired = 27;//账号验证Token已过期，重新登录
+  Common_Account_Pwd_Error = 28;//密码错误
+  Common_Role_KeyData_Loss_After_Offline = 29;//错过关键数据,需要重登
+  Common_Validation_Other_Device_Login = 30;//在其他设备登录
+
+  //Logic模块错误码 3xxxxx
+  LogicCommon_Params_Error = 300000;      //通用参数错误
+  LogicCommon_Config_Global_Error = 300001;  //全局配置错误
+  LogicCommon_Server_Role_Full_Error = 300002;  //服务器人数已满
+  LogicCommon_AddItem_Count_Error = 300003;  //增加道具数量错误
+  LogicCommon_CostItem_Count_Error = 300004;  //消耗道具数量错误
+  LogicCommon_Function_Locked = 300005;  //功能未解锁
+
+
+  //角色相关 301xxx
+  LogicRole_Not_Exist = 301001;              //角色不存在
+  LogicRole_Config_Not_Exist = 301002; //配置不存在
+  LogicRole_Config_Error = 301003; //配置异常
+  LogicRole_LvTogetherMaster_Lv_Error = 301004; //共鸣大师等级异常
+  LogicRole_Fight_Report_Share_Repeat_Error = 301005; //战报在该频道已分享过
+  LogicRole_Fight_Report_Cannot_Share_ThisChannel_Error = 301006; //战报无法分享在该频道
+  LogicRole_FirstLoginReward_Claimed = 301007;              //首登奖励已领取
+  LogicRole_PlayerLevelupReward_Level_Not_Enough = 301008;  //玩家等级不足，无法领取下一段位奖励
+  LogicRole_PlayerLevelupReward_Exp_Not_Enough = 301009;    //玩家经验不足，无法领取下一段位奖励
+  LogicRole_PlayerLevelupReward_Config_Error = 301010;      //玩家等级段位奖励配置异常
+  LogicRole_Cat_Not_Exist = 301011;                       //小猫数据不存在
+  LogicRole_Cat_BagIndex_Error = 301012;                    //小猫旅行背包编号非法
+  LogicRole_Cat_RecordItem_Not_Exist = 301013;              //小猫旅行背包唱片道具不存在
+  LogicRole_Cat_Traveling_Cannot_Pack_Bag = 301014;        //小猫出游中不可打包背包
+  LogicRole_Cat_Item_Config_Not_Exist = 301015;             //小猫旅行背包道具配置不存在
+  LogicRole_Cat_AtHome_Cannot_BackImmediately = 301016;     //小猫在家无法使用立刻回家
+  LogicRole_Cat_Love_Ticket_Not_Enough = 301017;            //爱心车票不足
+  LogicRole_Plant_Seed_Not_Seed = 301018;                   //种子道具子类型非法
+  LogicRole_Plant_Seed_Config_Not_Exist = 301019;           //种子/植物配置不存在
+  LogicRole_Plant_Pot_In_Use = 301020;                    //花盆已被占用
+  LogicRole_Plant_Pot_Not_In_Room = 301021;               //房间中不存在该花盆
+  LogicRole_Plant_Pot_Type_Mismatch = 301022;             //花盆类型与植物不匹配
+  LogicRole_Plant_Not_Exist = 301023;                     //种植物不存在
+  LogicRole_Plant_Must_Use_Fertilizer = 301024;           //需要使用肥料
+  LogicRole_Plant_Already_Fertilized = 301025;            //种植物已施肥
+  LogicRole_Plant_Cannot_Fertilize = 301026;              //当前种植物无法施肥
+  LogicRole_Plant_Cannot_Harvest = 301027;                //当前种植物无法收获
+  LogicRole_Plant_Cannot_Remove = 301028;                 //当前种植物无法铲除
+  LogicRole_Plant_Fertilizer_Config_Not_Exist = 301029;   //肥料配置不存在
+  LogicRole_Plant_Op_Invalid = 301030;                    //种植物操作类型非法
+  LogicRole_Npc_Not_Exist = 301031;                       //NPC不存在
+  LogicRole_Npc_Gift_Not_Presentable = 301032;            //礼物不可赠送
+  LogicRole_Npc_Gift_Already_Sent = 301033;                 //今日已向该NPC送过礼
+  LogicRole_Npc_Gift_Daily_Limit = 301034;                  //今日可向NPC送礼次数已达上限（全角色每日3个NPC）
+  LogicRole_Npc_Encounter_Not_Enough = 301035;              //与该NPC会面次数不足
+  LogicRole_Npc_Gift_Favor_Config_Not_Exist = 301036;       //NPC礼物好感配置不存在
+  LogicRole_Npc_Dialogue_History_Invalid = 301037;          //NPC对话历史数据无效
+
+  //英雄相关 302xxx
+  LogicHero_Params_Error = 302000;              //英雄参数错误
+  LogicHero_Config_Error = 302001;              //英雄配置错误
+  LogicHero_Not_Exist = 302002;                //英雄不存在
+  LogicHero_Lv_Limit_By_Stg = 302003;            //英雄等级受阶段限制
+  LogicHero_Stg_Upper_Limit = 302004;            //英雄阶段到达上限
+  LogicHero_Config_LevelCost_Error = 302008; //升级消耗表异常
+  LogicHero_Config_StgCost_Error = 302009; //升阶消耗表异常
+  LogicHero_Config_StarCost_Error = 302010; //升星消耗表异常
+  LogicHero_On_Lineup = 302011; //英雄在阵上
+  LogicHero_Lv_Limit_By_Star = 302012; //等级受星级限制
+  LogicHero_Lv_Limit_By_Apt = 302013; //等级受资质限制
+  LogicHero_Lv_Limit_By_Together = 302014; //等级受共鸣限制
+  LogicHero_Hero_RepeatSelection = 302015; //英雄被重复选中
+  LogicHero_Star_Not_Enough = 302016; //星级不足
+  LogicHero_Potential_Config_Error = 302017; //英雄潜能配置异常
+  LogicHero_Potential_Skill_Not_Exist = 302018; //英雄潜能技能不存在
+  LogicHero_Potential_Skill_Order_Error = 302019; //英雄潜能技能槽位异常
+  LogicHero_Potential_Nation_Error = 302020; //英雄阵营异常
+  LogicHero_Potential_SpLink_Error = 302021; //神魔链接异常
+  LogicHero_Type_Error = 302022; //武将类型异常
+  LogicHero_Config_ArousalCost_Error = 302023; //觉醒消耗表异常
+  LogicHero_Material_Type_Error = 302024; //材料类型错误
+  LogicHero_Material_Mismatch = 302025; //物品材料不匹配
+  LogicHero_Material_Hero_Mismatch = 302026; //英雄材料不匹配
+  LogicHero_Hero_Locked = 302027; //英雄锁定
+  LogicHero_Material_Hero_Locked = 302028; //英雄材料锁定
+  LogicHero_Quality_Error = 302029; //英雄品质异常
+  LogicHero_Rebirth_Limit_Level = 302030;//重生限制:等级
+  LogicHero_Rebirth_Limit_Together = 302031;//重生限制:共鸣大师
+  LogicHero_In_SpecialLink = 302032;//英雄处于神魔链接中
+  LogicHero_Config_SoulCost_Error = 302033;//武魂消耗表异常
+  LogicHero_BackBuild_Limit_Quality = 302034;//回退限制:品质
+  LogicHero_BackBuild_Limit_Nation = 302035;//回退限制:阵营
+  LogicHero_HandBook_Activated_Already = 302036;//手册已激活
+  LogicHero_HandBook_Reward_Not_Exist = 302037;//无奖励
+  LogicHero_HeroShow_Not_Exist = 302038;//英雄展示不存在
+  LogicHero_Gem_Config_Error = 302039;//锦囊配置异常
+  LogicHero_Gem_Star_Config_Error = 302040;//锦囊配置异常
+  LogicHero_Gem_Not_Exist = 302041;//锦囊不存在
+  LogicHero_Gem_Star_Error = 302042;//锦囊星级异常
+  LogicHero_Gem_Star_CostConfig_Error = 302043;//锦囊升星消耗配置前后端不一致
+  LogicHero_Gem_Star_CostNum_Error = 302044;//锦囊升星消耗数量与预期不符
+  LogicHero_Gem_Slot_Not_Exist = 302045;//锦囊槽位不存在
+  LogicHero_Gem_Slot_Locked = 302046;//锦囊槽位未解锁
+  LogicHero_Gem_HeroNum_Limit = 302047;//锦囊占用已满
+  LogicHero_Gem_Slot_Not_Clean = 302048;//锦囊槽位不为空
+  LogicHero_Gem_Change_Nothing = 302049;//锦囊无变化
+  LogicHero_HandScroll_Lv_Error = 302050;//绘卷等级异常
+  LogicHero_HandScroll_Condition_Limit = 302051;//绘卷条件不足
+  LogicHero_HandScroll_Config_Error = 302052;//绘卷配置异常
+  LogicHero_HandScroll_Unknown_Condition = 302053;//未知条件
+  LogicHero_Palace_Config_Error = 302054;//光暗之殿配置异常
+  LogicHero_Palace_Skill_SoulLimit = 302055;//光暗之殿境界不足
+  LogicHero_Palace_Max = 302056;//光暗之殿无下一阶
+  LogicHero_Palace_Cheer_Star_Limit = 302057;//光暗之殿助力星级不足
+  LogicHero_MartialSoul_Higher_Exist = 302058;//同名光暗武将存在更高境界
+  LogicHero_Gem_Params_Error = 302059;//武魂参数错误
+  LogicHero_Gem_Realize_Upgrade_Config_Error = 302060;//武魂融悟升级配置异常
+  LogicHero_Gem_Realize_Item_Not_Enough = 302061;//道具武魂数量不足
+  LogicHero_Gem_Realize_Item_Selected_Over_Need = 302062;//选中道具武魂数量超出需求
+  LogicHero_Gem_Realize_Destroy_Not_Enough = 302063;//融悟的武魂不足
+  LogicHero_Hero_Equips_Not_Remove = 302064;//幻武未卸下
+  LogicHero_Hero_Gem_Not_Remove = 302065;//武魂未卸下
+  LogicHero_Hero_Flower_Not_Remove = 302066;//花灵未卸下
+  LogicHero_God_Star_Higher_Exist = 302067;//同名武将存在更高神赋
+  LogicHero_God_Star_Max = 302068;//神赋已满
+  LogicHero_MartialSoul_Not_Default = 302069;//境界非初始状态
+  LogicHero_Hero_SoulJade_Not_Remove = 302070;//魂玉未卸下
+
+  //资源相关 303xxx
+  LogicResource_Params_Error = 303000;    //资源参数错误
+  LogicResource_Config_Error = 303001;    //资源配置错误
+  LogicResource_SilverCoin_Not_Enough = 303002;  //银币不足
+  LogicResource_Dust_Not_Enough = 303003;  //粉尘不足
+  LogicResource_GoldIngot_Not_Enough = 303004;  //元宝不足
+  LogicResource_Exploit_Not_Enough = 303005;  //功勋不足
+  LogicResource_HeroExp_Not_Enough = 303006;  //英雄经验不足
+  LogicResource_RoleExp_Not_Enough = 303007;  //角色经验不足
+  LogicResource_VipExp_Not_Enough = 303008;  //VIP经验不足
+  LogicResource_Wood_Not_Enough = 303009;  //木材不足
+  LogicResource_Stone_Not_Enough = 303010;  //石材不足
+  LogicResource_Food_Not_Enough = 303011;  //粮食不足
+  LogicResource_Energy_Not_Enough = 303012;  //体力不足
+  LogicResource_CureEnergy_Not_Enough = 303013; //治疗能量不足
+  LogicResource_Not_Enough = 303014;      //资源不足
+  LogicResource_MaxStackable_LIMITED = 303015; //资源堆叠上限
+  LogicResource_PerLeagueScore_Not_Enough = 303016;      //个人联盟资源不足
+  LogicResource_SmithyExp_Not_Enough = 303017; //铁匠铺经验不足
+  LogicResource_FoundryManExp_Not_Enough = 303018; //锻造师经验不足
+  LogicResource_StarCoin_Not_Enough = 303019;//星图币不足
+  LogicResource_GoldBean_Not_Enough = 303020;  //金豆不足
+
+  //道具相关 304xxx
+  LogicItem_Params_Error = 304000;      //道具参数错误
+  LogicItem_Item_Config_Error = 304001;    //道具配置错误
+  LogicItem_Not_Enough = 304002;        //道具数量不足
+  LogicItem_Unusable = 304003;         //道具不可使用
+  LogicItem_Item_Not_Exist = 304004;          //道具不存在
+  LogicItem_SubType_Config_Error = 304005;     //道具子类型错误
+  LogicItem_No_Fragments = 304006; //没有能合成的碎片
+  LogicItem_Type_Unknown = 304007; //未知类型
+  LogicItem_Amount_Error = 304008; //道具使用数量错误
+  LogicItem_Usage_Fail = 304009; //道具使用失败
+  LogicItem_Usage_Conditions_Not_Meet = 304010;//道具使用条件不满足
+  LogicItem_Can_Not_Sold = 304011;//该道具无法出售
+  LogicItem_Sold_Time_Not_Match = 304012;//未过期道具无法出售
+  LogicItem_Add_Number_Limit = 304013;//增加的道具到达上限
+
+  //章节相关 305xxx
+  LogicChapter_Params_Error = 305000;    //章节参数错误
+  LogicChapter_Config_Error = 305001;    //章节配置错误
+  LogicChapter_Config_Dungeon_Error = 305002; //通用关卡配置错误
+  LogicChapter_Config_Npc_Error = 305003;  //关卡Npc配置错误
+  LogicChapter_Dungeon_Not_Exist = 305004;  //关卡不存在
+  LogicChapter_Dungeon_Status_Error = 305005;  //关卡状态异常
+  LogicChapter_Config_Main_Dungeon_Error = 305006;  //主线关卡配置异常
+  LogicChapter_HangUp_Skip_TimesLimit = 305007;//快速挂机次数限制
+  LogicChapter_HangUp_PiXiu_Zero = 305008;//没貔貅
+  LogicChapter_Drop_Config_Error = 305009;//掉落配置错误
+  LogicChapter_Sweep_Times_Not_Enough = 305010;//扫荡次数不足
+  LogicChapter_MainDungeon_Progress_Reward_Config_Error = 305011;//章节进度奖励配置异常
+  LogicChapter_MainDungeon_Progress_Reward_None = 305012;//无可领章节进度奖励
+  LogicChapter_HangUp_Reward_Not_Exist = 305013;//无可领挂机奖励
+  LogicChapter_ConquerCity_Chapter_Reward_Not_Exist = 305014;//无可领章节宝箱
+  LogicChapter_ChainDungeon_Data_Not_Exist = 305015;//过关斩将无数据
+  LogicChapter_ChainDungeon_Type_Not_Open = 305016;//过关斩将该类型未开放
+  LogicChapter_ChainDungeon_Storey_Mismatch = 305017;//过关斩将层数不匹配
+  LogicChapter_ChainDungeon_Wave_Mismatch = 305018;//过关斩将波数不匹配
+  LogicChapter_ChainDungeon_Config_Error = 305019;//过关斩将关卡配置异常
+  LogicChapter_ChainDungeon_No_Rewards = 305020;//过关斩将无奖励可领
+  LogicChapter_ChainDungeon_Rewards_Take_Already = 305021;//过关斩将奖励已领
+  LogicChapter_ChainDungeon_TimeLimit_Stage_Error = 305022;//过关斩将限时阶段异常
+  LogicChapter_ChainDungeon_TimeLimit_Task_Config_Error = 305023;//过关斩将限时挑战配置异常
+  LogicChapter_ChainDungeon_TimeLimit_OverTime = 305024;//过关斩将限时活动超时
+  LogicChapter_ChainDungeon_TimeLimit_TaskType_Error = 305025;//过关斩将限时挑战类型异常
+  LogicChapter_ChainDungeon_TimeLimit_Task_Record_Error = 305026;//过关斩将限时挑战记录不符
+  LogicChapter_ChainDungeon_TimeLimit_Task_Take_Already = 305027;//过关斩将限时挑战已领
+  LogicChapter_ChainDungeon_TeamCount_Insufficient = 305028;//过关斩将队伍数不足
+  LogicChapter_ChainDungeon_Single_Team_Hero_Count_Error = 305029;//过关斩将出战队伍英雄数量异常
+
+
+  //阵容相关 306xxx
+  LogicLineup_Params_Error = 306000;    //阵容参数错误
+  LogicLineup_Not_Exist = 306001;      //军队不存在
+  LogicLineup_Hero_Pos_Error = 306002;  //英雄布阵位置非法
+  LogicLineup_Weapon_Pos_Error = 306003;  //神器布阵位置非法
+  LogicLineup_Beasts_Pos_Error = 306004;  //动物布阵位置非法
+  LogicLineup_Hero_No_Enough = 306005;  //上阵武将数不足
+  LogicLineup_Hero_Pos_Occupy = 306006;  //上阵武将位置被占用
+
+  //抽卡相关 307xxx
+  LogicGacha_Params_Error = 307000;        //抽卡参数错误
+  LogicGacha_Config_Error = 307001;        //抽卡配置错误
+  LogicGacha_Not_Exist = 307002;        //卡池不存在
+  LogicGacha_Expired = 307003;          //卡池过期
+  LogicGacha_Times_Not_Enough = 307004;      //抽卡次数已用完
+  LogicGacha_Times_Not_Enough_Today = 307005;  //今日抽卡次数已用完
+  LogicGacha_Free_Times_Cooled_Down = 307006;  //免费招募次数冷却完毕
+  LogicGacha_Config_Pool_Error = 307007;//卡池表异常
+  LogicGacha_Config_TabList_Error = 307008;//页签表异常
+  LogicGacha_Config_Package_Error = 307009;//卡包表异常
+  LogicGacha_WishList_Params_Error = 307010;//心愿单参数错误
+  LogicGacha_Can_Not_Set_This_Hero = 307011;//不能设置该英雄
+  LogicGacha_WishList_Not_Open = 307012;//心愿单未开启
+  LogicGacha_WishList_Clash_Of_Nation = 307013;//心愿单阵营冲突
+  LogicGacha_Times_Reward_Config_Error = 307014;//进度奖励配置错误
+  LogicGacha_Gacha_Score_Not_Enough = 307015;//进度积分不足
+  LogicGacha_WishList_Num_Error = 307016;//心愿单数量错误
+  LogicGacha_Unable_To_Replace_Realized_Heroes = 307017;//无法替换已实现的英雄
+  LogicGacha_Recharge_Num_Not_Enough = 307018;//充值金额不足
+  LogicGacha_No_Wish_List = 307019;//没有心愿单
+  LogicGacha_Times_Left_Few_Today = 307020;//今日剩余抽卡次数x次
+
+  //邮件错误码 308xxx
+  LogicMail_Config_Template_Error = 308000;  //邮件模板表异常
+  LogicMail_No_Rewards_Collection_Error = 308001;  //没有可领取的邮件奖励
+  LogicMail_Empty = 308002; //用户邮箱中没有邮件
+  LogicMail_Mail_Not_Exist = 308003; //邮件不存在
+  LogicMail_Rewards_Collection_Error = 308004; //邮件奖励领取出错
+  LogicMail_Hero_Rewards_Collection_Error = 308005; //英雄背包已满
+
+  //签到错误码 309xxx
+  LogicSignIn_Date_Error = 309000; //签到日期错误
+  LogicSignIn_Way_Error = 309001; //签到方式错误
+  LogicSignIn_Signed_In = 309002; //该日已签到
+  LogicSignIn_Rewards_Collection_Error = 309003; //没有可领取的累计签到奖励
+  LogicSignIn_ReSign_Times_Reach_Maximum = 309004; //补签次数达最大值
+  LogicSignIn_Get_SignIn_Rewards_Error = 309005; //领取签到奖励错误
+
+  //本服排行榜错误码 310xxx
+  LogicRank_Type_Not_Exist = 310000;//该类型排行榜不存在
+  LogicRank_Type_Undefined = 310001;//未定义类型排行榜
+  LogicRank_Target_No_Rank = 310002;//对象未上榜
+  LogicRank_ThumbsUp_Repeat = 310003;//重复点赞
+  LogicRank_Params_Error = 310004;//参数异常
+  LogicRank_Mission_Not_Exist = 310005;//任务不存咋
+  LogicRank_Mission_Status_Error = 310006;//任务状态异常
+  LogicRank_Mission_Award_Received = 310007;//任务奖励已领取
+  LogicRank_Mission_Config_Error = 310008;//任务配置异常
+  LogicRank_ThumbsUp_Times_Limit = 310009;//点赞上限
+  LogicRank_Mission_Award_Nothing = 310010;//无奖励可领
+  LogicRank_Mission_Not_Completed = 310011;//任务未完成
+
+  //VIP错误码 311xxx
+  LogicVip_Package_Config_Error = 311000; //VIP礼包配置错误
+  LogicVip_Package_Purchased = 311001; //VIP礼包已购买
+  LogicVip_Cumulative_Login_Date_Error = 311002; //VIP累计登录日期错误
+  LogicVip_Cumulative_Login_Reward_Collected = 311003; //VIP累计登录奖励已领取
+  LogicVip_Cumulative_Login_Config_Error = 311004; //VIP累计登录配置错误
+  LogicVip_Package_Purchase_Level_Error = 311005; //VIP礼包购买等级错误
+  LogicVip_Privilege_Config_Error = 311006; //VIP权限配置错误
+  LogicVip_Privilege_OneClickSweep_Not_Exist = 311007; //缺少一键扫荡特权
+
+
+  //本服竞技场错误码 312xxx
+  LogicArena_FreeTimes_Not_Enough = 312000;//免费挑战次数不足
+  LogicArena_PaidTimes_Not_Enough = 312001;//付费挑战次数不足
+  LogicArena_Undefined_Type = 312002;//未定义类型
+  LogicArena_Opponent_Not_Exist = 312003;//对手不存在
+  LogicArena_Opponent_Changed = 312004;//对手已变化
+  LogicArena_DailySettle_Already = 312005;//今日已结算
+  LogicArena_SeasonSettle_Already = 312006;//赛季已结算
+  LogicArena_Arena_Not_Exist = 312007;//竞技场未开放或不存在
+  LogicArena_Arena_UserData_Null = 312008;//玩家不在竞技场中
+  LogicArena_User_ArenaData_Not_Exist = 312009;//玩家竞技场数据不存在
+  LogicArena_WorldTop_Season_Settle = 312010;//天下至尊已结算
+  LogicArena_WorldTop_Config_Error = 312011;//天下至尊配置异常
+  LogicArena_WorldTop_Match_CoolDown = 312012;//天下至尊匹配冷却
+  LogicArena_WorldTop_Team_Num_Error = 312013;//天下至尊队伍数量异常
+
+  //商店错误码 313xxx
+  LogicShop_Shop_Not_Exist = 313000;//商店不存在
+  LogicShop_Shop_Config_Not_Exist = 313001;//商店配置不存在
+  LogicShop_Shop_Can_Not_ManualRefresh = 313002;//该商店不可手动刷新
+  LogicShop_Shop_Goods_Not_Exist = 313003;//商品不存在
+  LogicShop_Shop_Goods_SoldOut = 313004;//商品已售完
+  LogicShop_Shop_Goods_Config_Not_Exist = 313005;//商品配置不存在
+  LogicShop_Shop_Goods_Not_Enough = 313006;//商品数量不足
+  LogicShop_Shop_Type_Undefined = 313007;//类型未定义
+  LogicShop_Shop_Times_Limits = 313008;//购买次数限制
+  LogicShop_Shop_Goods_Lv_Not_Enough = 313009;//未达到商品购买等级
+
+
+  //任务错误码 314xxx
+  LogicMission_Config_Error = 314000; //任务配置错误
+  LogicMission_Rewards_Collection_Error = 314001; //任务奖励领取出错
+  LogicMission_Daily_Points_Not_Enough = 314002;//任务积分不够
+  LogicMission_Achieve_Points_Rewards_Unknown = 314003; //成就任务积分奖励未知
+  LogicMission_Mission_Not_Exist = 314004; //任务不存在
+  LogicMission_Mission_Type_Error = 314005; //任务类型错误
+  LogicMission_Can_Not_Use_Card = 314006;//该任务不能使用完成卡
+  LogicMission_Card_Not_Enough = 314007;//任务完成卡不足
+  LogicMission_Mission_States_Error = 314008;//任务状态错误
+  LogicMission_Card_Type_Error = 314009;//完成卡类型错误
+
+  //神兵错误码 315xxx
+  LogicArtifact_Config_Error = 315000; //神兵配置错误
+  LogicArtifact_Fragment_Not_Enough = 315001; //神兵碎片不足
+  LogicArtifact_BookScore_Not_Enough = 315002; //神兵图鉴值不足
+  LogicArtifact_Reach_The_Max_Level = 315003; //神兵等级达到上限
+  LogicArtifact_Artifact_Already_Possess = 315004; //神兵已拥有
+  LogicArtifact_Artifact_Not_Exit = 315005; //神兵不存在
+  LogicArtifact_Reach_The_Max_Stage = 315006; //神兵达到最大星级
+  LogicArtifact_Artifact_Function_Locked = 315007; //神兵功能未开放
+
+  //通行证错误码 316xxx
+  LogicPassport_Config_Error = 316000; //通行证配置错误
+  LogicPassport_Passport_Not_Exist = 316001; //通行证不存在
+  LogicPassport_Passport_Is_Advance_Already = 316002; //高级通行证已购买
+  LogicPassport_Passport_OverTime = 316003; //该通行证已过期
+  LogicPassport_Passport_Cannot_BuyLevel = 316004; //该通行证无法购买经验
+  LogicPassport_Passport_Score_Full = 316005; //该通行证经验已满
+  LogicPassport_Passport_Param_Error = 316006; //通行证请求参数错误
+  LogicPassport_Passport_BuyLevel_Not_Open = 316007; //通行证未到购买时间
+  LogicPassport_Passport_Is_Middle_Already = 316008; //中级通行证已购买
+  LogicPassport_Passport_Has_No_Middle = 316009; //该战令没有中级通行证
+
+  //派遣错误码 317xxx
+  LogicDispatch_Function_Locked = 317000;//功能未解锁
+  LogicDispatch_Building_Not_Exist = 317001;//建筑不存在
+  LogicDispatch_Building_Config_Error = 317002;//建筑配置异常
+  LogicDispatch_Camp_Lv_Limit = 317003;//营地等级限制
+  LogicDispatch_Building_Status_Error = 317004;//建筑状态异常
+  LogicDispatch_Event_Config_Error = 317005;//事件配置异常
+  LogicDispatch_TimeGear_Config_Error = 317006;//时间挡位配置异常
+  LogicDispatch_Hero_Not_Enough = 317007;//派遣英雄数量不足
+  LogicDispatch_Buff_Config_Error = 317008;//加成配置异常
+  LogicDispatch_FreeTimes_Not_Enough = 317009;//免费次数不足
+  LogicDispatch_PaidTimes_Not_Enough = 317010;//消费次数不足
+  LogicDispatch_Event_Completed = 317011;//事件已完成
+
+  //装备错误码 318xxx
+  LogicEquipment_Function_Locked = 318000;//功能未解锁
+  LogicEquipment_Config_Error = 318001;//装备配置错误
+  LogicEquipment_Exp_Not_Enough = 318002;//经验值不足
+  LogicEquipment_Chase_Config_Error = 318003;//装备追赶配置错误
+  LogicEquipment_Equipment_Not_Exit = 318004;//装备不存在
+  LogicEquipment_Equipment_Hang_Up_Error = 318005;//装备挂机出错
+  LogicEquipment_Equipment_Hang_Up_Time_Error = 318006;//装备挂机时间出错
+  LogicEquipment_Equipment_Condition_Format_Error = 318007;//装备条件格式出错
+  LogicEquipment_Equipment_Function_Locked = 318008;//装备功能未开放
+  LogicEquipment_Custom_Config_Error = 318009;//初始定制装备配置错误
+  LogicEquipment_Smithy_Mission_Not_Complete = 318010;//铁匠铺任务未完成
+  LogicEquipment_Smithy_Level_Not_Enough = 318011;//铁匠铺等级不足
+  LogicEquipment_FoundryMan_Level_Up_Not_Complete = 318012;//锻造师升级未完成
+  LogicEquipment_Equipments_Reach_Maximum = 318013;//装备存储件数达最大值
+
+  //试炼塔错误码 319xxx
+  LogicTrialTower_Function_Locked = 319000;//功能未解锁
+  LogicTrialTower_TowerType_Locked = 319001;//该类型塔未解锁
+  LogicTrialTower_TowerConfig_Error = 319002;//该类型塔配置异常
+  LogicTrialTower_Team_Not_Exist = 319003;//选中的队伍不存在
+  LogicTrialTower_StageConfig_Error = 319004;//层级配置异常
+  LogicTrialTower_ChallengeTimes_Limit = 319005;//挑战次数不足
+  LogicTrialTower_StageReward_Not_Exist = 319006;//无层级奖励
+  LogicTrialTower_DailyReward_Not_Exist = 319007;//无每日奖励
+  LogicTrialTower_DailyReward_Config_Error = 319008;//每日奖励配置异常
+  LogicTrialTower_DailyReward_Times_Limit = 319009;//每日奖励今日领取上限
+  LogicTrialTower_Undergo_Config_Error = 319010;//历练配置异常
+  LogicTrialTower_Undergo_Refresh_Times_Limit = 319011;//历练刷新次数上限
+  LogicTrialTower_Undergo_Take_Times_Limit = 319012;//历练领取次数上限
+  LogicTrialTower_Tower_Status_Error = 319013;//状态异常
+  LogicTrialTower_Function_Development_In_Progress = 319014;//功能开发中
+
+  //礼包错误码 320xxx
+  LogicGift_Function_Locked = 320000;//功能未开放
+  LogicGift_Gift_Not_Exit = 320001;//礼包不存在
+  LogicGift_Gift_Bag_Config_Error = 320002;//礼包配置错误
+  LogicGift_Purchases_Reach_Maximum_Number = 320003;//礼包购买次数达上限
+  LogicGift_Conditions_Not_Met = 320004;//礼包购买条件不满足
+  LogicGift_Purchase_Parameter_Error = 320005;//礼包购买参数错误
+  LogicGift_Gift_Type_Error = 320006;//礼包类型错误
+  LogicGift_Gift_Choice_Box_Config_Error = 320007;//礼包自选物品配置错误
+  LogicGift_Purchase_Error = 320008;//礼包购买错误
+
+  //活动错误码 321xxx
+  LogicActivity_Function_Locked = 321000;//功能未开放
+  LogicActivity_Not_Exit = 321001;//活动不存在
+  LogicActivity_Not_Started = 321002;//活动未开始
+  LogicActivity_Has_Ended = 321003;//活动已结束
+  LogicActivity_Purchase_Error = 321004;//活动购买错误
+  LogicActivity_Type_Error = 321005;//活动类型错误
+  LogicActivity_Get_Rewards_Error = 321006;//领取活动奖励错误
+  LogicActivity_Config_Error = 321007;//活动配置错误
+  LogicActivity_Parameter_Error = 321008;//活动参数错误
+  LogicActivity_Operation_Error = 321009;//活动操作错误
+  LogicActivity_SuperSignin_Buy_Already_Error = 321010;//今日已签到
+  LogicActivity_SuperSignin_FreeGet_Already_Error = 321011;//今日不可免费领取
+  LogicActivity_SuperSignin_Signin_Full_Error = 321012;//已签满
+  LogicActivity_SuperSignin_Not_Buy_Error = 321013;//今日还未签到
+  LogicActivity_SuperSignin_Has_No_Extral_Rewards_Error = 321014;//今日无额外奖励
+  LogicActivity_SuperSignin_Today_Extral_Rewards_Received_Already_Error = 321015;//今日额外奖励已领取
+  LogicActivity_GrownBox_Received_Already_Error = 321016;//今日宝箱已开启
+  LogicActivity_GrownBox_Open_Score_Not_Enough_Error = 321017;//开启宝箱积分不足
+  LogicActivity_ShowActivity_Reward_Taked_Error = 321018;//展示活动奖励已领
+  LogicActivity_FlipCard_All_Reward_Got = 321019;//已抽取所有奖励
+  LogicActivity_Turntable_Unlock = 321020;//转盘未激活
+  LogicActivity_Turntable_GachaTimes_Limit = 321021;//转盘次数不足
+  LogicActivity_AdSupply_Config_Error= 321022;//广告补给配置错误
+  LogicActivity_Locked_Too_Early= 321023;//未到开放时间
+  LogicActivity_TargetNum_Invalid = 321024;//目标值不合法
+  LogicActivity_SuperSignin2_BigWin_Need_Signin_Full_Error = 321025;//领取大奖需要本轮签满
+  LogicActivity_SuperSignin2_BigWin_Received_Error = 321026;//已领取过大奖
+
+  //剧情错误码 322xxx
+  LogicStory_Select_Group_Config_Error = 322000;//选择组配置异常
+  LogicStory_Selection_Not_Exist = 322001;//选择不存在
+  LogicStory_Select_Already = 322002;//已选择
+  LogicStory_Ream_Not_Exist = 322003;//剧情组不存在
+
+
+  //剧情错误码 323xxx
+  LogicTravel_Event_Config_Error = 323000;//游历事件配置异常
+  LogicTravel_Event_Not_Exist_Error = 323001;//游历事件不存在
+  LogicTravel_Event_Type_Error = 323002;//游历事件结果错误
+  LogicTravel_Event_Challenge_Fail_Error = 323003;//游历升级战斗失败
+  LogicTravel_Event_Challenge_OverTime_Error = 323004;//游历升级事件超时
+  LogicTravel_Event_Function_Not_Open_Error = 323005;//游历功能未开放
+
+  //火烧赤壁错误码 324xxx
+  LogicRogue_Huo_Dungeon_Config_Error = 324001;//关卡配置异常
+  LogicRogue_Huo_Dungeon_Cannot_Arrival = 324002;//关卡无法到达
+  LogicRogue_Huo_Dungeon_Not_Exist = 324003;//关卡不存在
+  LogicRogue_Huo_Event_Config_Error = 324004;//事件配置异常
+  LogicRogue_Huo_Event_Type_Unknown = 324005;//未知事件类型
+  LogicRogue_Huo_Dungeon_Data_Error = 324006;//关卡数据异常
+  LogicRogue_Huo_Event_Handle_Params_Not_Enough = 324007;//事件处理参数不足
+  LogicRogue_Huo_Event_Handle_Params_Error = 324008;//事件处理参数错误
+  LogicRogue_Huo_Hero_Full_Hp = 324009;//英雄未受伤
+  LogicRogue_Huo_Hero_Dead = 324010;//英雄已阵亡
+  LogicRogue_Huo_Dungeon_NextConfig_Not_Exist = 324011;//下一关配置不存在
+  LogicRogue_Huo_Dungeon_Not_End = 324012;//下一关并非下一层
+  LogicRogue_Huo_SystemConfig_Error = 324013;//系统参数异常
+  LogicRogue_Huo_Skip_Locked = 324014;//未解锁扫荡
+  LogicRogue_Huo_Elite_Locked = 324015;//未解锁困难
+  LogicRogue_Huo_Elixir_UsedLimit = 324016;//天地灵药使用上限
+
+
+  //好友系统 325xxx
+  LogicFriendship_Unknown_Request = 325000;//未知请求
+  LogicFriendship_Not_Your_Friends = 325001;//对方不是你的好友
+  LogicFriendship_ChivalrousPointSend_Reach_Maximum = 325002;//赠送侠义值达到最大值
+  LogicFriendship_ChivalrousPointReceive_Reach_Maximum = 325003;//侠义值接受达到最大值
+  LogicFriendship_ChivalrousPointReceive_Error = 325004;//收取侠义值错误
+  LogicFriendship_ChivalrousPointSend_Error = 325005;//赠送侠义值出错
+  LogicFriendship_Player_Info_Error = 325006;//玩家信息出错
+  LogicFriendship_Request_Type_Error = 325007;//请求类型出错
+  LogicFriendship_Blacklist_Player_Not_In = 325008;//玩家不在黑名单中
+  LogicFriendship_Blacklist_Player_Already_Exists = 325009;//玩家已在黑名单中
+  LogicFriendship_Blacklist_Is_Full = 325010;//黑名单已满
+  LogicFriendship_FriendsList_Player_Not_In = 325011;//玩家不在好友名单中
+  LogicFriendship_FriendsList_Is_Full = 325012;//玩家好友列表已满
+  LogicFriendship_FriendsList_Player_Already_Exists = 325013;//玩家已在好友名单中
+  LogicFriendship_Application_Not_Exist = 325014;//申请不存在
+  LogicFriendship_FriendsList_Others_Is_Full = 325015;//对方好友列表已满
+  LogicFriendship_Search_Can_Not_Be_Empty = 325016;//搜索栏不能为空
+  LogicFriendship_Search_Can_Not_Find_Player = 325017;//搜索未找到玩家
+  LogicFriendship_Search_ID_Format_Error = 325018;//ID搜索格式错误
+  LogicFriendship_Can_Not_Operate_Yourself = 325019;//不能操作你自己
+
+  //聊天错误码 326xxx
+  LogicChat_Channel_Not_Exist = 326000;//频道不存在
+  LogicChat_Channel_Chat_With_Self = 326001;//频道不存在
+  LogicChat_Channel_Too_Frequency = 326002;//发送消息过于频发
+  LogicChat_Channel_ChatMsg_Invalid = 326003;//消息不合法(包含敏感词)
+  LogicChat_Channel_Level_Limit = 326004;//未达到能发送消息的等级
+  LogicChat_Channel_Blacklist_Block = 326005;//消息被对方拒收
+  LogicChat_Channel_Recharge_Limit = 326006;//未达到发送要求
+
+  //首充礼包错误码 327xxx
+  LogicFristChargeGift_Package_Not_Exist = 327000;//礼包不存在
+  LogicFristChargeGift_BuyFunction_Not_Open = 327001;//未开放购买
+  LogicFristChargeGift_Buy_Already = 327002;//已购买
+  LogicFristChargeGift_Buy_Locked = 327003;//购买中
+
+  //联盟错误码 328xxx
+  LogicLeague_League_Not_Exist = 328000;//联盟不存在
+  LogicLeague_League_Name_Repeat = 328001;//联盟名字重复
+  LogicLeague_Has_League = 328002;//已有联盟
+  LogicLeague_Not_Match_League_Create_Condition = 328003;//不满足建盟条件
+  LogicLeague_Not_In_League = 328004;//你不在此联盟
+  LogicLeague_Not_Open_Apply = 328005;//该联盟未开放申请
+  LogicLeague_Not_Match_Apply_Condition = 328006;//未达到申请条件
+  LogicLeague_Apply_List_Full = 328007;//申请列表已满
+  LogicLeague_Right_Not_Match = 328008;//没有权限
+  LogicLeague_Member_Full = 328009;//同盟成员已满
+  LogicLeague_Join_Cooldown = 328010;//加盟冷却中
+  LogicLeague_Leader_Leave_Must_Lastone = 328011;//盟主必须最后退出
+  LogicLeague_Target_Is_Not_In_League = 328012;//对方已不在同盟中
+  LogicLeague_Target_Is_Yourself = 328013;//无法踢出自己
+  LogicLeague_Recruit_Cooldown = 328014;//招募公告冷却中
+  LogicLeague_No_Match_League_Can_Join = 328015;//没有可加入的盟
+  LogicLeague_Func_Not_Open = 328016;//联盟功能未开放
+  LogicLeague_Name_Invalid = 328017;//联盟名字非法
+  LogicLeague_Declaration_Invalid = 328018;//联盟宣言非法
+  LogicLeague_Announcement_Invalid = 328019;//联盟公告非法
+  LogicLeague_Name_Too_Long = 328020;//联盟名字超长
+  LogicLeague_Declaration_Too_Long = 328021;//联盟宣言超长
+  LogicLeague_Announcement_Too_Long = 328022;//联盟公告超长
+  LogicLeague_Today_KickOut_ActiveMember_Limit = 328023;//今日踢出的活跃团员超上限
+  LogicLeague_Level_Reward_Config_Not_Exist = 328024;//联盟等级奖励配置不存在
+  LogicLeague_Level_Reward_Received = 328025;//联盟等级奖励已领取过
+  LogicLeague_Level_Reward_Not_Match = 328026;//联盟等级奖励任务未完成
+  LogicLeague_Flag_Unlock_Config_Not_Exist = 328027;//联盟旗帜配置不存在
+  LogicLeague_Flag_Unlock = 328028;//联盟旗帜未解锁
+  LogicLeague_Dungeon_Config_Error = 328029;//联盟副本配置错误
+  LogicLeague_Dungeon_Free_Times_Reach_Maximum = 328030;//联盟副本免费挑战次数用尽
+  LogicLeague_Dungeon_Paid_Times_Reach_Maximum = 328031;//联盟副本付费挑战次数用尽
+  LogicLeague_Dungeon_Sweep_Error = 328032;//联盟副本扫荡出错
+  LogicLeague_Dungeon_Pass_Rewards_Error = 328033;//联盟副本通关奖励领取错误
+  LogicLeague_Dungeon_Inspiration_Reach_Maximum = 328034;//联盟副本鼓舞达上限
+  LogicLeague_Sacrifice_FreeTimes_Limit = 328035;//联盟免费祭祀次数上限
+  LogicLeague_Sacrifice_PaidTimes_Limit = 328036;//联盟付费祭祀次数上限
+  LogicLeague_Sacrifice_Not_Done_Yet = 328037;//联盟祭祀未进行
+  LogicLeague_Dungeon_Player_Inspiration_Reach_Maximum = 328038;//联盟副本鼓舞个人购买次数用尽
+  LogicLeague_Dungeon_Challenge_Dungeon_Error = 328039;//该守卫已阵亡，请挑战下一关吧
+  LogicLeague_League_Campaign_Sign_Up_Success = 328040; // 军团战役报名成功，无法进行该操作
+  LogicLeague_Vice_Leader_Number_Reach_Limit = 328041;//副团长数量达上限
+
+  //充值错误码 329xxx
+  LogicRecharge_Product_Not_Exist = 329000;//商品不存在
+  LogicRecharge_Coupons_Not_Enough = 329001;//代金券不足
+
+  //月卡错误码 330xxx
+  LogicMonthlyCard_Not_Exist = 330000;//月卡不存在
+  LogicMonthlyCard_Not_Active = 330001;//月卡未激活
+  LogicMonthlyCard_DailyReward_Received = 330002;//今日月卡奖励已领取
+  LogicMonthlyCard_AlreadyBuy = 330003;//月卡已购买
+  LogicMonthlyCard_GetAwardFirst = 330004;//请先领取奖励
+
+
+  //守卫战错误码 331xxx
+  LogicCityDefense_Not_Exist = 331000;//守卫战不存在
+  LogicCityDefense_Role_Register_Failed = 331001;//守卫战已报名
+  LogicCityDefense_Phase_Register_Denied = 331002;//该阶段禁止报名
+  LogicCityDefense_AttrPlus_Purchase_Repeated = 331003;//守卫战加成重复购买
+  LogicCityDefense_Phase_Denied_AttrPlus_Purchase = 331004;//守卫战加成该阶段禁止购买
+  LogicCityDefense_Enemy_Target_Not_Exist = 331005;//守卫战目标敌军不存在
+  LogicCityDefense_Enemy_Target_Refreshing = 331006;//守卫战目标敌军刷新中
+  LogicCityDefense_Enemy_Target_Already_Exist = 331007;//守卫战目标敌军已生成
+  LogicCityDefense_Unknown_Params = 331008;//守卫战未知参数
+  LogicCityDefense_Enemy_Target_Speedup_Times_Limit = 331009;//守卫战目标敌军加速次数不足
+  LogicCityDefense_Enemy_Target_Refresh_Times_Limit = 331010;//守卫战目标敌军刷新次数不足
+  LogicCityDefense_Defense_Battle_Times_Limit = 331011;//守卫战防守战斗次数不足
+  LogicCityDefense_Role_Not_Register = 331012;//未报名
+  LogicCityDefense_Phase_Not_Match = 331013;//阶段不同步
+
+
+  //宝物错误码 332XXX
+  LogicTreasure_Config_Error = 332000;//配置错误
+  LogicTreasure_Treasure_Is_Locked = 332001;//宝物未解锁
+  LogicTreasure_Today_Forge_Times_Reach_Maximum = 332002;//今日打造次数已达最大值
+  LogicTreasure_Backpack_Is_Full = 332003;//背包已满
+  LogicTreasure_Treasure_Not_In_The_Backpack = 332004;//宝物不在背包中
+  LogicTreasure_Treasure_Unable_To_Equip = 332005;//宝物无法装备
+  LogicTreasure_Operation_Type_Error = 332006;//操作类型错误
+  LogicTreasure_Refine_Attr_ID_Error = 332007;//洗练ID出错
+  LogicTreasure_Choose_Attr_ID_Error = 332008;//被洗练的ID出错
+  LogicTreasure_Attr_Reach_The_Maximum = 332009;//属性已达最大值
+  LogicTreasure_Error_Treasure_Quality = 332010;//最高品质宝物不能一键分解
+  LogicTreasure_Refine_Attr_Value_Error = 332011;//洗练属性值错误
+  LogicTreasure_Refine_ID_Value_Error = 332012;//洗练替换属性错
+  LogicTreasure_Attr_Not_Reach_The_Maximum = 332013;//属性未达最大值
+  LogicTreasure_Jade_Operation_Type_Error = 332014;//宝玉操作错误
+  LogicTreasure_Treasure_Type_Error = 332015;//宝物类型错误
+  LogicTreasure_Jade_Config_Error = 332016;//宝玉配置错误
+  LogicTreasure_Jade_Not_Enough = 332017;//宝玉数量不足
+  LogicTreasure_Jade_Can_Not_Synthesis = 332018;//宝玉无法继续合成
+  LogicTreasure_Jade_Can_Not_Resolve = 332019;//宝玉无法分解
+
+  //红包错误码 333XXX
+  LogicRedbag_Config_Error = 333000;//配置错误
+  LogicRedbag_Not_Exist = 333001;   //红包不存在
+  LogicRedbag_Get_Over = 333002;    //红包已抢完
+  LogicRedbag_Get_Already = 333003;    //已抢过
+  LogicRedbag_Get_Time_Over = 333004;  //没有领取次数
+  LogicRedbag_Send_Time_Over = 333005;  //发送红包已过期
+  LogicRedbag_Receive_Time_Over = 333006;  //领取红包已过期
+
+  //逐鹿八荒 334XXX
+  LogicTopGame_Config_Error = 334000; //配置错误
+  LogicTopGame_Guess_Not_Open = 334001; //竞猜未开始
+  LogicTopGame_Guess_Currency_Not_Enough = 334002; //竞猜币不足
+
+  //自选升星 335XXX
+  LogicRisingStar_Hero_Choose_Error = 335000;//英雄选择错误
+
+  //登录千抽 336XXX
+  LogicThousandGacha_Config_Error = 336000;//登录千抽配置错误
+  LogicThousandGacha_Times_Not_Enough = 336001;//登录千抽数量不足
+  LogicThousandGacha_Replace_Error = 336002;//登录千抽替换出错
+
+  //武将星图 337XXX
+  LogicHeroStarMap_Config_Error = 337000;//武将星图配置错误
+  LogicHeroStarMap_Star_Position_Activated = 337001;//该星位已激活
+  LogicHeroStarMap_Can_Not_Reset_Yet = 337002;//尚不能重置
+  LogicHeroStarMap_Reset_Time_Config_Error = 337003;//星图重置时间配置错误
+
+  //推荐阵容 338XXX
+  LogicRecommendedLineup_Config_Error = 338000;//推荐阵容配置错误
+  LogicRecommendedLineup_Get_Rewards_Error = 338001;//领取奖励错误
+  LogicRecommendedLineup_Param_Error = 338002;//参数错误
+
+  //英雄传记 339XXX
+  LogicHeroBiography_Config_Not_Exist = 339000;//传记配置不存在
+  LogicHeroBiography_Star_Max_Limit = 339001;//传记已满星
+  LogicHeroBiography_Star_Limit = 339002;//传记星级限制
+  LogicHeroBiography_Star_Config_Error = 339003;//传记升星配置异常
+  LogicHeroBiography_MainLv_Exp_Not_Enough = 339004;//传记图鉴值不足
+  LogicHeroBiography_Choose_Limit = 339005;//传记选择限制
+  LogicHeroBiography_Star_Not_Max = 339006;//传记未满星
+  LogicHeroBiography_Divide_Config_Error = 339007;//传记分解配置异常
+
+  //八荒山海 340XXX
+  LogicBeast_Config_Error = 340000;//荒兽配置错误
+  LogicBeast_Unknown_Operation_Type = 340001;//未知操作类型
+  LogicBeast_Realm_Level_Up_To_Limit = 340002;//领域等级达当前阶段上限
+  LogicBeast_Realm_Stage_Up_To_Limit = 340003;//领域星级达上限
+  LogicBeast_Realm_Level_Not_Up_To_Limit = 340004;//领域等级未达上限
+  LogicBeast_Synthesize_Error = 340005;//荒兽合成错误
+  LogicBeast_Level_Up_Error = 340006;//荒兽升级错误
+  LogicBeast_Level_Reach_The_Maximum = 340007;//荒兽等级达最大值
+  LogicBeast_Line_Up_Error = 340008;//荒兽布阵错误
+  LogicBeast_Beast_Is_Locked = 340009;//荒兽未解锁
+  LogicBeast_Gacha_Times_Reach_Maximum = 340010;//荒兽抽卡次数达上限
+  LogicBeast_Codex_Level_Up_Error = 340011;//荒兽羁绊升级错误
+  LogicBeast_Free_Times_Not_Enough = 340012;//免费次数不足
+  LogicBeast_Fall_Enemy_Not_Exist = 340013;//敌军不存在
+  LogicBeast_Fall_Battle_Already = 340014;//已战斗过，待选择
+  LogicBeast_Fall_Monster_Config_Error = 340015;//降世怪物配置异常
+  LogicBeast_Fall_Monster_Type_Error = 340016;//降世怪物类型异常
+  LogicBeast_Fall_Battle_Result_Not_Exist = 340017;//无战斗结果
+  LogicBeast_Function_Not_Open = 340018;//功能未开放
+  LogicBeast_Lineup_Interfere = 340019;//荒兽布阵冲突
+
+  //神器 341XXX
+  LogicGodEquip_Config_Error = 341000;//神器配置错误
+  LogicGodEquip_Exist_Error = 341001;//神器已激活
+  LogicGodEquip_Not_Exist_Error = 341002;//神器不存在
+  LogicGodEquip_Max_Star_Error = 341003;//神器已满星
+  LogicGodEquip_Rule_Slot_Not_Exist_Error = 341004;//神器法则插槽不存在
+  LogicGodEquip_Rule_Slot_Actived_Error = 341005;//神器法则插槽已激活
+  LogicGodEquip_Rule_Pre_Slot_Not_Actived_Error = 341006;//神器法则前置插槽未激活
+  LogicGodEquip_No_Can_Replace_WashAttr_Error = 341007;//洗练属性不存在
+  LogicGodEquip_Wash_Attr_Atlast_One_Error = 341008;//至少需要一条可洗练属性
+  LogicGodEquip_Not_Open = 341009;//装备神器功能未开放
+
+
+  //无双对决 342XXX
+  LogicTopBattleGame_Config_Error = 342000;//无双对决配置错误
+  LogicTopBattleGame_Guess_Full_Error = 342001;//竞猜记录已满
+  LogicTopBattleGame_Guess_Type_Repeat_Error = 342003;//重复竞猜
+  LogicTopBattleGame_Guess_Content_Error = 342004;//竞猜内容不存在
+  LogicTopBattleGame_GainReward_Status_Error = 342005;//当前阶段不可领取
+  LogicTopBattleGame_GainReward_Already_Error = 342006;//开赛奖励已领取
+  LogicTopBattleGame_Guess_Status_Error = 342007;//当前阶段不可竞猜
+
+  //个人信息 343XXX
+  LogicPersonalInfo_Name_Words_Count_Error = 343000;//名字字数错误
+  LogicPersonalInfo_Name_Sensitive_Words_Error = 343001;//名字存在屏蔽词
+  LogicPersonalInfo_Name_Special_Words_Error = 343002;//名字存在特殊字符
+  LogicPersonalInfo_Dont_Have_This_Adornment = 343003;//未拥有此装扮
+  LogicPersonalInfo_Adornment_Out_Of_Time = 343004;//装扮已过期
+  LogicPersonalInfo_Name_Already_Exist = 343005;//名字已存在
+
+  //藏品 344XXX
+  LogicCollection_System_Not_Unlocked = 344000;//系统尚未解锁
+  LogicCollection_Collection_Not_Exit = 344001;//藏品不存在
+  LogicCollection_Config_Error = 344002;//藏品配置错误
+  LogicCollection_Piece_Not_Enough = 344003;//藏品碎片不足
+  LogicCollection_Collection_Group_Not_Exit = 344004;//藏品组不存在
+  LogicCollection_Group_Skill_Choose_Error = 344005;//藏品技能选择错误
+  LogicCollection_Group_Skill_Choose_Hero_Error = 344006;//藏品技能选择英雄不满足要求
+  LogicCollection_Gacha_Group_Not_Exist = 344007;//藏品卡池组不存在
+  LogicCollection_Gacha_Pool_Choose_Error = 344008;//藏品卡池选择错误
+
+  //幻武库 345XXX
+  LogicWeapon_System_Not_Unlocked = 345000;//系统尚未解锁
+  LogicWeapon_Config_Error = 345001;//幻武库配置错误
+  LogicWeapon_Disassemble_Item_Type_Error = 345002;//分解道具类型错误
+  LogicWeapon_Target_Hero_Not_Exist = 345003;//目标英雄不存在
+  LogicWeapon_Equipped_Hero_Not_Exist = 345004;//携带幻武的英雄不存在
+  LogicWeapon_Equipped_Weapon_Not_Exist = 345005;//装备的幻武不存在
+  LogicWeapon_Operation_Type_Error = 345006;//操作类型错误
+  LogicWeapon_Parameter_Error = 345007;//参数错误
+  LogicWeapon_Hero_Not_Meeting_The_Requirements = 345008;//武将不满足要求
+  LogicWeapon_Weapon_Equip_Error = 345009;//该类型幻武已达可装备数量上限
+
+  //九州争霸 346xxx
+  HegemonyWars_Arena_Not_Exist = 346001;//九州争霸竞技场不存在
+  HegemonyWars_Arena_LevelConfig_Error = 346002;//九州争霸竞技场段位配置异常
+  HegemonyWars_Arena_Data_Error = 346003;//九州争霸竞技场个人数据异常
+  HegemonyWars_Arena_PresetRobot_Config_Error = 346004;//九州争霸竞技场预设机器人异常
+  HegemonyWars_City_Not_Exist = 346005;//九州争霸城池不存在
+  HegemonyWars_City_Not_Lord = 346006;//九州争霸城池并非城主
+  HegemonyWars_City_Param_Error = 346007;//九州争霸城池参数错误
+  HegemonyWars_City_RoleType_Error = 346008;//九州争霸城池身份异常
+  HegemonyWars_City_Number_Full = 346009;//九州争霸城池满人
+  HegemonyWars_City_PassRecord_Not_Exist = 346010;//九州争霸城池许可设置不存在
+  HegemonyWars_City_Apply_Full = 346011;//九州争霸城池申请数已满
+  HegemonyWars_Season_Settle = 346012;//九州争霸赛季已结算
+  HegemonyWars_City_End = 346013;//九州争霸城池结束
+  HegemonyWars_Not_Lord_City_Not_Exist = 346014;//九州争霸未加入城池
+  HegemonyWars_Arena_Match_NoBody = 346015;//当前暂无其他对手，请稍后重试
+
+  //兑换码 347xxx
+  RedeemCode_Code_Not_Exist = 347000;//兑换码不存在
+  RedeemCode_You_Have_Already_Used_This_One = 347001;//你已经使用过这个兑换码
+  RedeemCode_Code_Config_Error = 347002;//兑换码配置错误
+  RedeemCode_Code_Group_Used = 347003;//已使用过该组的另一个兑换码
+  RedeemCode_Code_Times_Exhaust = 347004;//可兑换次数耗尽
+  RedeemCode_Code_Using_Time_Error = 347005;//兑换码使用时间错误
+  RedeemCode_Can_Not_Use = 347006;//兑换码不可使用
+
+  // 满城金甲 348xxx
+  LogicGoldenCity_Config_Error = 348000; // 满城金甲配置错误
+  LogicGoldenCity_Dmg_Error = 348001; // 满城金甲伤害错误
+  LogicGoldenCity_No_Reward_Times = 348002; // 满城金甲没有奖励次数
+
+  //花灵 349xxx
+  LogicFlower_Function_Not_Open = 349000; //花灵功能未开放
+  LogicFlower_Config_Error = 349001;//花灵配置错误
+  LogicFlower_Level_Reach_Maximum = 349002;//花灵等级达到限制
+  LogicFlower_Star_Reach_Maximum = 349003;//花灵星级已满
+  LogicFlower_LineUp_Hero_Reach_Limit = 349004;//花灵上阵英雄已满
+  LogicFlower_Hero_Not_Meet_Condition = 349005;//英雄不满足条件
+  LogicFlower_Flower_Not_Active = 349006;//花灵未激活
+  LogicFlower_Star_Not_Reach_Maximum = 349007;//花灵星级未满
+  LogicFlower_Awake_Level_Reach_Maximum = 349008;//花灵觉醒等级满
+  LogicFlower_Unknown_Operate = 349009;//未知操作类型
+  LogicFlower_Flower_Soul_Operate_Error = 349010;//花魄操作错误
+  LogicFlower_Flower_Line_Up_Over_Limit = 349011;//花灵上阵英雄超过数量限制
+  LogicFlower_Hero_Line_Up_Full = 349012;//英雄上阵花灵已满
+  LogicFlower_Line_Up_Error = 349013;//花灵上阵错误
+  
+  // 军团战役 350xxx
+  LogicLeagueCampaign_Has_Sign_Up = 350000; // 已报名
+  LogicLeagueCampaign_Sign_Up_Not_Meet_1 = 350001; // 报名未满足条件 1
+  LogicLeagueCampaign_Sign_Up_Not_Meet_2 = 350002; // 报名未满足条件 2
+  LogicLeagueCampaign_Team_Array_Max = 350003; // 队伍数量超上限
+  LogicLeagueCampaign_Hero_Repeated = 350004; // 队伍英雄重复
+  LogicLeagueCampaign_Room_Not_Exist = 350005; // 房间不存在
+  LogicLeagueCampaign_Set_Team_Time_Error = 350006; // 队伍不在设置的时间段
+  LogicLeagueCampaign_Team_Locked = 350007; // 队伍已锁定
+  LogicLeagueCampaign_City_Protect = 350008; // 城池处于保护期
+  LogicLeagueCampaign_City_Self = 350009; // 不能攻打自己的城池
+  LogicLeagueCampaign_City_Occupied = 350010; // 城池已占领
+  LogicLeagueCampaign_City_Not_Self = 350011; // 不能驻守非自己的城池
+  LogicLeagueCampaign_City_Team_Limit = 350012; // 城池驻守队伍已满
+  LogicLeagueCampaign_Forbid_In_Battle = 350013; // 军团战役战斗期间禁止该操作
+  LogicLeagueCampaign_Forbid_Enter_Room = 350014; // 军团战役报名之后加入军团的禁止进入房间
+
+  // 阵法 351xxx
+  LogicFormation_Function_Not_Open = 351000; // 阵法功能未开放
+  LogicFormation_Config_Error = 351001;//阵法配置错误
+  LogicFormation_Piece_Not_Enough = 351002;//阵法碎片不足
+  LogicFormation_Not_Active = 351003;//阵法未激活
+  LogicFormation_Level_Reach_Maximum = 351004;//阵法等级已满
+  LogicFormation_Unknown_Piece_Info = 351005;//未知碎片
+
+  //云台 352xxx
+  LogicCloudStage_Function_Not_Open = 352000;//功能未解锁
+  LogicCloudStage_Config_Error = 352001;//配置错误
+  LogicCloudStage_Already_Exist = 352002;//云台已激活
+  LogicCloudStage_Condition_Limit = 352003;//云台条件不满足
+  LogicCloudStage_BlessLv_Limit = 352004;//庇佑等级不匹配
+  LogicCloudStage_Stone_No_Change = 352005;//神石无变化
+  LogicCloudStage_Stone_Config_Error = 352006;//云台神石配置错误
+  LogicCloudStage_StarPivot_Not_Match = 352007;//云台星枢不匹配
+  LogicCloudStage_Stone_Star_Limit = 352008;//神石星级限制
+  LogicCloudStage_Not_Exist = 352009;//云台未解锁
+  LogicCloudStage_StarPivot_Lv_Limit = 352010;//星枢等级上限
+  LogicCloudStage_StarPivot_Config_Error = 352011;//星枢配置错误
+  LogicCloudStage_Manager_Error = 352012;//云台空系统
+  LogicCloudStage_StarPivot_Not_Exist = 352013;//星枢未点亮
+  LogicCloudStage_StarPivot_Lv_Not_Enough = 352014;//星枢等级不足
+
+  // 御魂玩法
+  SoulJadeTeam_Room_Not_Exist = 353000; // 房间不存在
+  SoulJadeTeam_Room_Full = 353001; // 房间已满
+  SoulJadeTeam_Kick_User_Not_In_Room = 353002; // 被踢玩家已不在房间
+  SoulJadeTeam_User_Kick_Out = 353003; // 已被该房间房主踢出，无法继续加入该房间
+  // 御魂养成 354xxx
+  LogicSoulJade_Function_Not_Open = 354000;//魂玉养成未开放
+  LogicSoulJade_Invalid_SoulJade = 354001 ;// 魂玉不存在或无效
+  LogicSoulJade_Already_Equipped = 354002; // 魂玉已穿戴
+  LogicSoulJade_Equipped_Cannot_Operate = 354003; // 已穿戴魂玉不能进行该操作（如分解/标记丢弃）
+  LogicSoulJade_Locked_Cannot_Operate = 354004; // 已锁定魂玉不能进行该操作
+  LogicSoulJade_Position_Occupied = 354005; // 穿戴位置已被占用
+  LogicSoulJade_No_Valid_To_Disassemble = 354006; // 无有效魂玉可分解
+  LogicSoulJade_No_Available_To_Equip = 354007; // 无可用魂玉可穿戴（一键穿戴）
+  LogicSoulJade_Level_Not_Enough = 354008; // 强化等级不足，无法突破
+  LogicSoulJade_Already_Max_Stage = 354009; // 已达最大突破阶段
+  LogicSoulJade_Upgrade_Material_Invalid = 354010; // 强化材料无效（非经验石）
+  LogicSoulJade_Upgrade_No_Exp_Gain = 354011; // 本次强化无经验增加
+  LogicSoulJade_Swap_Same_SoulJade = 354012; // 置换的两件魂玉相同
+  LogicSoulJade_OneClick_Has_Equipped = 354013; // 一键穿戴时英雄已有魂玉
+  LogicSoulJade_OneClick_No_Equipped = 354014 ;// 一键卸下时英雄无魂玉
+  LogicSoulJade_Params_Error = 354015 ;// 参数错误
+  LogicSoulJade_Config_Error = 354016 ;// 配置异常
+  LogicSoulJade_Flag_UnDefine = 354017 ;// 未定义的标记
+  LogicSoulJade_Flag_Change_None = 354018 ;// 无魂玉标记变动
+  LogicSoulJAde_Base_Config_Error = 354019; //魂玉基础配置异常
+  LogicSoulJAde_Break_Config_Error = 354020; //魂玉突破配置异常
+  LogicSoulJAde_Upgrade_Config_Error = 354021; //魂玉升级配置异常
+
+
+  //Gateway模块错误码
+  //公用错误码 400xxx
+  GatewayCommon_System_Error = 400000;        //系统错误
+  GatewayCommon_Version_Too_Law = 400001;     //版本号过低
+  GatewayCommon_Token_Invaild = 400002;       //无效的token
+  GatewayCommon_Token_Timeout = 400003;       //token超时
+  GatewayCommon_Value_Error = 400004;         //未知参数
+  GatewayCommon_Server_Maintenance_Error = 400005;      //服务器维护中
+  GatewayCommon_Server_Unopen_Error = 400006;      //服务未开启错误
+  GatewayCommon_Server_Temp_Maintenance_Error = 400007;      //服务器临时维护,请5分钟后重试
+  GatewayCommon_User_Robbed = 400008;      //账号占用中
+  GatewayCommon_Server_BattleAreaMerging_Error = 400009;      //服务器战区合并中
+
+  //角色错误码 401xxx
+  GatewayRole_Not_Exist = 401001;        //角色不存在
+  GatewayRole_Account_Banned = 401002;    //账号已封禁
+  GatewayRole_Banned = 401003;        //角色已封禁
+  GatewayRole_Chat_Banned = 401004;      //被禁言中
+  GatewayRole_Remote_Login = 401005;      //异地登录顶号
+
+  //Login 模块错误码
+  LoginCommon_System_Error = 500000; //系统错误
+  //账号错误 501
+  LoginAccount_Already_Bound = 501000;//账号已绑定
+  LoginAccount_Roles_Not_Exist = 501001;//账号下无角色
+  LoginAccount_Unknown_LoginType = 501002;//未知登录方式
+  LoginAccount_Login_Failed = 501003;//登录失败
+
+  //Report模块错误码
+  //公用错误码 600xxx
+  ReportCommon_Report_Invaild_Error = 600000; //战报已过期
+
+}
+
+message Error {
+  ErrorCode code = 1; //错误码
+  repeated string args = 2; //错误码参数
+}

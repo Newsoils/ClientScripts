@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
@@ -8,6 +7,16 @@ using UnityEngine.UI;
 
 public class PlantInteractPanel : UIPanelBase
 {
+    private enum PopType
+    {
+        None,
+        Seed,
+        Fertilizer,
+        Harvest,
+        Remove,
+        PotState
+    }
+
     public GameObject panelObj;
     public GameObject rightButtonRoot;
     public Button BtnRemove;
@@ -15,13 +24,16 @@ public class PlantInteractPanel : UIPanelBase
     public Button BtnWater;
     public Button BtnRemoveGrass;
     public Button BtnEdit;
+    public Button BtnShop;
     public GameObject popSeedPrefab;
     public GameObject popFertilizerPrefab;
     public GameObject popHarvestPrefab;
     public GameObject popRemovePrefab;
     public GameObject potPanelPrefab;
     private List<GameObject> pops = new List<GameObject>();
-    private float waterTime;
+    private PopType currentPopType = PopType.None;
+    private PlantData currentSeedData;
+    private Pot currentPot;
     
     private void Start()
     {
@@ -30,16 +42,17 @@ public class PlantInteractPanel : UIPanelBase
         BtnWater.onClick.AddListener(() =>
         {
             EditManager.Instance.SetMode(new WaterPlantMode());
-            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "现在手指可以在屏幕上划动，给植物浇水");
+            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "现在手指可以在屏幕上划动，给植物浇水！");
         });
-        //BtnRemoveGrass.onClick.AddListener(() => ChangeState(PlantState.RemoveGrass));
         BtnEdit.onClick.AddListener(() => UIManager.Instance.OpenPanel<PlantPanel>());
+        BtnShop.onClick.AddListener(() => EvtDsp.TriggerEvt(EvtNames.OpenShoppingPanel));
         EvtDsp.AddEvt<PlantData>(EvtNames.ShowSeedPop, ShowSeedPops);
         EvtDsp.AddEvt(EvtNames.ShowFertilizerPop, ShowFertilizerPops);
         EvtDsp.AddEvt(EvtNames.ShowRemovePop, ShowRemovePops);
         EvtDsp.AddEvt(EvtNames.ShowHarvestPop, ShowHarvestPops);
         EvtDsp.AddEvt<Pot>(EvtNames.ShowPotState, ShowPotPanel);
         EvtDsp.AddEvt(EvtNames.ClosePlantPop, ClosePlantPops);
+        EvtDsp.AddEvt(EvtNames.ReloadPlantData, RefreshCurrentPops);
 
         EvtDsp.AddEvt(EvtNames.OnPhonePanelOpen, ClosePanel);
         ClosePanel();
@@ -51,12 +64,14 @@ public class PlantInteractPanel : UIPanelBase
         BtnHarvest.onClick.RemoveAllListeners();
         BtnWater.onClick.RemoveAllListeners();
         BtnRemoveGrass.onClick.RemoveAllListeners();
+        BtnShop.onClick.RemoveAllListeners();
         EvtDsp.RemoveEvt<PlantData>(EvtNames.ShowSeedPop, ShowSeedPops);
         EvtDsp.RemoveEvt(EvtNames.ShowFertilizerPop, ShowFertilizerPops);
         EvtDsp.RemoveEvt(EvtNames.ShowRemovePop, ShowRemovePops);
         EvtDsp.RemoveEvt(EvtNames.ShowHarvestPop, ShowHarvestPops);
         EvtDsp.RemoveEvt<Pot>(EvtNames.ShowPotState, ShowPotPanel);
         EvtDsp.RemoveEvt(EvtNames.ClosePlantPop, ClosePlantPops);
+        EvtDsp.RemoveEvt(EvtNames.ReloadPlantData, RefreshCurrentPops);
 
         EvtDsp.RemoveEvt(EvtNames.OnPhonePanelOpen, ClosePanel);
     }
@@ -73,17 +88,15 @@ public class PlantInteractPanel : UIPanelBase
     }
     public override void OpenPanel(params object[] data)
     {
-        // ShowAll+SwitchPlantMode 会再次 OpenPanel；清掉上次的盆阶段气泡，避免叠在其它全屏 UI 上
         ClosePlantPops();
         panelObj.SetActive(true);
     }
     private void ShowSeedPops(PlantData data)
     {
-        foreach(var obj in pops)
-        {
-            Destroy(obj.gameObject);
-        }
-        pops.Clear();
+        currentPopType = PopType.Seed;
+        currentSeedData = data;
+        currentPot = null;
+        ClearPops();
         var potList = RoomSystem.currentRoom.pots;
         foreach(var pot in potList)
         {
@@ -98,16 +111,15 @@ public class PlantInteractPanel : UIPanelBase
 
     private void ShowFertilizerPops()
     {
-        foreach (var obj in pops)
-        {
-            Destroy(obj.gameObject);
-        }
-        pops.Clear();
+        currentPopType = PopType.Fertilizer;
+        currentSeedData = null;
+        currentPot = null;
+        ClearPops();
         var potList = RoomSystem.currentRoom.pots;
         foreach (var pot in potList)
         {
             Plant plant = PlantManager.Instance.GetPlantByPot(pot);
-            if (plant != null && !plant.data.isFertilize && plant.data.growStage < 4)
+            if (plant != null && !plant.data.isFertilize && plant.data.growStage == 1)
             {
                 GameObject obj = Instantiate(popFertilizerPrefab, panelObj.transform);
                 obj.GetComponent<PotPop>().Init(pot);
@@ -117,16 +129,15 @@ public class PlantInteractPanel : UIPanelBase
     }
     private void ShowHarvestPops()
     {
-        foreach (var obj in pops)
-        {
-            Destroy(obj.gameObject);
-        }
-        pops.Clear();
+        currentPopType = PopType.Harvest;
+        currentSeedData = null;
+        currentPot = null;
+        ClearPops();
         var potList = RoomSystem.currentRoom.pots;
         foreach (var pot in potList)
         {
             Plant plant = PlantManager.Instance.GetPlantByPot(pot);
-            if (plant != null && plant.data.growStage == 4)
+            if (plant != null && plant.data.growStage == 2)
             {
                 GameObject obj = Instantiate(popHarvestPrefab, panelObj.transform);
                 obj.GetComponent<PotPop>().Init(pot);
@@ -136,11 +147,10 @@ public class PlantInteractPanel : UIPanelBase
     }
     private void ShowRemovePops()
     {
-        foreach (var obj in pops)
-        {
-            Destroy(obj.gameObject);
-        }
-        pops.Clear();
+        currentPopType = PopType.Remove;
+        currentSeedData = null;
+        currentPot = null;
+        ClearPops();
         var potList = RoomSystem.currentRoom.pots;
         foreach (var pot in potList)
         {
@@ -155,11 +165,10 @@ public class PlantInteractPanel : UIPanelBase
     }
     private void ShowPotPanel(Pot pot)
     {
-        foreach (var obj in pops)
-        {
-            Destroy(obj.gameObject);
-        }
-        pops.Clear();
+        currentPopType = PopType.PotState;
+        currentSeedData = null;
+        currentPot = pot;
+        ClearPops();
         Plant plant = PlantManager.Instance.GetPlantByPot(pot);
         if (plant != null)
         {
@@ -168,7 +177,37 @@ public class PlantInteractPanel : UIPanelBase
             pops.Add(obj);
         }
     }
+    private void RefreshCurrentPops()
+    {
+        switch (currentPopType)
+        {
+            case PopType.Seed:
+                if (currentSeedData != null)
+                    ShowSeedPops(currentSeedData);
+                break;
+            case PopType.Fertilizer:
+                ShowFertilizerPops();
+                break;
+            case PopType.Harvest:
+                ShowHarvestPops();
+                break;
+            case PopType.Remove:
+                ShowRemovePops();
+                break;
+            case PopType.PotState:
+                if (currentPot != null)
+                    ShowPotPanel(currentPot);
+                break;
+        }
+    }
     private void ClosePlantPops()
+    {
+        currentPopType = PopType.None;
+        currentSeedData = null;
+        currentPot = null;
+        ClearPops();
+    }
+    private void ClearPops()
     {
         foreach (var obj in pops)
         {

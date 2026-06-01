@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
@@ -11,10 +12,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public LayerMask targetLayer;
         public float maxDistance = 100;
 
-        /// <summary>小地图选房间会关 UI，同帧内 EventSystem 可能已点不到图；由 <see cref="MapPanel.SwitchRoom"/> 置位，本帧 LateUpdate 里跳过世界射线。</summary>
-        private static bool s_mapRoomSwitchConsumedPick;
+        /// <summary>UI 同帧关闭后 EventSystem 可能已射不到原 UI；置位后本帧 LateUpdate 跳过世界射线，避免点击穿透到门/家具。</summary>
+        private static bool s_uiConsumedPick;
 
-        public static void NotifyMapRoomSwitchConsumedPick() => s_mapRoomSwitchConsumedPick = true;
+        public static void NotifyUiConsumedPick() => s_uiConsumedPick = true;
+        public static void NotifyMapRoomSwitchConsumedPick() => NotifyUiConsumedPick();
 
         private void Update()
         {
@@ -28,9 +30,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             if (!InputManager.Instance.WasSingleTapThisFrame)
                 return;
-            bool mapTap = s_mapRoomSwitchConsumedPick;
-            s_mapRoomSwitchConsumedPick = false;
-            if (mapTap)
+            bool uiConsumedPick = s_uiConsumedPick;
+            s_uiConsumedPick = false;
+            if (uiConsumedPick)
                 return;
             if (IsScreenPositionOverRaycastableUi(InputManager.Instance.LastTapPosition))
                 return;
@@ -42,6 +44,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             Ray ray = Camera.main.ScreenPointToRay(screenPosition);
             bool flag = true;
             RaycastHit[] hits = Physics.RaycastAll(ray, maxDistance, targetLayer);
+            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
             foreach (var hit in hits)
             {
                 if (hit.collider.enabled)

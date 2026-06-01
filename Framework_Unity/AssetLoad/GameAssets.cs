@@ -14,13 +14,15 @@ namespace CLIP.Framework_Unity.Asset
 
         public static void Init()
         {
-            //var json = File.ReadAllText(
-            //    Path.Combine(Application.streamingAssetsPath, "resource_index.json"));
+            var ta = Resources.Load<TextAsset>(GameAssetsPathDefine.ResourceIndexJsonResourcesPath);
+            if (ta == null)
+            {
+                Debug.LogError($"[ResourceIndexRuntime] 找不到资源索引文件: {GameAssetsPathDefine.ResourceIndexJsonResourcesPath}，"
+                    + "请确认 ResourceIndexGenerator 已生成索引。");
+                return;
+            }
 
-            var json = Resources.Load<TextAsset>("Config/resource_index");
-
-            var data = Serialization_Provider.DeserializeObject<ResourceIndexData>(json.text);
-
+            var data = Serialization_Provider.DeserializeObject<ResourceIndexData>(ta.text);
             table = new Dictionary<string, ResourceItem>();
             foreach (var e in data.Items)
                 table[e.key] = e;
@@ -118,7 +120,7 @@ namespace CLIP.Framework_Unity.Asset
         /// <summary>
         /// 通过逻辑 Key 加载（异步）
         /// </summary>
-        private async Task<T> LoadAsync<T>(string key, Action<T> callback = null) where T : UnityEngine.Object
+        private async Task<T> LoadAsyncByKey<T>(string key, Action<T> callback = null) where T : UnityEngine.Object
         {
             if (allAssets.TryGetValue(key, out var asset))
             {
@@ -191,9 +193,9 @@ namespace CLIP.Framework_Unity.Asset
         }
 
 
-        public void LoadAndSet<T>(string key, Action<T> onLoaded) where T : UnityEngine.Object
+        public void LoadAndSetByKey<T>(string key, Action<T> onLoaded) where T : UnityEngine.Object
         {
-            _ = LoadAsync<T>(key, onLoaded);
+            _ = LoadAsyncByKey<T>(key, onLoaded);
         }
 
         public static bool TryConvertFileNameToResKey(string fileName, string fileType, out string resKey)

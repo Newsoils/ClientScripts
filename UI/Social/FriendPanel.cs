@@ -24,6 +24,7 @@ public class FriendPanel : MonoBehaviour
     public UnAcceptFriendUnit searchedUnacceptedFriend;
 
     private bool _isSearching;
+    private bool _isFiltering;
 
     public GameObject friendsItemView;
 
@@ -36,7 +37,7 @@ public class FriendPanel : MonoBehaviour
             SM._on_refresh_social_state.AddListener(ShowSearchResults);
         }
 
-        searchInput.onValueChanged.AddListener(DoSearch);
+        searchInput.onValueChanged.AddListener(OnSearchInputValueChanged);
         btnSearch.onClick.AddListener(DoSearch);
         //btnClearSearch.onClick.AddListener(ClearSearch);
     }
@@ -48,7 +49,7 @@ public class FriendPanel : MonoBehaviour
             SM._on_refresh_social_state.RemoveListener(ShowSearchResults);
         }
 
-        searchInput.onSubmit.RemoveListener(DoSearch);
+        searchInput.onValueChanged.RemoveListener(OnSearchInputValueChanged);
         btnSearch.onClick.RemoveAllListeners();
         //btnClearSearch.onClick.RemoveAllListeners();
     }
@@ -65,7 +66,6 @@ public class FriendPanel : MonoBehaviour
         obj.SetActive(false);
         ClearSearch();
     }
-
 
     public void RefreshPanel()
     {
@@ -110,6 +110,19 @@ public class FriendPanel : MonoBehaviour
         SM.on_try_find_friend(keyword);
     }
 
+    private void OnSearchInputValueChanged(string text)
+    {
+        if (_isFiltering) return;
+
+        string filtered = SensitiveWordManager.Instance.FilterText(text);
+        if (filtered != text)
+        {
+            _isFiltering = true;
+            searchInput.text = filtered;
+            _isFiltering = false;
+        }
+    }
+
     private void ClearSearch()
     {
         friendsItemView?.SetActive(true);
@@ -134,7 +147,7 @@ public class FriendPanel : MonoBehaviour
         if (!_isSearching || SM._temp_search_result == null) return;
 
         var results = SM._temp_search_result;
-        if (results.Count == 0 || string.IsNullOrWhiteSpace(results[0].friend_id))
+        if (results.Count == 0 || results[0].RoleId == 0)
         {
             PromptMessage.Instance.ShowUpPrompt("未找到该玩家");
             return;
@@ -142,7 +155,7 @@ public class FriendPanel : MonoBehaviour
 
         var record = results[0];
         bool isAccepted = SM._current_social_info._friend_accepted_info_record
-            .Exists(f => f.friend_id == record.friend_id);
+            .Exists(f => f.RoleId == record.RoleId);
 
         if (isAccepted)
         {

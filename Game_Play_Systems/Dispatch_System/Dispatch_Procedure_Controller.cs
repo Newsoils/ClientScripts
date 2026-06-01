@@ -60,7 +60,7 @@ public class Dispatch_Procedure_Controller : MonoBehaviour
         {
             return;
         }
-        if(current_info.foodName == null)
+        if(current_info.foodName == null || string.IsNullOrEmpty(current_info.foodName))
         {
             ClearAllChildren(foodRoot);
         }
@@ -69,7 +69,7 @@ public class Dispatch_Procedure_Controller : MonoBehaviour
             ChangeItemPrefab(Item_Type.Food, current_info.foodName);
         }
 
-        if (current_info.snackName == null)
+        if (current_info.snackName == null || string.IsNullOrEmpty(current_info.snackName))
         {
             ClearAllChildren(snackRoot);
         }
@@ -78,16 +78,26 @@ public class Dispatch_Procedure_Controller : MonoBehaviour
             ChangeItemPrefab(Item_Type.Snack, current_info.snackName);
         }
 
-        if (current_info.tapeName == null)
+        if (current_info.tapeName == null || string.IsNullOrEmpty(current_info.tapeName))
         {
-            cdMesh.gameObject.SetActive(false);
+            if (cdMesh != null)
+                cdMesh.gameObject.SetActive(false);
         }
         else
         {
-            cdMesh.gameObject.SetActive(true);
+            if (cdMesh != null)
+                cdMesh.gameObject.SetActive(true);
             ChangeItemPrefab(Item_Type.Tape, current_info.tapeName);
         }
 
+    }
+
+    public void ClearDispatchSceneModels()
+    {
+        ClearAllChildren(foodRoot);
+        ClearAllChildren(snackRoot);
+        if (cdMesh != null)
+            cdMesh.gameObject.SetActive(false);
     }
 
     public void ChangeItemPrefab(Item_Type item_Type, string name)
@@ -97,6 +107,9 @@ public class Dispatch_Procedure_Controller : MonoBehaviour
 
     public async Task ChangeItemPrefabAsync(Item_Type item_Type,string name)
     {
+        if (string.IsNullOrEmpty(name))
+            return;
+
         switch (item_Type)
         {
             case Item_Type.Food:
@@ -140,7 +153,7 @@ public class Dispatch_Procedure_Controller : MonoBehaviour
         {
             case Procedure_Dispatch.SelectBag:
                 procudure_SelectBag.SetActive(true);
-                //Debug.Log("进入选择背包阶段");
+                ClearDispatchSceneModels();
                 break;
             case Procedure_Dispatch.SelectFood:
                 procudure_SelectFood.SetActive(true);

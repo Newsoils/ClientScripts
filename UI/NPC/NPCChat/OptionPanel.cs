@@ -75,11 +75,11 @@ namespace CLIP.Project_Mouse.UI
             RectTransform contentRect = content.GetComponent<RectTransform>();
 
             int index = 0;
-            foreach (var kv in dialogue.Options)
+            foreach (var opt in dialogue.options)
             {
                 if (index >= buttonHandlers.Count) break;
                 int capturedIndex = index;
-                _options.Add(new OptionData(kv.Key, () =>
+                _options.Add(new OptionData(opt.content, () =>
                 {
                     buttonHandlers[capturedIndex]?.Invoke();
                     StartCoroutine(DeferredDismiss(onDismiss));

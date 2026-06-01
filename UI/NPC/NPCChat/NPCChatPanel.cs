@@ -129,7 +129,7 @@ namespace CLIP.Project_Mouse.UI
                 return;
             }
 
-            GameAssets.Instance.LoadAndSet<Sprite>(iconResourceName, sprite =>
+            GameAssets.Instance.LoadAndSetByKey<Sprite>(iconResourceName, sprite =>
             {
                 onLoaded?.Invoke(sprite);
             });

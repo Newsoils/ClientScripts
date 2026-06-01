@@ -1,0 +1,22 @@
+[
+  {
+    "id": 64003,
+    "name": "Cross.RegisterModuleReq"
+  },
+  {
+    "id": 64004,
+    "name": "Cross.RegisterModuleRes"
+  },
+  {
+    "id": 64006,
+    "name": "Cross.SyncRankScoreDataToCrossS2S"
+  },
+  {
+    "id": 64008,
+    "name": "Cross.SyncRankDataToCrossS2S"
+  },
+  {
+    "id": 64010,
+    "name": "Cross.CrossCommonRankActivityInfoSyncS2S"
+  }
+]

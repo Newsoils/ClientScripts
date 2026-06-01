@@ -44,7 +44,7 @@ public class NPCPanel : MonoBehaviour
 
     public void RefreshNPCList()
     {
-        var npcDict = NPCManager.Instance.NPC_Info_Dict;
+        var npcDict = NPCManager.Instance.NPC_Info_Dic;
         var acquaintedNpcs = new List<NPC_Info>();
         foreach (var kv in npcDict)
         {

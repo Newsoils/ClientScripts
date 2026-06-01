@@ -147,7 +147,7 @@ public class ScrollerController_DispatchItem : MonoBehaviour, IEnhancedScrollerD
         }
         else if (state == DispatchWarehouseCellState.InUseElsewhere)
         {
-            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "库存不足，该物品已在其他背包中使用");
+            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "库存不足，该物品已在其他背包中使用！");
             return;
         }
         else
@@ -165,16 +165,18 @@ public class ScrollerController_DispatchItem : MonoBehaviour, IEnhancedScrollerD
         var shoppingPanel = UIManager.Instance.OpenPanel<ShoppingPanel>();
         shoppingPanel.OpenOrChooseDailyMagazine();
 
-        // 首次打开时 DailyMagazinePanel.Start() 会默认切到 Clothes，等其执行后再强制切到携带物。
+        // 首次打开时 DailyMagazinePanel.Start() 会默认切到 Clothes，等其执行后再强制切到对应携带物页签。
         yield return null;
-        shoppingPanel.dailyMagazinePanel.OnPrimaryCategoryButtonClick(DailyShoppingPrimaryCategory.Belonging);
         switch(currentType)
         {
             case Item_Type.Food:
-                shoppingPanel.dailyMagazinePanel.OnSecondaryCategoryButtonClick(DailyShoppingSecondaryCategory.Food);
+                shoppingPanel.dailyMagazinePanel.OnTabButtonClick(DailyShoppingTab.Food);
                 break;
             case Item_Type.Snack:
-                shoppingPanel.dailyMagazinePanel.OnSecondaryCategoryButtonClick(DailyShoppingSecondaryCategory.Snack);
+                shoppingPanel.dailyMagazinePanel.OnTabButtonClick(DailyShoppingTab.Snack);
+                break;
+            case Item_Type.Tape:
+                shoppingPanel.dailyMagazinePanel.OnTabButtonClick(DailyShoppingTab.Tape);
                 break;
         }
 

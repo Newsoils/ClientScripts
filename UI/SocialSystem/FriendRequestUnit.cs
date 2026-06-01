@@ -19,7 +19,7 @@ namespace CLIP.Project_Mouse.UI
 
         public void InitFriendUnit()
         {
-            nameText.text = record._brief_info._player_nick_name;
+            nameText.text = record.DisplayName;
         }
 
         public void FriendDetail()

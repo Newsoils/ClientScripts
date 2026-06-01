@@ -28,7 +28,7 @@ public abstract class UIPanelBase : UIBase, IPanel
 
     public virtual void OnDestroy()
     {
-        UIManager.Instance.UnregisterPanel(PanelID);
+        UIManager.Instance?.UnregisterPanel(PanelID);
     }
 
     private void TryRegister()
@@ -43,7 +43,7 @@ public abstract class UIPanelBase : UIBase, IPanel
     /// </summary>
     public virtual void Initialize()
     {
-        UIManager.Instance.RegisterPanel(this);
+        UIManager.Instance?.RegisterPanel(this);
     }
 
     /// <summary>

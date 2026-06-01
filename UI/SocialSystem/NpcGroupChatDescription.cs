@@ -49,7 +49,7 @@ namespace CLIP
                     icon.InitNpcIcon(null, this);
 
                     int idx = 1;
-                    foreach (var kv in CLIP.Project_Mouse.Game_Play_System.NPCManager.Instance.NPC_Info_Dict)
+                    foreach (var kv in CLIP.Project_Mouse.Game_Play_System.NPCManager.Instance.NPC_Info_Dic)
                     {
                         if (idx < childCount)
                         {

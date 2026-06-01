@@ -14,6 +14,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 {
     public class TimeManager : SingletonMono<TimeManager>
     {
+        protected override bool PersistAcrossScenes => true;
         private DateTime curTime;
         public string currentTime;
         private Timer timer;
@@ -42,11 +43,21 @@ namespace CLIP.Project_Mouse.Game_Play_System
         }
         public void GetTime(Action onComplete = null)
         {
-            EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "GetTime", GetTimeTask(), (string result) => onComplete?.Invoke());
+            // TODO zhaorui
+            //EvtDsp.ReturnEvt< ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, GetTimeTask(), (string result) => onComplete?.Invoke());
+        }
+
+        public void SetServerTime(long unixSeconds)
+        {
+            curTime = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).LocalDateTime;
+            AnalyzeTime();
+            isInit = true;
+            EvtDsp.TriggerEvt(EvtNames.On_Set_Time);
         }
         private ServerTask GetTimeTask()
         {
-            ServerTask task = new ServerTask("GetTime", (string result, ServerTask task) =>
+            var req = new Cmd.GetServerCurrentTimeReq();
+            ServerTask task = new ServerTask(req, (string result, ServerTask task) =>
             {
                 if(result != "nodata")
                 {

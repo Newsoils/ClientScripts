@@ -1,0 +1,938 @@
+syntax = "proto3";
+package common;
+option go_package = "github.com/xcompany/xgame/proto/common";
+
+message ServerRoleInfo {
+  uint64 RoleID = 1;        //角色ID
+  string RoleName = 2;        //roleName
+  string RoleHeadIcon = 3;  //头像
+  int32 Lv = 4;          //角色当前等级
+  int64 Exp = 5;        //角色当前经验
+  int64 Power = 6;      //玩家战力
+  int32 HeroLevelTogether = 7; //共鸣等级
+  int64 VipLv = 8; //vip等级
+  int64 VipExp = 9; //vip经验
+  int64 RoleHeadSpine = 10; //玩家角色形象
+  int32 HeroLevelTogetherMaster = 11;//共鸣大师等级
+  int32 ServerID = 12;//归属服务器
+  int32 OfficialLv = 13;//官职等级
+  string GuideRecord = 14;//引导记录
+  LeagueInfo League = 15; //联盟信息
+  repeated MonthlyCard cards = 16; //月卡信息
+  int32 RankAnonymous = 17; //排行榜是否匿名 0 不匿名  1 匿名
+  int64 HeadRing = 18; //头像框
+  int64 MainLineRecord = 19; //主线关卡进度
+  int32 MainTrialTowerFloor = 20; //主塔进度
+  int32 HeroCollect = 21; //武将收集数量
+  int32 ArenaRank = 22; //竞技场排名
+  int64 RoleTitle = 24;//玩家称号
+  int64 RoleChatBubble = 25;//聊天气泡
+  map<string, string> ClientRecords = 26;
+  int32 NickNameChangeTimes = 27;//玩家改名次数
+  repeated MonthlyCard2 card2s = 28; //月卡2信息
+  int32 RoleCreateTime = 29;//创角时间
+  int32 TotalRecharge = 30;//充值金额
+  repeated int64 Privilege = 31;//特权
+  int32 FirstInfoFlag = 32;//首次信息标记 0位 创角奖励 (其他首次可向高位扩展)
+  int32 NextLevelRewardLevel = 33; //当前已领取过最高的等级
+  int32 NextLevelRewardSegment = 34; //当前已领取过最高的段位
+  int32 TodayShopRefreshTimes = 35; //今日商店刷新次数
+  repeated int64 BuyDiamondTimesRecord = 36;//购买钻石次数记录
+}
+
+message ItemInfo {
+  uint64 UID = 1;       //唯一ID
+  uint64 ConfigID = 2;  //道具配置ID
+  int64 Count = 3;      //持有数量
+  int32 TypeID = 4;//类型ID
+  int32 IsNew = 5;//是否为新获取
+  int32 IsLock = 6;//是否加锁
+  repeated ItemInfo ChangedItems = 7;  //转化后的道具
+  repeated int32 TagType = 8; //奖励使用时的角标类型
+  int64 VaildTime = 9; //失效时间
+}
+
+//邮件信息
+message MailInfo {
+  uint64 MailID = 1;
+  uint64 RoleID = 2;
+  LocaleParam Title = 3;
+  repeated LocaleParam TitleParams = 4;
+  LocaleParam SenderName = 5;
+  LocaleParam Content = 6;
+  repeated LocaleParam ContentParams = 7;
+  int64 CreateTime = 8;
+  int32 IsReceive = 9;
+  repeated ItemInfo ItemAwards = 10;
+  int64 ValidTime = 11;
+  int32 IsRead = 12;
+  int32 MailType = 13;
+}
+
+//文本数据
+message LocaleParam {
+  LocaleParamType ParamType = 1;  // 参数类型：1 文本，2 本地化Key
+  string ParamString = 2;  // 参数文本
+}
+
+//文本数据类型
+enum LocaleParamType{
+  ParamType_None = 0;//空置
+  ParamType_Text = 1;//直接显示
+  ParamType_Translate = 2;//需要替换翻译
+}
+
+//抽卡卡池记录
+message GachaRecord {
+  uint64 RecordID = 1;//唯一ID
+  int64 TagID = 2;//唯一关联页签ID
+  int64 PoolID = 3;//实际卡池ID
+  uint64 RoleID = 4;//角色ID
+  int32 DailyGachaCount = 5;//每日已抽取次数
+  int64 DailyGachaResetTime = 6;//下次每日上限重置时间
+  int32 GachaFreeTimes = 7;//免费抽卡已用次数
+  int64 NextCycleFreeGachaTime = 8;//下次重置免费抽卡时间
+  int32 TotalGachaTimes = 9;//抽卡计数
+  int32 GachaFreeTimesMax = 10;//免费抽卡上限次数
+}
+
+//抽卡保底记录
+message GachaEnsureRecord {
+  int64 EnsureGroupID = 1;//保底组ID
+  repeated int32 RemainingTimes = 2;//保底
+}
+
+//玩家等级提升
+message PlayerLevelUpResult {
+  int32 Old = 1;//原等级
+  int64 OldExp = 2;//原经验
+  int32 New = 3;//新等级
+  int64 NewExp = 4;//新经验
+  int64 AddExp = 5;//增加的经验
+  repeated ItemInfo Rewards = 6;//添加的道具
+}
+
+message NormalRankInfo {
+  int64 RankID = 1;//排行榜ID
+  int32 RankType = 2;//排行榜类型
+  repeated SingleRoleRankInfo Infos = 3;//排行数据
+  SingleRoleRankInfo Special = 4;//特别对象
+  repeated uint64 ThumbsUpList = 5;//已点赞名单
+  int64 ThumbsUpTimes = 6;//已点赞次数
+  int32 CompletedMission = 7;//排行榜相关任务完成数量(可领取
+  int64 SettleTime = 8;//结算时间
+  int64 ResetTime = 9;//重置时间
+  repeated int64 RankArgs = 10;//其他参数(1.天阶比武args[0]挡位等级)
+  int32 IfNeedCross = 11;//是否需要跨服装填
+  uint64 RankUID = 12;//排行榜UID
+  int64 ModuleType = 13; //所属模块ID 15 活动
+  int64 ModuleID = 14; //所属功能ID(活动UID)
+}
+
+//个人排行榜信息
+message SingleRoleRankInfo {
+  uint64 UID = 1;//主体UID 公会/个人/账号
+  int32 RankOrder = 2;//排行中序号
+  int64 RankValue = 3;//排行榜主要值
+  int64 UpdateTime = 4;//更新时间
+  repeated int64 Args = 5;//其他参数
+  SimpleRoleInfo Role = 6;//角色数据
+  int64 ThumbsUpTimes = 7;//被点赞次数
+  int32 ServerID = 8;//所属服务器ID
+  string ServerName = 9; //服务器名字
+}
+
+message MissionInfo {
+  uint64 MissionUID = 1; //任务唯一ID
+  int32  MissionType = 2; //任务类型  1:日常 2：成就
+  int64  MissionConfigID = 3; //任务配置ID
+  int32  Progress = 4;//任务进度
+  int32  Status = 5; //任务状态  0：进行中 1：已完成 2：已领取
+  int64  UpdateTime = 6; //最近更新时间
+  int64  MissionShowType = 7; //任务展示类型
+}
+
+//排行榜点赞信息
+message ThumbsUpRecordInSingleRank {
+  int32 RankType = 1;//榜单类型
+  repeated uint64 UID = 2;//点赞对象
+}
+
+//次数等快捷购买
+enum ConvenientPurchase {
+  TARGET_TYPE_NONE = 0;
+  TARGET_TYPE_GACHA = 1;//抽卡券
+  TARGET_TYPE_ARENA = 2;//竞技场挑战券
+  TARGET_TYPE_MATERIAL_DUNGEON = 3;//主线
+}
+
+// 道具大类（与 CLIP.Project_Mouse.ENUM.Item_Type 对齐）
+enum ItemType {
+  ItemType_None = 0;
+  ItemType_Food = 1;          // 食物
+  ItemType_Tape = 2;          // 磁带
+  ItemType_Snack = 3;        // 零食
+  ItemType_Pot = 4;           // 花盆
+  ItemType_Seed = 5;          // 种子
+  ItemType_Harvest = 6;       // 收获物
+  ItemType_FoodMaterial = 7;  // 食材
+  ItemType_OtherMaterial = 8; // 其他素材
+  ItemType_Fertilizer = 9;    // 肥料
+  ItemType_RoomPlacement = 10; // 房间放置物
+  ItemType_Currency = 11;     // 货币
+  ItemType_Cloth = 12;        // 服装
+}
+
+//共享任务结构
+message CommonShareMissionInfo {
+  MissionInfo Info = 1;
+  SimpleRoleInfo Role = 2;//展示人
+}
+
+//值变动展示
+message ValueChangeShow {
+  int64 NewValue = 1;//新值
+  int64 ChangeValue = 2;//变动值
+}
+
+message GiftInfo {
+  uint64 GiftUID = 1;
+  uint64 RoleID = 2;
+  int32 PurchasesNumber = 3; //购买次数
+  int64 PurchaseTime = 4; //上次购买时间
+  int64 CreateTime = 5; //创建时间
+  int64 GiftConfigID = 6; //礼包配置ID
+  int32 GiftType = 7; //礼包类型
+  int64 NextRefreshTime = 8 ; //下次刷新时间
+  int64 GiftOutOfTime = 9;//礼包过期时间，0则不过期
+}
+
+message Wishlist{
+  int64 tagID = 1;//抽卡页签
+  map<int64, int32> WishInfo = 2;//key:英雄id value:今日心愿单实现次数
+}
+
+//跑马灯单条数据体
+message MarqueeInfo {
+  uint64 MarqueeUID = 1;//唯一ID
+  int64 ConfigID = 2;//配置ID
+  int32 TypeID = 3;//类型
+  int32 Priority = 4;//优先权
+  LocaleParam Msg = 5;//消息主体
+  repeated LocaleParam MsgArgs = 6;//消息参数
+  int32 Status = 7;//状态
+  int64 StartTime = 8;//开始时间
+  int64 Delay = 9;//播报间隔
+  int64 EndTime = 10;//结束时间
+}
+
+message ActivityInfo{
+  uint64 ActivityUID = 1;
+  int64 ListUniqueID = 2;//活动表唯一ID
+  int64 FuncID = 3;//功能ID
+  int64 ConfigID = 4;//配置ID
+  int32 Type = 5;//类型
+  int64 StartTime = 6;//开始时间
+  int64 EndTime = 7;//结束时间
+  int32 State = 8;//状态
+  ActivityUniqueInfo UniqueInfo = 9;//独立信息
+  map<int64, int64> ExtraMap = 10;//额外信息(需要的活动自己定义)
+  repeated uint64 PassportUIDs = 11; //活动使用的战令UID
+  repeated int64 PassportIDs = 12; //活动使用的战令配置ID
+  repeated uint64 RankUIDs = 13; //活动使用的排行榜UID
+  repeated int64 RankIDs = 14; //活动使用的排行榜配置ID
+}
+
+message ActivityUniqueInfo{
+  AccumulateRechargeActivityInfo AccumulateRechargeInfo = 1;//累充活动信息
+  LuxuryRechargeActivityInfo  LuxuryRechargeInfo = 2;//积天豪礼信息
+  Continue7ActivityInfo Continue7Info = 3;//7日礼包信息
+  SignInActivityInfo SignInInfo = 4;//签到活动信息
+  TaskEventActivityInfo TaskEventInfo = 5;//降临活动信息
+  map<int64, int64> FirstChargeGiftRecord = 6; //首充礼包信息(key是礼包id,val是礼包状态)
+  //val 0位表示是否开放可购买(0 不可购买  1 可购买) 1位标识是否已购买(0 不可购买  1 可购买) 2位标识是否锁定(已支付未到账,锁定30分钟或者订单支付超时未返回) 3位表示第一天是否已领取(0 未领取 1 已发放) 4位标识第二天是否领取(0 未领取 1 已发放) 5位标识第三天是否领取(0 未领取 1 已发放)
+  DailyRechargeActivityInfo  DailyRechargeInfo = 7;//每日首充活动
+  LoginEightActivityInfo LoginEightInfo = 8;//8日登录活动信息
+  FundActivityInfo FundInfo = 9;//基金活动信息
+  SevenDayActivityInfo SevenDayInfo = 10;//7日狂欢
+  RisingStarActivityInfo RisingStarInfo = 11;//自选升星
+  ThousandGachaActivityInfo ThousandGachaInfo = 12;//登录千抽
+  RechargeRankActivityInfo RechargeRankActivityInfo = 13; //堆金叠玉活动
+  NewPlayerPackageActivityInfo NewPlayerPackageInfo = 14; //新服礼遇活动
+  GiftTimeLimitActivityInfo GiftTimeLimitInfo = 15;//限时触发礼包活动
+  RankingTaskActivityInfo RankingTaskInfo = 16;//揭榜扬名活动
+  StrongRoadActivityInfo StrongRoadInfo = 17;//登神之路活动
+  LimitHeroThemeActivityInfo  LimitHeroThemeInfo = 18;//限时武将主题活动
+  HeroGachaActivityInfo   HeroGachaInfo = 19;//武将抽卡活动
+  HeroGiftActivityInfo HeroGiftInfo = 20;//神将自选活动
+  HeroChallengeActivityInfo HeroChallengeInfo = 22;//英雄挑战活动
+  BraveBingoActivityInfo BraveBingoInfo = 23;//骁勇征召活动
+  SevenDayMainActivityInfo  SevenDayMainInfo = 24;//决胜新服主活动
+  DailyDiscountActivityInfo DailyDiscountActivityInfo = 25; //每日特惠
+  RankCompetitionActivityInfo RankCompetitionActivityInfo = 27; //冲榜竞赛
+  SuperSigninActivityInfo SuperSigninActivityInfo = 28; //超值签到
+  GrownBoxInfo GrownBoxInfo = 29; //成长宝箱
+  ShowInfo ShowInfo = 30; //展示活动信息
+  FestivalActivityInfo FestivalInfo = 31;//庆典月活动
+  ChainGiftActivityInfo ChainGiftInfo = 32; //福利船活动
+  ExchangeShopActivityInfo ExchangeShopInfo = 33; //兑换屋活动
+  WishActivityInfo WishInfo = 34;//祈愿活动
+  FlipCardActivityInfo FlipCardInfo = 35;//秘境寻遗活动
+  PiscesTurntableActivityInfo PiscesTurntable = 36;//双鱼转盘,新服转盘,广告转盘
+  DailyBlissActivityInfo DailyBlissInfo = 39;
+  AdChainGiftPackActivityInfo AdChainGiftPack = 40;//链式礼包
+  AdSupplyActivityInfo AdSupply = 41;//免费补给
+  SignInAdvanceActivityInfo SignInAdvanceInfo = 42;//宝藏签到
+  LuckyCatActivityInfo LuckCatInfo = 44;//招财猫活动
+  FlopCardActivityInfo FlopCardActivityInfo = 45;//翻牌活动
+  LuckyGiftBagActivityInfo LuckyGiftBagActivityInfo = 46;//福运礼包活动
+  SuperSignin2ActivityInfo SuperSignin2ActivityInfo = 47; //超值签到2
+}
+
+//累计充值
+message AccumulateRechargeActivityInfo{
+  int32 RechargeAmount = 1;//充值金额
+  map<int64, int32> RewardStatus = 2;//奖励信息
+}
+
+//积天豪礼
+message LuxuryRechargeActivityInfo{
+  int32 Days = 1; //累计天数
+  int32 TodayRecharge = 2; //今日充值金额
+  map<int32, int32> RewardRecord = 3;//奖励领取记录 Key:Days Value：-1：未解锁 0：未达成 1：可领取 2：已领取
+  int64 NextRefreshTime = 4; //下次刷新时间
+}
+
+//7日礼包
+message Continue7ActivityInfo{
+  map<int64, int64> Record = 1;//记录
+  map<int64, GiftGroup> GiftMap = 2;//
+}
+
+//跑马灯内容映射
+message MarqueeContentInfo{
+  string Language = 1;
+  string Content = 2;
+}
+
+//跑马灯单条数据体(服务器内
+message MarqueeInfoInServer {
+  uint64 MarqueeUID = 1;//唯一ID
+  int64 ConfigID = 2;//配置ID
+  int32 TypeID = 3;//类型
+  int32 Priority = 4;//优先权
+  LocaleParam Msg = 5;//消息主体
+  repeated LocaleParam MsgArgs = 6;//消息参数
+  int32 Status = 7;//状态
+  int64 StartTime = 8;//开始时间
+  int64 Delay = 9;//播报间隔
+  int64 EndTime = 10;//结束时间
+  repeated uint64 ReceiveIDs = 11;//指定接收玩家
+  int32 IsLoad = 12;//登录加载
+  repeated MarqueeContentInfo Inter = 13;//后台填写内容
+}
+
+//消息内容类型
+enum ChatMsgType {
+  TEXT = 0;           //纯文本(带emoji)
+  //COOR = 1;           //带坐标文本
+  HERO = 2;           //英雄分享
+  REPORT = 3;         //战报分享
+  EXPRESSION = 4;     //图片表情
+  LEAGUE_INVITE = 5;  //联盟邀请
+  HEGEMONYWARS_CITY_INVITE = 6;  //九州争霸城池邀请
+  //SYSTEM_TIPS = 6;    //系统预设
+  //POS_SHARE = 7 ;     //坐标分享
+  //LEAGUE_BUILDING = 8;//联盟建筑分享
+  SOULJADETEAM_INVITE = 7; //御魂玩法房间邀请
+}
+
+//聊天频道类型枚举
+enum ChatChannelType {
+  WORLD = 0;   //全服聊天(跨全服)
+  AREA = 1;    //区域聊天(跨战区)
+  LOCAL = 2;   //本地聊天(单服)
+  LEAGUE = 3;  //联盟聊天
+  PRIVATE = 4; //私人小组聊天
+  SINGLE_PRIVATE = 5;//私聊
+  SINGLE_TOPGAME = 6;//逐鹿八荒
+}
+
+//聊天频道成员角色枚举
+enum ChatChannelMemberRole {
+  MEMBER = 0;  //成员
+  ADMIN = 1;   //管理员
+}
+
+//群聊消息
+message ChatMessage {
+  Spokesman       Person = 1;   //发言人
+  int64           TimeTag = 2;   //信息发出时间戳
+  ChatMsgType     MsgType = 3;   //信息类型
+  string          Text = 4;   //文本类型
+  uint64          MsgID = 6;   //聊天的消息ID
+}
+
+//聊天翻译
+message ChatTranslate {
+  int32   languageID = 1; //聊天翻译语言
+  string  content = 2; //翻译内容
+}
+
+//发言人信息
+message Spokesman {
+  SimpleRoleInfo RoleInfo = 1;
+  GameServer ServerInfo = 2; //所属服务器信息
+}
+
+//群组聊天频道信息
+message GroupChatChannel {
+  common.ChatChannelType ChannelType = 1;         //频道类型
+  uint64 ChannelTypeID = 2;                        //频道ID
+  uint64 ChannelUID = 3;                          //频道UID
+  string ChannelNm = 4;                           //频道名
+  repeated common.ChatMessage Content = 5;        //内容
+  repeated GroupChatChannelMember Members = 6;    //成员信息(小组频道管理员才有)
+  uint64 ReadMsgID = 7; //已读取到的消息ID
+}
+
+//私聊频道信息
+message PrivateChatChannel {
+  Spokesman He = 1;
+  repeated common.ChatMessage Content = 2;//聊天内容
+  uint64 ReadMsgID = 3; //已读取到的消息ID
+}
+
+//群组成员信息
+message GroupChatChannelMember {
+  Spokesman Member = 1;           //成员信息
+  ChatChannelMemberRole Role = 2; //成员角色
+}
+
+//商品信息
+message UserShopGoods {
+  int64 GoodsID = 1; //商品ID
+  int32 LeftBuyTimes = 2; //剩余购买次数 0 为已售罄
+}
+
+//签到活动信息
+message SignInActivityInfo{
+  int32 CumulativeTime = 1;           //累计时间
+  int32 CumulativeDays = 2;           //累计天数
+  map<int64, int32> RewardMap = 3;    //奖励领取记录
+  int64 OnlineTimeStamp = 4;          //在线时间戳
+}
+
+message PlayerDetailedInfo{
+  uint64 RoleID = 1;//玩家ID
+  string RoleName = 2;//玩家名称
+  string RoleHeadIcon = 3;//头像
+  int64  HeadRing = 4;//头像框
+  int32  RoleLv = 5;//角色当前等级
+  int64  RolePower = 6;//玩家战力
+  int32  ServerID = 7;//归属服务器
+  string ServerName = 8;//服务器名
+  int32  OfficialLv = 9;//官职等级
+  string LegionName = 10;//军团名称
+  int64 LastLogin = 11;//最后登录时间
+  int64 LastLogoff = 12;//最后登出时间
+  int32 ChivalrousSend = 14;//侠义值发送 0：未发送 1：已发送
+  int32 ChivalrousReceive = 15;//侠义值接收 0：未收到 1：收到未接收 2：已接受
+  uint64 LegionID = 16;//军团ID
+  int64 MainDungeonRecord = 17;//主线关卡进度
+  int32 IsFriend = 18;      //是否好友
+  int32 IsBlacklist = 19;   //是否黑名单
+  int32 TrialTowerFloor = 20;//试炼之塔层数
+}
+
+//好友系统信息
+message FriendshipInfo{
+  uint64 RoleID = 1;//玩家ID
+  repeated PlayerDetailedInfo FriendsInfo = 2;//好友具体信息
+  repeated PlayerDetailedInfo BlacklistInfo = 3;//黑名单具体信息
+  repeated PlayerDetailedInfo ApplicationList = 4;//申请列表具体信息
+  map<uint64, int32> TodayPoint = 5;//今日侠义值
+  map<uint64, int32> TodaySentPoint = 6;//今日赠送侠义值
+}
+
+//降临活动信息
+message TaskEventActivityInfo{
+  repeated common.MissionInfo ActivityMissionInfo = 1; //活动任务
+  int32 FinalReward = 2; //最终奖励 0：不可领取 1：可领取 2：已领取
+}
+
+message ChatServerInfo {
+  int32 ServerID = 1; //服务器ID
+  string ServerNm = 2; //服务器名称
+}
+
+//每日首充
+message DailyRechargeActivityInfo{
+  int32 TodayRecharge = 1;
+  map<int64, int32> RewardMap = 2;
+}
+
+//8日登录活动
+message LoginEightActivityInfo{
+  map<int32, int32> RewardMap = 1;
+  int32 Days = 2;
+}
+
+//联盟简略信息
+message LeagueSimpleInfo{
+  uint64 LeagueID = 1; //联盟ID
+  string LeagueName = 2; //联盟名称
+  int32 FlagIcon = 3; //联盟旗子
+  SimpleRoleInfo Leader = 4; //盟主信息
+  int32 ApplyType = 5; //验证类型
+  int32 ApplyLv = 6; //申请等级
+  int32 LeagueLv = 7; //联盟等级
+  int32 LeagueMemberNum = 8;//联盟成员数量
+  map<int32, int32> BadgeLv = 9;//军团勋章等级
+}
+
+//联盟详细信息
+message LeagueOuterDetailInfo{
+  LeagueSimpleInfo SimpleInfo = 1; //联盟简略信息
+  string LeagueDeclaration = 2; //联盟宣言
+  repeated LeagueMemberSimpleInfo Members = 3; //联盟主要成员
+}
+
+//联盟详细信息
+message LeagueInnerDetailInfo{
+  LeagueSimpleInfo SimpleInfo = 1; //联盟简略信息
+  string LeagueDeclaration = 2; //联盟宣言
+  string LeagueAnnouncement = 3; //联盟公告
+  int64 LeagueExp = 4; //军团经验
+  int64 InviteSendTime = 5; //军团邀请发送时间
+}
+
+//联盟盟主简略信息
+message LeagueLeader{
+  uint64 RoleID = 1; //角色ID
+  string RoleName = 2; //角色名字
+  int32 ServerID = 3; //服务器ID
+}
+
+//联盟成员简略信息
+message LeagueMemberSimpleInfo{
+  uint64 RoleID = 1; //角色ID
+  string RoleName = 2; //角色名字
+  int32 ServerID = 3; //服务器ID
+  int32 LeagueTitle = 4; //联盟角色
+  int64 Power = 5; //角色战力
+  string HeadIcon = 6; //角色头像
+  int32 RoleLv = 7; //角色当前等级
+  int32 ActivityScore = 8; //活跃
+  int64 LastOfflineTime = 9; //最后下线时间
+}
+
+//跟随玩家的联盟信息
+message RoleLeagueInfo{
+  int64 LastLeagueQuitTime = 1; //上次退盟时间
+  repeated uint64 ApplyLeagueUIDs = 2; //已申请的联盟
+  repeated int64 TaskIDs = 3; //已领取的联盟任务
+  int32 FirstQuit = 4; //首次退盟 0 未退盟 1 已退过盟
+}
+
+//基金活动
+message FundActivityInfo{
+  map<int32, FundActivityDetailInfo> ActivityMap = 1;
+}
+
+message FundActivityDetailInfo{
+  map<int32, int32> RewardMap = 1;
+  int32 IsBought = 2;
+}
+
+//联盟信息
+message LeagueInfo{
+  uint64 LeagueID = 1; //联盟ID
+  string LeagueName = 2; //联盟名称
+  int32 Title = 3; //联盟职务
+  int32 LeagueLv = 4; //联盟等级
+}
+
+message MonthlyCard{
+  int64 MonthlyCardID = 1; //月卡ID
+  int64 Progress = 2; //进度
+  int32 Active = 3; //是否激活 0 未激活 1 已激活
+  int64 ActiveTime = 4; //激活时间
+  int32 TodayReceived = 5; //今天是否已领取
+}
+
+//七日狂欢
+message SevenDayActivityInfo{
+  int64 Process = 1;
+  map<int64, int32> RewardMap = 2;
+  map<int32, MissionGroup> MissionMap = 3;
+  map<int32, GiftGroup> GiftMap = 4;
+}
+
+//任务组
+message MissionGroup{
+  repeated MissionInfo Missions = 1;
+}
+//礼包组
+message GiftGroup{
+  repeated GiftInfo Gifts = 1;
+}
+
+//联盟动态信息
+message LeagueLogInfo{
+  int64 TimeStamp = 1; //动态发生时间
+  int32 LogTemplateID = 2; //动态模板ID
+  repeated LocaleParam Params = 3; //参数
+}
+
+//自选升星活动
+message RisingStarActivityInfo{
+  uint64 ChooseHero = 1;
+  map<int64, int32> FreeRewardMap = 2;
+  map<int64, int32> PaidRewardMap = 3;
+  map<int64, int64> FreeFragmentRecord = 4;
+  map<int64, int64> PaidFragmentRecord = 5;
+}
+
+//登录千抽活动
+message ThousandGachaActivityInfo{
+  int32 GachaTimes = 1;//抽卡次数
+  map<int32, int32> CollectionRecord = 2;
+  map<int32, ThousandGachaRecord> GachaRecord = 3;
+  map<int32, uint64>  MissionRecord = 4;
+  repeated uint64 TempRecord = 5;
+}
+message ThousandGachaRecord{
+  repeated uint64 HeroID = 1;
+}
+
+//联盟任务
+message LeagueTaskInfo {
+  int64 TaskID = 1;//任务ID
+  int32 TaskStatus = 2;//任务状态
+  int64 TaskProgress = 3;//任务进度
+}
+
+//联盟任务组
+message LeagueTaskInfoGroup {
+  repeated LeagueTaskInfo Infos = 1;//组内任务
+  int32 GroupID = 2;//组ID
+}
+
+//堆金叠玉活动
+message RechargeRankActivityInfo {
+  int32 Anonymous = 1; //是否匿名
+}
+
+message CodexInfo{
+  int64 CodexID = 1;
+  int32 CodexLevel = 2;
+}
+
+message BeastGachaInfo{
+  int32 DailyFreeTimes = 1;
+  int32 DailyGachaTimes = 2;
+  int32 CumulativeGachaTimes = 3;
+}
+
+message GiftTimeLimitActivityInfo{
+  map<int32, GiftGroup> GiftTabInfo = 1;
+}
+
+message NewPlayerPackageActivityInfo{
+  map<int64, GiftGroup> GiftTabInfo = 1;
+}
+
+//揭榜扬名
+message RankingTaskActivityInfo{
+  int64 Turns = 1;
+  int32 Cycle = 2;
+  int32 Round = 3;
+  repeated common.MissionInfo Missions = 4;
+  repeated common.GiftInfo Gifts = 5;
+  int64 StartTime = 6;
+  int64 EndTime = 7;
+}
+
+//强者之路
+message StrongRoadActivityInfo{
+  int32 Process = 1;//进度
+  map<int64, int32> ProcessRewardMap = 2;//进度奖励
+  map<int64, common.MissionInfo>Missions = 3;//任务 key:strongRoad唯一id*10 + 任务线位置（0，1，2...）
+  map<int64, int32> MissionCompleteCount = 4;//任务计数
+  map<int64, int32> AllMissionCount = 5;//总任务计数
+}
+
+//限时武将主题活动
+message LimitHeroThemeActivityInfo{
+  repeated uint64 SubActivityUID = 1;//子活动UID
+  repeated GiftInfo GiftList = 2;//礼包表
+  int64 GiftGroupID = 3;//礼包组id
+}
+
+//抽卡活动
+message HeroGachaActivityInfo{
+  //通用活动字段
+  int32 ActivitySubType = 1;//活动子类型 1：武将抽卡 2：荒兽抽卡 3：武魂抽卡 4：鼎见万象
+  repeated GiftInfo GiftList = 2;//礼包表
+  repeated MissionInfo MissionList = 3;//任务表
+  int64 RankingID = 4;//排行榜ID
+  map<int64, uint64> GachaRecordUID = 5;//抽卡记录ID key:配置ID value:抽卡记录UID
+  int64  GachaPoint = 6;//抽卡排行榜积分
+  int32 Anonymous = 7; //是否匿名 0 不匿名  1 匿名
+  int64 GiftGroupID = 8;//礼包组id
+  int64 MissionGroupID = 9;//任务组id
+  int64 Progress = 10;//进度
+  map<int64, int32> ProgressRewards = 11;//进度奖励
+  //特殊功能字段
+  int64 HeroTeamID = 12;//英雄抽卡活动：当前选择的角色组配置ID
+  int32 HeroGemChooseID = 13;//武魂抽卡活动：选择的ID 1：指定武魂1 2：指定武魂2 3：随机武魂
+  repeated int64 HeroGemRandomChoose = 14; //武魂抽卡活动：随机武魂选择
+  int64 HeroGemConfigID = 15;//武魂抽卡活动：当前配置ID
+  map<uint64, bool> GetItemRecord = 16;//鼎见万象活动：抽到的道具记录
+  int64 HeroGemStartTime = 17;//武魂抽卡活动：当期开始时间
+  int64 HeroGemEndTime = 18;//武魂抽卡活动：当期结束时间
+}
+
+//每日特惠活动
+message DailyDiscountActivityInfo{
+  int32 AllBuyTimes = 1;//一键次数
+  int64 ShopID = 2;//商店ID
+  repeated GiftInfo Gifts = 3;//礼包表
+  repeated MissionInfo Missions = 4; //次数任务
+}
+
+//装饰数据
+message Adornment{
+  int64 AdornmentID = 1;
+  int32 AdornmentType = 2;
+  int64 StartTime = 3;
+  int64 EndTime = 4;
+}
+
+//冲榜竞赛活动
+message RankCompetitionActivityInfo{
+  int64 SettleTime = 1;//结算时间
+  NormalRankInfo RankInfo = 2; //榜信息
+}
+
+//超值签到活动
+message SuperSigninActivityInfo{
+  int64 Flag = 1;//签到情况 0-31位表示是否有签到过 32-63位是否有领取过再领一次
+  int32 IsTodayReceive = 2; //今日是否已签到
+  int32 CurrentDobuleRate = 3; //当前双倍概率
+  int64 EndTime = 4; //结束时间(只有全部签到签完才会有值,这个值和活动自带的结束谁小用谁)
+}
+
+//成长宝箱
+message GrownBoxInfo{
+  int32 TimeStamp = 1;  //今日时间戳
+  int32 TodayScore = 2; //当前积分
+  int32 IsReceived = 3; //今日是否已打开
+  int32 TotalScore = 4; //总积分
+  int32 ReceivedScore = 5; //打开时的积分
+  repeated MissionInfo Missions = 6; //成长每日任务
+}
+
+//骁勇征召活动
+message BraveBingoActivityInfo{
+  repeated int32 BingoMap = 1;
+  map<int64, int32> BingoReward = 2;
+}
+
+//英雄挑战
+message HeroChallengeActivityInfo{
+  int32 DmgLevel = 1;
+  repeated MissionInfo MissionList = 2;
+}
+
+//七日主活动
+message SevenDayMainActivityInfo{
+  repeated common.MissionInfo MissionList = 2;
+  repeated uint64 SubActivityUID = 3;//子活动UID
+}
+
+//角色简要信息
+message SimpleRoleInfo {
+  uint64 RoleID = 1;        //角色ID
+  string RoleName = 2;        //roleName
+  string RoleHeadIcon = 3;  //头像
+  int32 Lv = 4;          //角色当前等级
+  int64 Power = 5;      //玩家战力
+  int64 VipLv = 6; //vip等级
+  int64 RoleHeadSpine = 7; //玩家角色形象
+  int32 ServerID = 8;//归属服务器
+  string ServerName = 9;//归属服务器
+  int32 OfficialLv = 10;//官职等级
+  LeagueInfo League = 11; //联盟信息
+  int32 RankAnonymous = 12; //排行榜是否匿名 0 不匿名  1 匿名
+  int64 HeadRing = 13; //头像框
+  int64 RoleTitle = 14;//玩家称号
+  int64 RoleChatBubble = 15;//聊天气泡
+}
+
+//服务器简略信息
+message GameServer {
+  int32 serverID = 1; //服务器ID
+  string serverName = 2; //服务器名字
+}
+
+message HeroGiftActivityInfo {
+  int64 HeroID = 1;
+  map<int64, int32>PurchaseRecord = 2;
+}
+
+message HegemonyWarsUserInfo {
+  int32 Grade = 1;//玩家段位
+  int64 Score = 2;//玩家积分
+  int32 WinPoint = 3;//胜点
+  int32 LosePoint = 4;//败点
+  int32 PlayerStatus = 7;//玩家状态 0待挑战 1普通挑战未结束 2待晋级 3晋级挑战未结束
+  int32 TaskRedPoint = 8;//任务红点 >0亮起
+}
+
+//展示活动信息
+message ShowInfo{
+  int32 Flag = 1;  //今日时间戳
+}
+
+//庆典月活动
+message FestivalActivityInfo{
+  repeated uint64 SubActivityUID = 1; //子活动UID
+  repeated MissionInfo MissionList = 2; //任务列表
+  repeated GiftInfo GiftList = 3; //礼包列表
+}
+
+//福利船活动信息
+message ChainGiftActivityInfo{
+  int64 NextRefreshTime = 1;
+  repeated GiftInfo Gift = 2;
+  int32 DailyReward = 3;//0:未领取， 1：已领取
+  int64 Day = 4;//活动第x天
+}
+
+message ExchangeShopActivityInfo{
+  map<int64, int32> ShopMap = 1;
+  map<int64, int32> GoodsMap = 2;
+}
+
+message WishActivityInfo{
+  map<int64, int32> RewardMap = 1;
+  int64 WarZoneProsperity = 2;
+  map<uint64, int64> ItemUse = 3;
+}
+
+message FlipCardActivityInfo{
+  repeated GiftInfo GiftList = 1;//礼包表
+  int32 Level = 2;//层数
+  map<int32, int64> GachaMap = 3;
+  map<int64, FlipCardSelectRewards> SelectRewards = 4;
+  int32 GatePosition = 5;
+}
+
+message FlipCardSelectRewards{
+  repeated int64 SelectID = 1;
+}
+
+//双鱼转盘
+message PiscesTurntableActivityInfo{
+  int32 UsedGachaTimes = 1;//本轮已抽
+  int32 ThisTurnMaxTimes = 2;//本轮最大抽数
+  int64 ChosenGreatReward = 3;//选中的大奖id
+  repeated GiftInfo GiftList = 4;//礼包表
+  int32 Anonymous = 5; //是否匿名 0 不匿名  1 匿名
+  int32 Type2GachaPermission = 6;//新服转盘抽卡上限
+  int32 Type2GachaTimesDailyUsed = 7;//新服转盘已用抽卡
+  int64 StartTime = 8;//当期开始时间
+  int64 EndTime = 9;//当期结束时间
+}
+
+//双鱼结果组
+message PiscesTurntableActivityResult{
+  repeated int32 Position = 1;//位置下标组
+  repeated ItemInfo Items = 2;//单次奖励
+}
+
+//每日洪福
+message DailyBlissActivityInfo{
+  repeated GiftInfo GiftList = 1;
+}
+
+//月卡2
+message MonthlyCard2{
+  int64 MonthlyCardID = 1; //月卡ID
+  int32 Active = 2; //是否激活 0 未激活 1 已激活
+  int64 ActiveTime = 3; //激活时间
+  int32 TodayReceived = 4; //今天是否已领取
+  int32 Num = 5; //今日可领取天数
+}
+
+//活动:链式礼包记录
+message AdChainGiftPackActivityInfo{
+  map<int64, int32> GroupCursor = 2;//链组游标(已购买)
+}
+
+//活动:免费补给
+message AdSupplyActivityInfo{
+  map<int64, int32> ClaimedTimes = 2;//礼包已领取次数
+  repeated AdSupplyActivityCumulativeRewardInfo CumulativeReward = 3;//累计奖励
+}
+
+message SignInAdvanceActivityInfo{
+  map<int64,int32> RewardMap = 1;
+  int32 TodaySignIn = 2;
+  int64 TodaySignInID = 3;
+  int64 EndTime = 4;
+}
+
+//活动:免费补给
+message AdSupplyActivityCumulativeRewardInfo{
+  int64 RewardID = 1;//ID
+  int32 Status = 2;//累计奖励状态 0未完成 1待领取 2已领取
+  repeated ItemInfo Rewards = 3;//奖励内容
+}
+
+message LuckyCatActivityInfo{
+  map<int64,int64> RewardMap = 1;
+  repeated LuckyCatRecord Record = 2;
+}
+
+message LuckyCatRecord{
+  int32 ServerID = 1;
+  string PlayerName = 2;
+  int64 Reward = 3;
+}
+
+// 游戏圈任务
+message GamingCircleTaskInfo {
+  int32 Id = 1; // 任务 id
+  int32 Progress = 2; // 任务进度
+  bool HasAward = 3; // 是否已领取
+}
+
+message FlopCardActivityInfo{
+  int32 CurrentRechargeNum = 1; //当前充值额度
+  int32 LastNum = 2; //最新一次翻牌结果
+  int32 TargetNum = 3; //目标数字
+}
+
+//福运礼包
+message LuckyGiftBagActivityInfo{
+  int32 GotOrder = 1; //以获取的挡位
+}
+
+//超值签到2活动
+message SuperSignin2ActivityInfo{
+  int64 Flag = 1;//签到情况 0-63位表示是否有签到过
+  int32 IsTodayReceive = 2; //今日是否已签到
+  int32 Round = 3; //当前轮次
+  int32 IsBigwinReceive = 4; //本轮大奖是否已领取
+}
+
+//内部空间点位信息
+message InnerPos {
+  int32 Face = 1; //房间6个面 1-6 (具体枚举待定义)
+  int32 PosX = 2; //在面上的X坐标
+  int32 PosY = 3; //在面上的Y坐标
+  int32 Direction = 4; //朝向
+}

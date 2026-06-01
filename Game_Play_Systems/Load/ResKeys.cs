@@ -2,6 +2,10 @@
 public static class ResKeys {
 public const string WAV_CATISGOOD = "WAV_CATISGOOD";
 public const string WAV_DAY = "WAV_DAY";
+public const string WAV_FLOWERSTAR = "WAV_FLOWERSTAR";
+public const string WAV_GREENSTAR = "WAV_GREENSTAR";
+public const string WAV_JAZZTEA = "WAV_JAZZTEA";
+public const string WAV_LEAFTHINKING = "WAV_LEAFTHINKING";
 public const string WAV_LEMMONNADE = "WAV_LEMMONNADE";
 public const string WAV_LOGIN = "WAV_LOGIN";
 public const string WAV_MAHOUSHAOJIU_NANA = "WAV_MAHOUSHAOJIU_NANA";
@@ -12,6 +16,10 @@ public const string MAT_CD1_MAO = "MAT_CD1_MAO";
 public const string MAT_CD2_LEMONNADE = "MAT_CD2_LEMONNADE";
 public const string MAT_CD3_MAHOUSHAOJIU_NANA = "MAT_CD3_MAHOUSHAOJIU_NANA";
 public const string MAT_CD4_TAI_S_WHISPER = "MAT_CD4_TAI_S_WHISPER";
+public const string MAT_CD5_FLOWERSTAR = "MAT_CD5_FLOWERSTAR";
+public const string MAT_CD6_JAZZTEA = "MAT_CD6_JAZZTEA";
+public const string MAT_CD7_LEAFTHINKING = "MAT_CD7_LEAFTHINKING";
+public const string MAT_CD8_GREENSTAR = "MAT_CD8_GREENSTAR";
 public const string PREFAB_CD_MODEL = "PREFAB_CD_MODEL";
 public const string PREFAB_FOOD1_TUNA_ONIGIRI = "PREFAB_FOOD1_TUNA_ONIGIRI";
 public const string PREFAB_FOOD2_DEEP_SEA_FISH_ONIGIRI = "PREFAB_FOOD2_DEEP_SEA_FISH_ONIGIRI";

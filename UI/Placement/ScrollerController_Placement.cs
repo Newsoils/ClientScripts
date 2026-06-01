@@ -183,8 +183,7 @@ public class ScrollerController_Placement : ScrollerController_GameItem<ScrollDa
         }
         else
         {
-            //TODO：UI 弹出提示，无法放置在当前房间
-            EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "该家具无法放置在当前房间");
+            EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "该家具无法放置在当前房间！");
             return;
         }
     }

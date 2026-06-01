@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
+using UnityEngine;
 
 namespace CLIP.Project_Mouse.Kernel
 {
@@ -11,13 +12,13 @@ namespace CLIP.Project_Mouse.Kernel
     public class ParagraphModel
     {
         [JsonProperty("_paraId")]
-        public int _paraId;
+        [SerializeField] private int _paraId;
 
         /// <summary>
         /// 仅用于 JSON 反序列化初始化。初始化后不再使用，运行时查找全由 <see cref="_dialogueMap"/> 承担。
         /// </summary>
         [JsonProperty("_allDialogueIdList")]
-        public List<int> _allDialogueIdList;
+        [SerializeField, HideInInspector] private List<int> _allDialogueIdList;
 
         private Dictionary<int, DialogueModel> _dialogueMap;
 
@@ -31,6 +32,7 @@ namespace CLIP.Project_Mouse.Kernel
             {
                 if (!globalDialogueDic.TryGetValue(id, out var model))
                 {
+                    Debug.LogError($"[ParagraphModel] 段落 {ParaId} 引用的对话 id={id} 在全局字典中未找到。");
                     continue;
                 }
                 _dialogueMap[id] = model;
@@ -45,7 +47,17 @@ namespace CLIP.Project_Mouse.Kernel
             if (_dialogueMap != null && _dialogueMap.TryGetValue(id, out var model))
                 return model;
 
+            Debug.LogError($"[ParagraphModel] 段落 {ParaId} 中不存在 id={id} 的对话。");
             return null;
+        }
+
+        public bool TryGetDialogueById(int id, out DialogueModel model)
+        {
+            if (_dialogueMap != null && _dialogueMap.TryGetValue(id, out model))
+                return true;
+
+            model = null;
+            return false;
         }
     }
 }

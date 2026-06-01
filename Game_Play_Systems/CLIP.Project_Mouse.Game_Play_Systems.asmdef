@@ -2,6 +2,7 @@
     "name": "CLIP.Project_Mouse.Game_Play_Systems",
     "rootNamespace": "",
     "references": [
+        "GUID:f3c0a9b4a0c44b0bb8b7b4a8c5d1e2f3",
         "GUID:8dd87f5b5583ef942b7d4221c402742e",
         "GUID:bbdef65244eff3c49be3d05ce22e6d9e",
         "GUID:53ba43c05f32826459df6d3ac8c41ad9",

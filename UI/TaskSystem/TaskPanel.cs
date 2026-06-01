@@ -1,5 +1,4 @@
 using CLIP.Framework_Core.Event;
-using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,7 +9,6 @@ namespace CLIP.Project_Mouse.UI
         [SerializeField] private ScrollerController_Task _taskScroller;
         [SerializeField] private GameObject obj;
         [SerializeField] private Button _exitButton;
-
         public void Start()
         {
             _exitButton.onClick.AddListener(ClosePanel);
@@ -20,27 +18,27 @@ namespace CLIP.Project_Mouse.UI
         protected override void OnEnable()
         {
             base.OnEnable();
-            EvtDsp.AddEvt(EvtNames.Task_Unlocked, OnTaskUnlocked);
+            EvtDsp.AddEvt(EvtNames.OnMissionRefresh, OnTaskRefresh);
         }
 
         private void OnDisable()
         {
-            EvtDsp.RemoveEvt(EvtNames.Task_Unlocked, OnTaskUnlocked);
-        }
-
-        private void OnTaskUnlocked()
-        {
-            if (!obj.activeSelf)
-                return;
-            _taskScroller.ReloadData();
+            EvtDsp.RemoveEvt(EvtNames.OnMissionRefresh, OnTaskRefresh);
         }
 
         public override void OnDestroy()
         {
             base.OnDestroy();
             _exitButton.onClick.RemoveAllListeners();
-            EvtDsp.RemoveEvt(EvtNames.Task_Unlocked, OnTaskUnlocked);
         }
+
+        private void OnTaskRefresh()
+        {
+            if (!obj.activeSelf)
+                return;
+            _taskScroller.ReloadData();
+        }
+
 
         public override void OpenPanel(params object[] data)
         {

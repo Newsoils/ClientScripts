@@ -15,7 +15,6 @@ public static class EvtNames
     //NPC Events
     public static string Meet_NPC = "On_Meet_NPC";
     public static string Give_Gift_TO_NPC = "Give_Gift_TO_NPC";
-    public static string On_Single_NPC_Data_Updated = "On_Single_NPC_Data_Updated";
     public static string On_All_NPC_Data_Received = "On_All_NPC_Data_Received";
     public static string On_NPC_Data_Update = "On_NPC_Data_Update";
     public static string Receive_NPC_Gift_TO_Player = "Receive_NPC_Gift_TO_Player";
@@ -75,11 +74,21 @@ public static class EvtNames
     public static string Set_TopPanel_Active = "Set_TopPanel_Active";
     public static string Set_MainPanel_All_Active = "Set_MainPanel_All_Active";
     public static string Show_TopPanel_Close_Other = "Show_TopPanel_Close_Other";
-
+    
 
     //派遣 DispatchUI
     public static string Dispatch_On_Start = "Dispatch_On_Start";
     public static string Dispatch_On_End = "Dispatch_On_End";
+
+    //教程
+    public static string Guide_Open_Panel = "Guide_Open_Panel";
+    public static string Guide_Close_Panel = "Guide_Close_Panel";
+    public static string Guide_Next_Step = "Guide_Next_Step";
+    public static string Guide_Start_Move_Furniture = "Guide_Start_Move_Furniture";
+    public static string Guide_Start_Shop = "Guide_Start_Shop";
+    public static string Guide_Step_Changed = "Guide_Step_Changed";
+    public static string Guide_Clear_View = "Guide_Clear_View";
+    public static string Guide_Is_View_Ready = "Guide_Is_View_Ready";
     /// <summary>服端拉取/清除派遣后，仅把展示层与 player_state 对齐；勿当作 Dispatch_On_End 用（后者会触发回家拍照等）。</summary>
     public static string Dispatch_VisualsSync = "Dispatch_VisualsSync";
 
@@ -91,6 +100,8 @@ public static class EvtNames
     public static string Dispatch_Switch_Bag = "Dispatch_Switch_Bag";
     public static string Dispatch_Change_Item = "Dispatch_Change_Item";
     public static string Dispatch_Refresh_Model = "Dispatch_Refresh_Model";
+    /// <summary>旅行背包打包成功（<see cref="PackageBagRes"/>），参数为 0-based 背包下标。</summary>
+    public static string Dispatch_Package_Bag_Res = "Dispatch_Package_Bag_Res";
     public static string Dispatch_Show_Reward = "Dispatch_Get_Reward";
     public static string Dispatch_Get_Photo = "Dispatch_Get_Photo";
 
@@ -116,6 +127,13 @@ public static class EvtNames
 
     public static string OnShoppingPanelOpen = "OnShoppingPanelOpen";
     public static string OnShoppingPanelClose = "OnShoppingPanelClose";
+    public static string OpenShoppingPanel = "OpenShoppingPanel";
+    public static string OnShopInfoReceived = "OnShopInfoReceived";
+    public static string OnManualRefreshShopReceived = "OnManualRefreshShopReceived";
+    public static string OnBuyGoodsReceived = "OnBuyGoodsReceived";
+    public static string OnSoldItemReceived = "OnSoldItemReceived";
+    public static string OnBuyTicketsReceived = "OnBuyTicketsReceived";
+    public static string OpenPayPanel = "OpenPayPanel";
 
     public static string OnPhonePanelOpen = "OnPhonePanelOpen";
     public static string OnPhonePanelClose = "OnPhonePanelClose";
@@ -144,6 +162,7 @@ public static class EvtNames
     public static string Show_Reward = "Show_Reward";
 
     public static string ShowFirstLoginReward = "ShowFirstLoginReward";
+    public static string GetFirstLoginReward = "GetFirstLoginReward";
 
 
 
@@ -224,13 +243,27 @@ public static class EvtNames
     /// <summary>任务系统：是否存在「可领取」任务状态变化（用于主界面任务按钮红点）。</summary>
     public static string Task_ClaimableChanged = "Task_ClaimableChanged";
 
-    public static string Task_ClaimReward = "Task_ClaimReward";
-    public static string Task_Operation = "Task_Operation";
+    /// <summary>任务系统：刷新面板。</summary>
+    public static string OnMissionRefresh = "OnMissionRefresh";
 
-    /// <summary>任务系统：等级提升时解锁了新任务。</summary>
-    public static string Task_Unlocked = "Task_Unlocked";
-
+    /// <summary>
+    /// 收到任务变动通知，更新任务数据
+    /// </summary>
+    public static string OnMissionUpdate = "OnMissionUpdate";
     /// <summary>经验系统：玩家等级数据从服务器加载完成。</summary>
     public static string PlayerLevelDataLoaded = "PlayerLevelDataLoaded";
 
+    /// <summary>场景切换视频播放完成，可触发 SceneLoadingHelper.Load_MainScene()。</summary>
+    public static string OnTransitionVideoFinished = "OnTransitionVideoFinished";
+
+    /// <summary>
+    /// 通知UI播放视频
+    /// </summary>
+    public static string PlayTransitionVideo = "PlayTransitionVideo";
+
+    public static string WS_Open = "WS_Open";
+    public static string Send_Req_To_Server = "Send_Req_To_Server";
+    public static string Login_Mandatory_Data_Ready = "Login_Mandatory_Data_Ready";
+    public static string Receive_Msg_From_Server = "Receive_Msg_From_Server";
+    public static string Guide_Skip_Current = "Guide_Skip_Current";
 }

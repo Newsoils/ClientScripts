@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Drawing.Drawing2D;
 using System.IO;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEditor;
@@ -25,10 +22,12 @@ public class CreateOrModifyPlacement : EditorWindow
     private static string PLACEMENT_SO_KEY = "PLACEMENT_SO_KEY";
     private static string PlacementGeometry_SO_KEY = "PlacementGeometry_SO_KEY";
     private static string PlacementGeometry_Json_KEY = "PlacementGeometry_Json_Key";
+    private static string INCREMENTAL_OVERRIDE_KEY = "Placement_IncrementalOverride";
     public PlacementPathSetting pathData = new PlacementPathSetting();
     public Placement_SO db;
     public PlacementGeometry_SO geoDb;
     public TextAsset geometryJson;
+    public bool incrementalOverride = false;
 
 
 
@@ -62,7 +61,11 @@ public class CreateOrModifyPlacement : EditorWindow
         pathData.OutPrefabPathOld = DrawPathFolder("输出Prefab路径（老）", pathData.OutPrefabPathOld);
         pathData.OutPrefabPathNew = DrawPathFolder("输出Prefab路径（新）",pathData.OutPrefabPathNew);
 
-
+        GUILayout.Space(10);
+        incrementalOverride = EditorGUILayout.ToggleLeft(
+            new GUIContent("增量覆盖（已存在的Prefab跳过）", "开启后，已生成的Prefab不会重新生成；关闭则每次全量覆盖"),
+            incrementalOverride
+        );
 
         GUILayout.Space(10);
 
@@ -97,6 +100,12 @@ public class CreateOrModifyPlacement : EditorWindow
         if(GUILayout.Button("测量家具尺寸"))
         {
             MeasurePlacementGeo();
+        }
+
+        GUILayout.Space(10);
+        if(GUILayout.Button("同步SO数据到Prefab"))
+        {
+            SyncPlacementDataToPrefabs();
         }
 
     }
@@ -180,6 +189,11 @@ public class CreateOrModifyPlacement : EditorWindow
             geometryJson = AssetDatabase.LoadAssetAtPath<TextAsset>(geoJson);
         }
 
+        if (EditorPrefs.HasKey(INCREMENTAL_OVERRIDE_KEY))
+        {
+            incrementalOverride = EditorPrefs.GetBool(INCREMENTAL_OVERRIDE_KEY);
+        }
+
     }
 
     void SaveData()
@@ -195,6 +209,8 @@ public class CreateOrModifyPlacement : EditorWindow
 
         string geoJson = AssetDatabase.GetAssetPath(geometryJson);
         EditorPrefs.SetString(PlacementGeometry_Json_KEY, geoJson);
+
+        EditorPrefs.SetBool(INCREMENTAL_OVERRIDE_KEY, incrementalOverride);
     }
 
 
@@ -210,7 +226,18 @@ public class CreateOrModifyPlacement : EditorWindow
             return;
         }
 
-        geoDb.geometryList.Clear();
+        if (!incrementalOverride)
+        {
+            geoDb.geometryList.Clear();
+            Debug.Log("[全量覆盖模式] 正在全部重新生成 Prefab...");
+        }
+        else
+        {
+            Debug.Log("[增量模式] 已存在的 Prefab 将被跳过...");
+        }
+
+        int skipCount = 0;
+        int generateCount = 0;
 
         foreach (string file in modelFiles)
         {
@@ -239,6 +266,17 @@ public class CreateOrModifyPlacement : EditorWindow
 
                 if (mf == null || mf.sharedMesh == null) continue;
 
+                // 增量模式：检查 Prefab 是否已存在，存在则跳过
+                string saveName = meshName + ".prefab";
+                string outPath = Path.Combine(pathData.OutPrefabPathNew, saveName).Replace('\\', '/');
+
+                if (incrementalOverride && File.Exists(outPath))
+                {
+                    skipCount++;
+                    continue;
+                }
+
+                generateCount++;
 
                 Bounds localBounds = mf.sharedMesh.bounds;
                 Vector3 worldScale = targetRenderer.transform.lossyScale;
@@ -289,9 +327,6 @@ public class CreateOrModifyPlacement : EditorWindow
                 SetLayerRecursively(newPrefabRoot.transform, GetPlacementLayer());
 
                 // 8. 保存 Prefab (这会成为一个独立的、不依赖原始 FBX 层级的 Prefab)
-                string saveName = meshName + ".prefab";
-                string outPath = Path.Combine(pathData.OutPrefabPathNew, saveName).Replace('\\', '/');
-
                 PrefabUtility.SaveAsPrefabAsset(newPrefabRoot, outPath);
 
                 // 9. 记录到 SO
@@ -312,7 +347,7 @@ public class CreateOrModifyPlacement : EditorWindow
         EditorUtility.SetDirty(geoDb);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("拆分 Prefab 生成完毕！材质已保留原样。");
+        Debug.Log($"Prefab 生成完毕！本次新增/覆盖: {generateCount}，增量跳过: {skipCount}");
     }
 
     // 自动寻找贴图并创建材质的方法
@@ -461,6 +496,132 @@ public class CreateOrModifyPlacement : EditorWindow
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("所有家具预制体处理完毕！");
+    }
+
+    /// <summary>
+    /// 将 Placement_SO 和 PlacementGeometry_SO 的数据同步写入已生成的家具 Prefab 中。
+    /// - 通过 Prefab 名称 + OutPrefabPathNew 定位 prefab 文件
+    /// - Placement_SO: 通过 res_url 提取 prefab 名称进行匹配，写入 PlacementRuntime.info / placingType / gridData
+    /// - PlacementGeometry_SO: 通过 modelName 直接匹配，写入/覆盖 PlacementRuntime.gridData
+    /// - 同时更新 BoxCollider 和 NavMeshObstacle 的尺寸
+    /// </summary>
+    public void SyncPlacementDataToPrefabs()
+    {
+        if (geoDb == null || db == null)
+        {
+            Debug.LogError("请同时指定 Placement_SO 和 PlacementGeometry_SO");
+            return;
+        }
+
+        // 建立 Placement_SO 匹配字典：prefab名称 → Room_Placement_Info
+        var soMatch = new System.Collections.Generic.Dictionary<string, CLIP.Project_Mouse.Kernel.Room_Placement_Info>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (var info in db._placement_db)
+        {
+            if (string.IsNullOrEmpty(info.res_url) || info.res_url.Contains("Mat")) continue;
+            string normalizedUrl = info.res_url.Replace('\\', '/');
+            string prefabName = System.IO.Path.GetFileNameWithoutExtension(normalizedUrl);
+            if (!soMatch.ContainsKey(prefabName))
+                soMatch[prefabName] = info;
+        }
+        
+
+        // 建立 PlacementGeometry_SO 匹配字典：modelName → PlacementGeometryData
+        var geoMatch = new System.Collections.Generic.Dictionary<string, PlacementGeometryData>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (var geo in geoDb.geometryList)
+        {
+            if (string.IsNullOrEmpty(geo.prefabPath)) continue;
+            string prefabName = System.IO.Path.GetFileNameWithoutExtension(geo.prefabPath);
+            if (!geoMatch.ContainsKey(prefabName))
+                geoMatch[prefabName] = geo;
+        }
+
+        // 扫描 OutPrefabPathNew 下的所有 prefab
+        string targetFolder = pathData.OutPrefabPathNew;
+        if (string.IsNullOrEmpty(targetFolder))
+        {
+            Debug.LogError("请指定 OutPrefabPathNew");
+            return;
+        }
+
+        var prefabs = LoadAllPrefabs(targetFolder);
+        int total = prefabs.Length;
+        int updatedCount = 0;
+        int noMatchCount = 0;
+
+        for (int i = 0; i < total; i++)
+        {
+            var prefab = prefabs[i];
+            if (prefab == null) continue;
+
+            string prefabName = prefab.name;
+            EditorUtility.DisplayProgressBar("同步SO数据到Prefab", $"正在处理: {prefabName}", (float)i / total);
+
+            string prefabPath = "";
+            // 优先用 PlacementGeometry_SO 的尺寸数据
+            if (!geoMatch.TryGetValue(prefabName, out var geoData))
+            {
+                noMatchCount++;
+                continue;
+            }
+
+            if (soMatch.TryGetValue(prefabName, out var placementInfo))
+            {
+                prefabPath = placementInfo.res_url;
+            }
+            else
+            {
+                noMatchCount++;
+                continue;
+            }
+
+            GameObject rootObj = null;
+            try
+            {
+                rootObj = PrefabUtility.LoadPrefabContents(prefabPath);
+
+                // 1. 写入 gridData（以 PlacementGeometry_SO 为主）
+                var runtime = rootObj.GetComponent<PlacementRuntime>();
+                if (runtime != null)
+                {
+                    runtime.gridData = new GridData(
+                        (int)geoData.size.x,
+                        (int)geoData.size.y,
+                        (int)geoData.size.z
+                    );
+
+                    // 2. 补充写入 info / placingType（从 Placement_SO 匹配）
+                    
+                        runtime.info = placementInfo;
+                        runtime.placingType = placementInfo.placing_type;
+                    runtime.placingType = placementInfo.placing_type;
+                    runtime.gridData.width = placementInfo.width;
+                    runtime.gridData.height = placementInfo.height;
+                    runtime.gridData.length = placementInfo.length;
+                    //runtime.Name = placementInfo.room_placement_name;
+
+                    runtime.data.name = placementInfo.room_placement_name;
+                    runtime.data.placementId = placementInfo.room_placement_id;
+                    EditorUtility.SetDirty(runtime);
+                }
+
+                EditorUtility.SetDirty(rootObj);
+                PrefabUtility.SaveAsPrefabAsset(rootObj, geoData.prefabPath);
+                updatedCount++;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"处理 Prefab {prefabName} 出错: {e.Message}");
+            }
+            finally
+            {
+                if (rootObj != null) PrefabUtility.UnloadPrefabContents(rootObj);
+            }
+        }
+
+        EditorUtility.ClearProgressBar();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log($"同步完毕！本次更新: {updatedCount} 个 Prefab，PlacementGeometry_SO 中无匹配: {noMatchCount} 个");
     }
 
     public void MeasurePlacementGeo()

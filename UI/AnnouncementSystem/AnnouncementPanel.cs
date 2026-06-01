@@ -59,7 +59,6 @@ namespace CLIP.Project_Mouse.UI
         // 初始化公告列表
         public void InitAnnouncementPanel()
         {
-            Email_And_Announcement_Manager.instance.update_mail_from_server();
             var announcementList = Email_And_Announcement_Manager.instance._announcement_record;
             int announcementCount = 0;
             int childCount = announcementUnitRoot.childCount;

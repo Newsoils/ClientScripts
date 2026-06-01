@@ -57,59 +57,6 @@ public class IntStringDictConverter : JsonConverter<Dictionary<int, string>>
 }
 
 /// <summary>
-/// Dictionary[string, int] 转换器，用于 DialogueModel.Options。
-/// </summary>
-public class StringIntDictConverter : JsonConverter<Dictionary<string, int>>
-{
-    public override Dictionary<string, int> ReadJson(JsonReader reader, Type objectType, Dictionary<string, int> existingValue, bool hasExistingValue, JsonSerializer serializer)
-    {
-        if (reader.TokenType == JsonToken.Null)
-            return new Dictionary<string, int>();
-
-        if (reader.TokenType == JsonToken.StartArray)
-        {
-            try
-            {
-                var array = JArray.Load(reader);
-                var dict = new Dictionary<string, int>();
-                foreach (JArray pair in array)
-                {
-                    if (pair.Count != 2)
-                        throw new JsonException("Each element must be [string, int]");
-                    dict[pair[0].Value<string>()] = pair[1].Value<int>();
-                }
-                return dict;
-            }
-            catch (JsonReaderException)
-            {
-                return new Dictionary<string, int>();
-            }
-        }
-        return new Dictionary<string, int>();
-    }
-
-    public override void WriteJson(JsonWriter w, Dictionary<string, int> d, JsonSerializer s)
-    {
-        if (d == null || d.Count == 0)
-        {
-            w.WriteStartArray();
-            w.WriteEndArray();
-            return;
-        }
-
-        w.WriteStartArray();
-        foreach (var kv in d)
-        {
-            w.WriteStartArray();
-            w.WriteValue(kv.Key);
-            w.WriteValue(kv.Value);
-            w.WriteEndArray();
-        }
-        w.WriteEndArray();
-    }
-}
-
-/// <summary>
 /// Dictionary[int, int] 转换器，用于临时兼容旧数据格式。
 /// </summary>
 public class IntIntDictConverter : JsonConverter<Dictionary<int, int>>

@@ -9,7 +9,7 @@ using Newtonsoft.Json.Linq;
 public class UniversalTextFilePreviewEditor : Editor
 {
     // 支持的扩展名（可自行增减）
-    private readonly string[] _supportedExtensions = { ".txt", ".json", ".csv", ".md", ".xml", ".lua", ".ini" };
+    private readonly string[] _supportedExtensions = { ".txt", ".json", ".csv", ".md", ".xml", ".lua", ".ini",".proto" };
     private string _fileContent;
     private bool _isSupported;
     private string _formattedJson;

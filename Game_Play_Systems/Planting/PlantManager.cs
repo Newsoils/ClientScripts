@@ -7,41 +7,56 @@ using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
+using CLIP.Project_Mouse.Network;
 using Newtonsoft.Json;
 using UnityEngine;
 
 
 public class PlantManager : SingletonMono<PlantManager>
 {
+    protected override bool PersistAcrossScenes => true;
+
     [Header("数据")]
-    public Dictionary<(string, int, string), GameObject> plantModels;//植物名-成长阶段-隐藏-模型
-    public Dictionary<(string, string), Material> plantMats;
     public Dictionary<int, PlantData> plantDatas;
     public Dictionary<string, PlantData> plantSeedNameDic;
+    private Dictionary<int, PlantData> plantSeedItemIdDic;
     public Dictionary<string, FertilizerData> fertilizerDatas;
     public Dictionary<string, PotData> potDatas;
-    public GameObject waterObj;
+    private GameObject waterPrefab;
 
     [Header("实例")]
     public GameObject plantPrefab;
     public Dictionary<string, Plant> plants = new Dictionary<string, Plant>();
     public string plantSeedName;
+
+    private List<Cmd.PlantInfo> cachedPlantInfos = new List<Cmd.PlantInfo>();
+    private Dictionary<ulong, double> plantCacheTimes = new Dictionary<ulong, double>();
+    private bool roomReady;
     
     private float updateTimer;
     private void Start()
     {
         InitData();
-        EvtDsp.AddReturnEvt(EvtNames.InitPlant, LoadPlant);
+        EvtDsp.AddReturnEvt(EvtNames.InitPlant, RefreshPlantsForCurrentRoomAsync);
         _ = LoadAsset();
     }
     private async Task LoadAsset()
     {
-        waterObj = await GameAssets.Instance.LoadAsycByKey<GameObject>(ResKeys.PREFAB_WATERFALL);
+        plantPrefab = Resources.Load<GameObject>("Prefabs/Plant");
+        await GetWaterPrefabAsync();
+    }
+    public async Task<GameObject> GetWaterPrefabAsync()
+    {
+        if (waterPrefab == null)
+        {
+            waterPrefab = await GameAssets.Instance.LoadAsycByKey<GameObject>(ResKeys.PREFAB_WATERFALL);
+        }
+        return waterPrefab;
     }
     protected override void OnDestroy()
     {
         base.OnDestroy();
-        EvtDsp.RemoveReturnEvt(EvtNames.InitPlant, LoadPlant);
+        EvtDsp.RemoveReturnEvt(EvtNames.InitPlant, RefreshPlantsForCurrentRoomAsync);
     }
     private void Update()
     {
@@ -69,75 +84,178 @@ public class PlantManager : SingletonMono<PlantManager>
     }
     private void InitData()
     {
-        var info = JsonConvert.DeserializeObject<List<PlantData>>(JsonData_Manager.Load_Single_JsonData("project_mouse_tb_plant_info"));
+        var info = JsonConvert.DeserializeObject<List<PlantData>>(JsonDataManager.Load_Single_JsonData("project_mouse_tb_plant_info"));
         plantDatas = info.ToDictionary(x => x.plantId, x => x);
         plantSeedNameDic = info.ToDictionary(x => x.plantSeed, x => x);
-        fertilizerDatas = JsonConvert.DeserializeObject<List<FertilizerData>>(JsonData_Manager.Load_Single_JsonData("project_mouse_tb_fertilizer_effect")).ToDictionary(x => x.fertilizerName, x => x);
-        potDatas = JsonConvert.DeserializeObject<List<PotData>>(JsonData_Manager.Load_Single_JsonData("project_mouse_tb_pot_info")).ToDictionary(x => x.itemName, x => x);
-
-        List<GameObject> source = Resources.LoadAll<GameObject>("Models/Plant").ToList();
-        plantModels = new Dictionary<(string, int, string), GameObject>();
-        foreach(var model in source)
+        plantSeedItemIdDic = new Dictionary<int, PlantData>();
+        foreach (var plant in info)
         {
-            string[] names = model.name.Split('_');
-            if(names.Length < 2)//该模型命名不规范
-            {
-                continue;
-            }
-            if(names.Length == 2)
-            {
-                plantModels.Add((names[0], int.Parse(names[1]), "default"), model);
-            }
-            else if(names.Length == 3)
-            {
-                plantModels.Add((names[0], int.Parse(names[1]), names[2]), model);
-            }
+            var seedItem = Global_Inventory_Manager.GetItemInfo(plant.plantSeed);
+            plantSeedItemIdDic[seedItem.item_id] = plant;
         }
-        List<Material> materials = Resources.LoadAll<Material>("Materials/Plant").ToList();
-        plantMats = new Dictionary<(string, string), Material>();
-        foreach(var material in materials)
-        {
-            string[] names = material.name.Split('_');
-            if (names.Length < 2)//该材质命名不规范
-            {
-                continue;
-            }
-            else
-            {
-                plantMats.Add((names[0], names[1]), material);
-            }
-        }
+        fertilizerDatas = JsonConvert.DeserializeObject<List<FertilizerData>>(JsonDataManager.Load_Single_JsonData("project_mouse_tb_fertilizer_effect")).ToDictionary(x => x.fertilizerName, x => x);
+        potDatas = JsonConvert.DeserializeObject<List<PotData>>(JsonDataManager.Load_Single_JsonData("project_mouse_tb_pot_info")).ToDictionary(x => x.itemName, x => x);
     }
     #region 植物相关
-    private async Task LoadPlant()
+    public void RequestPlantDataFromServer()
     {
-        await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "LoadPlant", LoadPlantTask(), null);
+        if (NetWork_Center_WSS.IsConnectedToPlayerServer)
+            NetWork_Center_WSS.SendMsg(new Cmd.GetAllPlantReq());
     }
-    public ServerTask LoadPlantTask()
+
+    private Task RefreshPlantsForCurrentRoomAsync()
     {
-        ServerTask task = new ServerTask("LoadPlant", (string receive, ServerTask task) =>
+        roomReady = true;
+        ApplyCachedPlantsToCurrentRoom();
+        return Task.CompletedTask;
+    }
+
+    public void CacheAllPlants(IEnumerable<Cmd.PlantInfo> plantInfos)
+    {
+        cachedPlantInfos = plantInfos != null ? plantInfos.Select(x => x.Clone()).ToList() : new List<Cmd.PlantInfo>();
+        plantCacheTimes.Clear();
+        double now = Time.realtimeSinceStartupAsDouble;
+        foreach (var plantInfo in cachedPlantInfos)
         {
-            if (receive == "nodata")
-            {
-                task.isBreak = true;
-                task.result = "植物数据加载失败";
-                return;
-            }
-            foreach(var plant in plants.Values)
+            plantCacheTimes[plantInfo.UID] = now;
+        }
+    }
+
+    public void ApplyCachedPlantsToCurrentRoom()
+    {
+        if (!roomReady)
+            return;
+        RebuildPlants(cachedPlantInfos);
+    }
+
+    public void ApplyAllPlants(IEnumerable<Cmd.PlantInfo> plantInfos)
+    {
+        CacheAllPlants(plantInfos);
+        ApplyCachedPlantsToCurrentRoom();
+    }
+
+    private void RebuildPlants(IEnumerable<Cmd.PlantInfo> plantInfos)
+    {
+        foreach(var plant in plants.Values)
+        {
+            if (plant != null)
             {
                 Destroy(plant.gameObject);
             }
-            plants.Clear();
-            List<PlantLocalData> datas = JsonConvert.DeserializeObject<List<PlantLocalData>>(receive);
-            foreach(var data in datas)
+        }
+        plants.Clear();
+
+        foreach(var plantInfo in plantInfos)
+        {
+            var data = ToLocalData(plantInfo);
+            if(TryCreatePlant(data, out var plant))
             {
-                if(TryCreatePlant(data, out var plant))
-                {
-                    plants.Add(data.uid, plant);
-                }
+                plants.Add(data.uid, plant);
             }
-        });
-        return task;
+        }
+        EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
+    }
+
+    public void ApplyPlant(Cmd.PlantInfo plantInfo)
+    {
+        var data = ToLocalData(plantInfo);
+        if (data.harvestTime == -1)
+        {
+            RemoveCachedPlant(plantInfo.UID);
+            RemovePlantByUid(data.uid);
+            return;
+        }
+        if(plants.TryGetValue(data.uid, out var plant))
+        {
+            plant.UpdateData(data);
+        }
+        else if(TryCreatePlant(data, out var newPlant))
+        {
+            plants.Add(data.uid, newPlant);
+        }
+        EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
+    }
+
+    public void ApplyPlantChange(Cmd.PlantChangeS2C change)
+    {
+        foreach (var plantInfo in change.PlantAdd)
+        {
+            UpsertCachedPlant(plantInfo);
+            if (roomReady)
+                ApplyPlant(plantInfo);
+        }
+        foreach (var plantInfo in change.PlantUpd)
+        {
+            UpsertCachedPlant(plantInfo);
+            if (roomReady)
+                ApplyPlant(plantInfo);
+        }
+        foreach (var plantInfo in change.PlantDel)
+        {
+            RemoveCachedPlant(plantInfo.UID);
+            if (roomReady)
+                RemovePlantByUid(plantInfo.UID.ToString());
+        }
+    }
+
+    private void UpsertCachedPlant(Cmd.PlantInfo plantInfo)
+    {
+        int index = cachedPlantInfos.FindIndex(x => x.UID == plantInfo.UID);
+        if (index >= 0)
+        {
+            cachedPlantInfos[index] = plantInfo.Clone();
+        }
+        else
+        {
+            cachedPlantInfos.Add(plantInfo.Clone());
+        }
+        plantCacheTimes[plantInfo.UID] = Time.realtimeSinceStartupAsDouble;
+    }
+
+    private void RemoveCachedPlant(ulong plantUid)
+    {
+        cachedPlantInfos.RemoveAll(x => x.UID == plantUid);
+        plantCacheTimes.Remove(plantUid);
+    }
+
+    private void RemovePlantByUid(string plantUid)
+    {
+        if(plants.TryGetValue(plantUid, out var plant))
+        {
+            plant.Remove();
+            EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
+        }
+    }
+
+    public void ApplyGrowStage(string plantUid, int growStage)
+    {
+        if(plants.TryGetValue(plantUid, out var plant))
+        {
+            plant.UpdateGrowStageFromServer(growStage);
+        }
+    }
+
+    private static PlantLocalData ToLocalData(Cmd.PlantInfo plantInfo)
+    {
+        PlantManager manager = PlantManager.Instance;
+        manager.plantSeedItemIdDic.TryGetValue((int)plantInfo.PlantSeed, out var plantData);
+        long adjustedPlantTime = plantInfo.PlantTime;
+        if (manager.plantCacheTimes.TryGetValue(plantInfo.UID, out var cacheTime))
+        {
+            adjustedPlantTime = Math.Max(plantInfo.PlantTime - (long)(Time.realtimeSinceStartupAsDouble - cacheTime), 0L);
+        }
+        return new PlantLocalData
+        {
+            uid = plantInfo.UID.ToString(),
+            potUid = plantInfo.PotUID,
+            plantId = plantData.plantId,
+            variantKey = plantInfo.VariantKey,
+            growStage = plantInfo.GrowStage,
+            growStage2 = plantInfo.GrowStage2,
+            plantTime = adjustedPlantTime,
+            harvestTime = plantInfo.HarvestTime,
+            isFertilize = plantInfo.IsFertilize
+        };
     }
     #region 植物交互
     /// <summary>
@@ -145,29 +263,13 @@ public class PlantManager : SingletonMono<PlantManager>
     /// </summary>
     public void WaterPlant()
     {
-        EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "WaterPlant", WaterPlantTask(), null);
-    }
-    public ServerTask WaterPlantTask()
-    {
-        ServerTask task = new ServerTask("WaterPlant", (string receive, ServerTask task) =>
+        if (NetWork_Center_WSS.IsConnectedToPlayerServer)
         {
-            if (receive == "nodata")
+            NetWork_Center_WSS.SendMsg(new Cmd.PlantOpReq
             {
-                task.isBreak = true;
-                task.result = "植物数据加载失败";
-                return;
-            }
-            List<PlantLocalData> datas = JsonConvert.DeserializeObject<List<PlantLocalData>>(receive);
-            foreach (var data in datas)
-            {
-                if(plants.TryGetValue(data.uid, out var plant))
-                {
-                    plant.UpdateData(data);
-                }
-            }
-
-        });
-        return task;
+                Op = 1
+            });
+        }
     }
     /// <summary>
     /// 更新
@@ -177,154 +279,66 @@ public class PlantManager : SingletonMono<PlantManager>
         if(updateTimer < 0)
         {
             updateTimer = 3;
-            EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "UpdatePlant", UpdatePlantTask(), null);
         }
     }   
-    public ServerTask UpdatePlantTask()
-    {
-        ServerTask task = new ServerTask("UpdatePlant", (string receive, ServerTask task) =>
-        {
-            if (receive == "nodata")
-            {
-                task.isBreak = true;
-                task.result = "植物数据加载失败";
-                return;
-            }
-            List<PlantLocalData> datas = JsonConvert.DeserializeObject<List<PlantLocalData>>(receive);
-            foreach (var data in datas)
-            {
-                if (plants.TryGetValue(data.uid, out var plant))
-                {
-                    plant.UpdateData(data);
-                }
-            }
-
-        });
-        return task;
-    }
     /// <summary>
     /// 种植
     /// </summary>
     /// <param name="seedName"></param>
-    public async Task PlantPlant(string seedName, string potUid)
+    public void PlantPlant(string seedName, string potUid)
     {
-        int plantId = -1;
-        if(TryGetPlantDataByName(seedName, out PlantData data))
+        var seedItem = Global_Inventory_Manager.GetItemInfo(seedName);
+        if(NetWork_Center_WSS.IsConnectedToPlayerServer)
         {
-            plantId = data.plantId;
+            NetWork_Center_WSS.SendMsg(new Cmd.PlantReq
+            {
+                SeedID = seedItem.item_id,
+                PotUID = potUid
+            });
         }
-        if(plantId != -1)
-        {
-            await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "PlantPlant", PlantPlantTask(plantId, potUid), null);
-        }
-    }
-    public ServerTask PlantPlantTask(int plantId, string potUid)
-    {
-        string send = JsonConvert.SerializeObject((plantId, potUid));
-        ServerTask task = new ServerTask(send, (string receive, ServerTask task) =>
-        {
-            if (receive == "nodata")
-            {
-                task.isBreak = true;
-                task.result = "植物数据加载失败";
-                return;
-            }
-            if(receive == "fail")
-            {
-                task.isBreak = true;
-                task.result = "生成植物失败";
-                return;
-            }
-            (PlantLocalData newPlantData, List<PlantLocalData> datas) = JsonConvert.DeserializeObject<(PlantLocalData, List<PlantLocalData>)>(receive);
-            if(TryCreatePlant(newPlantData, out var newPlant))
-            {
-                plants.Add(newPlantData.uid, newPlant);
-            }
-
-            foreach (var data in datas)
-            {
-                if (plants.TryGetValue(data.uid, out var plant))
-                {
-                    plant.UpdateData(data);
-                }
-            }
-        });
-        return task;
     }
     /// <summary>
     /// 收获
     /// </summary>
     /// <param name="plant"></param>
-    public async Task HarvestPlant(Plant plant)
+    public void HarvestPlant(Plant plant)
     {
-        await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "HarvestPlant", HarvestPlantTask(plant.data.uid), null);
-    }
-    public ServerTask HarvestPlantTask(string plantUid)
-    {
-        ServerTask task = new ServerTask(plantUid, (string receive, ServerTask task) =>
+        if (NetWork_Center_WSS.IsConnectedToPlayerServer)
         {
-            if (receive == "nodata")
+            NetWork_Center_WSS.SendMsg(new Cmd.PlantOpReq
             {
-                task.isBreak = true;
-                task.result = "植物数据加载失败";
-                return;
-            }
-            PlantLocalData harvestPlantData = JsonConvert.DeserializeObject<PlantLocalData>(receive);
-            if (plants.TryGetValue(harvestPlantData.uid, out var harvestPlant))
-            {
-                harvestPlant.Harvest(harvestPlantData);
-            }
-        });
-        return task;
+                Op = 3,
+                PlantUID = ulong.Parse(plant.data.uid)
+            });
+        }
     }
     /// <summary>
     /// 移除
     /// </summary>
     /// <param name="plant"></param>
-    public async Task RemovePlant(Plant plant)
+    public void RemovePlant(Plant plant)
     {
-        await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "RemovePlant", RemovePlantTask(plant.data.uid), null);
-    }
-    public ServerTask RemovePlantTask(string plantUid)
-    {
-        ServerTask task = new ServerTask(plantUid, (string receive, ServerTask task) =>
+        if (NetWork_Center_WSS.IsConnectedToPlayerServer)
         {
-            if (receive == "nodata")
+            NetWork_Center_WSS.SendMsg(new Cmd.PlantOpReq
             {
-                task.isBreak = true;
-                task.result = "植物数据加载失败";
-                return;
-            }
-            if(plants.TryGetValue(plantUid, out var plant))
-            {
-                plant.Remove();
-            }
-        });
-        return task;
+                Op = 4,
+                PlantUID = ulong.Parse(plant.data.uid)
+            });
+        }
     }
-    public async Task FertilizePlant(Plant plant, string fertilizerName)
+    public void FertilizePlant(Plant plant, string fertilizerName)
     {
-        int fertilizerId = fertilizerDatas[fertilizerName].fertilizerId;
-        await EvtDsp.ReturnEvt<string, ServerTask, Action<string>, Task>(EvtNames.Excute_Server_Task, "FertilizePlant", FertilizePlantTask(plant.data.uid, fertilizerId), null);
-    }
-    public ServerTask FertilizePlantTask(string plantUid, int fertilizerId)
-    {
-        string send = JsonConvert.SerializeObject((plantUid, fertilizerId));
-        ServerTask task = new ServerTask(send, (string receive, ServerTask task) =>
+        var fertilizerItem = Global_Inventory_Manager.GetItemInfo(fertilizerName);
+        if (NetWork_Center_WSS.IsConnectedToPlayerServer)
         {
-            if (receive == "nodata")
+            NetWork_Center_WSS.SendMsg(new Cmd.PlantOpReq
             {
-                task.isBreak = true;
-                task.result = "植物数据加载失败";
-                return;
-            }
-            (bool isSuccess,PlantLocalData newData) = JsonConvert.DeserializeObject<(bool, PlantLocalData)>(receive);
-            if (plants.TryGetValue(plantUid, out var plant))
-            {
-                plant.UpdateData(newData);
-            }
-        });
-        return task;
+                Op = 2,
+                ItemID = fertilizerItem.item_id,
+                PlantUID = ulong.Parse(plant.data.uid)
+            });
+        }
     }
     private bool TryCreatePlant(PlantLocalData data, out Plant plant)
     {
@@ -333,56 +347,7 @@ public class PlantManager : SingletonMono<PlantManager>
         return plant.Init(data);
     }
     #endregion
-    public GameObject GetModel(int plantId, int growStage, string variantName)
-    {
-        if(!plantDatas.TryGetValue(plantId, out var data))
-        {
-            Log.Error("植物ID不存在");
-            return null;
-        }
-        string modelKey = data.modelKey;
-        if(string.IsNullOrEmpty(variantName))
-        {
-            variantName = "default";
-        }
-        if(plantModels.TryGetValue((modelKey, growStage + 1, variantName), out var model))
-        {
-            return model;
-        }
-        if (plantModels.TryGetValue((modelKey, growStage + 1, "default"), out var defaultModel))
-        {
-            return defaultModel;
-        }
-        return plantModels[("default", growStage + 1, variantName)];
-    }
-    public Material GetMaterial(int plantId, int growStage, string variantKey)
-    {
-        if (!plantDatas.TryGetValue(plantId, out var data))
-        {
-            Log.Error("植物ID不存在");
-            return null;
-        }
-        List<string> matKeys = data.matKey;
-        if (matKeys.Count == 0)
-        {
-            return null;
-        }
-        else
-        {
-            string modelKey = data.modelKey;
-            int index = variantKey == null ? 0 : data.variantKey.IndexOf(variantKey);
-            string matKey = matKeys[index];
-            if(plantMats.TryGetValue((modelKey, matKey), out Material mat))
-            {
-                return mat;
-            }
-            else
-            {
-                Log.Error(data.modelKey + "_" + variantKey);
-                return null;
-            }
-        }
-    }
+
     public Plant GetPlantByPot(Pot pot)
     {
         foreach(var plant in plants.Values)

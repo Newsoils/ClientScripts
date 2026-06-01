@@ -20,7 +20,7 @@ namespace CLIP.Project_Mouse.UI
 
         public void InitFriendUnit(string buttonText)
         {
-            nameText.text = record._brief_info._player_nick_name;
+            nameText.text = record.DisplayName;
         }
 
         public void FriendDetail()
@@ -30,7 +30,7 @@ namespace CLIP.Project_Mouse.UI
 
         public void TryAddFriend()
         {
-            Player_Social_Manager._instance.on_try_add_friend(record.friend_id);
+            Player_Social_Manager._instance.on_try_add_friend(record.FriendId);
         }
     }
 

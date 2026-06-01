@@ -22,6 +22,12 @@ namespace CLIP.NewSoil
         /// </summary>
         public static int activeSceneIndex = 1;
 
+        [SerializeField]
+        [Tooltip(
+            "唯一常驻栈：建议把 LoginScene 里的 NetWork_Manager / Global_Game_Data_Receiver / Login_Manager / TapTapLoginManager / Dispatch_Manager 等整棵迁成预制体，拖到这里。" +
+            "会在进入 LoginScene 之前实例化到 [GameBootstrap] 下并随 DDOL 常驻；并在 LoginScene 中删掉同名物体，避免 SingletonMono 判重销毁。")]
+        GameObject persistentCoreSystemsPrefab;
+
         /// <summary>
         /// 游戏启动时执行
         /// </summary>
@@ -38,6 +44,8 @@ namespace CLIP.NewSoil
 
             SceneManager.UnloadSceneAsync(SceneManager.GetActiveScene());
 
+            Application.targetFrameRate = 60;
+            Application.runInBackground = true;
 
             if (SceneManager.GetActiveScene().name != "Boot")
             {
@@ -59,10 +67,10 @@ namespace CLIP.NewSoil
         private void Start()
         {
             if (SceneManager.GetActiveScene().name == "Boot")
-                Initialize();
+                InitializeFromBoot(this);
         }
 
-        private static async void Initialize()
+        private static async void InitializeFromBoot(GameBootstrap boot)
         {
             Log.Custom("=== [GameBootstrap] Initializing ===","GameBoot", Color.cyan);
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
@@ -70,6 +78,23 @@ namespace CLIP.NewSoil
             // 根节点
             GameObject root = new GameObject("[GameBootstrap]");
             DontDestroyOnLoad(root);
+
+            // 常驻网络 / 登录 / 同步栈：先于 LoginScene 实例化，避免与 Login 场景内第二套物体冲突（预制体由 Boot 上字段指定）
+            GameObject corePrefab = boot != null ? boot.persistentCoreSystemsPrefab : null;
+            if (corePrefab == null)
+                corePrefab = Resources.Load<GameObject>("PersistentCoreSystems");
+
+            if (corePrefab != null)
+            {
+                var core = UnityEngine.Object.Instantiate(corePrefab, root.transform, false);
+                core.name = corePrefab.name;
+                Log.Info("[GameBootstrap] 已实例化常驻管理栈（来自 Inspector 预制体或 Resources/PersistentCoreSystems）。");
+            }
+            else
+            {
+                Log.Warn(
+                    "[GameBootstrap] 未提供常驻栈：请在 Boot 物体上拖入 persistentCoreSystemsPrefab，或放入 Resources/PersistentCoreSystems.prefab；否则仍依赖各场景内管理器，可能与单例判重冲突。");
+            }
 
             // -------------------------------
             // 1️⃣ 自动创建所有核心Mono系统
@@ -79,6 +104,12 @@ namespace CLIP.NewSoil
             CreateOrFindSystem<UIManager>(root);
             CreateOrFindSystem<ObjectPool>(root);
             CreateOrFindSystem<SceneLoadingHelper>(root);
+            CreateOrFindSystem<NPCManager>(root);
+            CreateOrFindSystem<NPCChatManager>(root);
+            CreateOrFindSystem<MissionManager>(root);
+            CreateOrFindSystem<PlantManager>(root);
+            CreateOrFindSystem<GuideManager>(root);
+            CreateOrFindSystem<PayManager>(root);
             //CreateOrFindSystem<PersistentObjectManager>(root);
 
             // 初始化 AssetManager
@@ -87,24 +118,25 @@ namespace CLIP.NewSoil
             //加载资源,播放健康游戏忠告
             var loadTask = GameAssets.Instance.InitAsync();
 
-            var noticeTask = ShowHealthNotice(); 
+            var noticeTask = ShowHealthNotice(); // 👈 新增
 
             // ✅ 等两个都完成
             await Task.WhenAll(loadTask, noticeTask);
 
             await Task.Delay(100); // 单位是毫秒，100ms = 0.1秒
 
+
             // 所有资源加载完毕后再进入游戏主场景
             var loadOp = SceneManager.LoadSceneAsync(activeSceneIndex);
             while (!loadOp.isDone)
                 await Task.Yield();
+            CreateOrFindSystem<SceneLoadHelper>(root);
             CreateOrFindSystem<CharacterClothesManager>(root);
-            CreateOrFindSystem<CharacterHandHeldController>(root);
-
+            CreateOrFindSystem<CharacterHandHeldManager>(root);
+            CreateOrFindSystem<GachaManager>(root);
             // 初始化持久化对象管理器（在进入 MainScene 后）
             CreateOrFindSystem<PersistentObjectManager>(root);
             PersistentObjectManager.Instance.Initialize();
-
 
             Debug.Log("<color=green>=== [GameBootstrap] Done ===</color>");
         }
@@ -137,60 +169,8 @@ namespace CLIP.NewSoil
             }
             return instance;
         }
+       
 
-        /// <summary>
-        /// 初始化非Mono系统
-        /// </summary>
-        private static void InitNonMonoSystems(IEnumerable<string> sysNames)
-        {
-            foreach (var sysName in sysNames)
-            {
-                string fullName = $"CLIP.NewSoil.{sysName}";
-                Type type = Type.GetType(fullName);
-
-                if (type == null)
-                {
-                    Log.Error($"[GameBootstrap] ❌ 未找到系统类型: {fullName}");
-                    continue;
-                }
-
-                // 获取 Instance 属性
-                PropertyInfo instanceProp = type.GetProperty("Instance", BindingFlags.Public | BindingFlags.Static);
-                var instance = instanceProp?.GetValue(null);
-                if (instance == null)
-                {
-                    Log.Error($"[GameBootstrap] ❌ 无法获取单例实例: {sysName}");
-                    continue;
-                }
-
-                // 调用 Init() 方法（如果存在）
-                MethodInfo initMethod = type.GetMethod("Init", BindingFlags.Public | BindingFlags.Instance);
-                if (initMethod != null)
-                {
-                    initMethod.Invoke(instance, null);
-                    Log.Info($"[GameBootstrap] Initialized Non-Mono system: {sysName}");
-                }
-                else
-                {
-                    Log.Error($"[GameBootstrap] ⚠️ {sysName} 没有 Init() 方法");
-                }
-            }
-        }
-
-
-        public static async Task LoadSceneAsyncAwait(string sceneName, LoadSceneMode mode = LoadSceneMode.Single)
-        {
-            AsyncOperation op = SceneManager.LoadSceneAsync(sceneName, mode);
-            if (op == null)
-            {
-                Log.Error($"Failed to load scene: {sceneName}");
-                return;
-            }
-
-            while (!op.isDone)
-                await Task.Yield();
-
-            Log.Info($"Scene '{sceneName}' loaded successfully!");
-        }
+    
     }
 }

@@ -1,11 +1,16 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using CLIP.Framework_Core.Event;
 using CLIP.Framework_Core.Network;
 using CLIP.Framework_Unity;
+using CLIP.Project_Mouse.Game_Play_System;
+using Cmd;
+using Common;
+using Google.Protobuf;
 using UnityEngine;
 
-namespace CLIP.Project_Mouse.Game_Play_System
+namespace CLIP.Project_Mouse.Network
 {
     /// <summary>
     /// 消息接收者信息类。
@@ -14,7 +19,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
     [System.Serializable]
     public class Msg_Receicer_Info
     {
-        public string _name;                // 接收者名称（对应消息目标）
+        public int _receiver_msg_id;                // 接收者消息ID
         public IMsg_Receiver _receiver;     // 实现了消息接收接口的实例
 
         public Msg_Receicer_Info() { }
@@ -29,10 +34,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
     /// 3. 通过协程定时检查消息缓冲区并进行派发。
     /// 
     /// </summary>
-    public class Msg_Dispatcher : MonoBehaviour
+    public class Msg_Dispatcher : SingletonMono<Msg_Dispatcher>
     {
-        public static Msg_Dispatcher _instance;  // 单例引用
-
+        protected override bool PersistAcrossScenes => true;
         public List<Msg_Receicer_Info> _receiver_infos = new List<Msg_Receicer_Info>(); // 已注册的消息接收者列表
         public List<Network_Msg> _msg_buffer = new List<Network_Msg>();                  // 消息缓冲区（待分发消息队列）
         public Network_Msg _current_msg;                                               // 当前正在处理的消息
@@ -40,26 +44,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public float _refresh_interval = 0.1f; // 消息分发刷新间隔（秒）
         public bool _is_locking = false;       // 是否锁定（可用来暂停消息处理）
 
-        /// <summary>
-        /// 初始化单例与调度循环
-        /// </summary>
+
         void Start()
         {
-            if (_instance == null)
-            {
-                _instance = this;
-                DontDestroyOnLoad(this.gameObject); // 在场景切换时保持存在
-
-                StartCoroutine(try_dispatching_msg()); // 启动消息分发协程
-            }
-            else
-            {
-                // 保证场景中只存在一个 Msg_Dispatcher
-                if (_instance != this)
-                {
-                    Destroy(this.gameObject);
-                }
-            }
+            StartCoroutine(try_dispatching_msg()); // 启动消息分发协程
         }
 
         /// <summary>
@@ -83,7 +71,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     _current_msg = _msg_buffer[0];
                     _msg_buffer.RemoveAt(0);
 
-                    Log.Info($"[MsgDispatcher] Processing message id={_current_msg.msg_id}, target={_current_msg.action_target}");
+                    Log.Info($"[MsgDispatcher] Processing msg_id={_current_msg.msg_id}");
 
                     // 无效消息ID检查
                     if (_current_msg.msg_id < 0)
@@ -92,11 +80,54 @@ namespace CLIP.Project_Mouse.Game_Play_System
                         continue;
                     }
 
+
+                    // 登录鉴权回包：服务端可能把业务失败写在 ErrorCode，仍需派发以便 Login_Manager 解析 detail_info
+                    if (_current_msg.ErrorCode != 0 && _current_msg.msg_id != 1004)
+                    {
+                        if (ServerErrorCodeHandler.TryHandle(_current_msg.ErrorCode, _current_msg.ErrorArgs))
+                        {
+                            // 已由注册表处理，跳过消息派发
+                        }
+                        else
+                        {
+                            Log.Error($"[MsgDispatcher] Error code={_current_msg.ErrorCode}, msg_id={_current_msg.msg_id}, skipping.");
+                        }
+                        continue;
+                    }
+
+                    if (_current_msg.ErrorCode != 0 && _current_msg.msg_id == 1004)
+                        Debug.LogWarning($"[MsgDispatcher] msg_id=1004 且 ErrorCode={_current_msg.ErrorCode}，照常派发 Login_Manager（请勿仅用 ErrorCode 判断登录是否成功）。");
+
+                    // 心跳 S2C：无需业务 Receiver，直接打印服务器时间戳
+                    if (_current_msg.msg_id == 1008)
+                    {
+                        try
+                        {
+                            if (!string.IsNullOrWhiteSpace(_current_msg.detail_info))
+                            {
+                                var parser = new JsonParser(JsonParser.Settings.Default.WithIgnoreUnknownFields(true));
+                                var s2c = parser.Parse<HeartBeatS2C>(_current_msg.detail_info);
+                                Debug.Log($"[HeartBeatS2C] ts={s2c.Ts}");
+                                TimeManager.Instance?.SetServerTime(s2c.Ts);
+                            }
+                            else
+                            {
+                                Debug.Log("[HeartBeatS2C] (empty detail_info)");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogWarning($"[HeartBeatS2C] parse failed. detail_info={_current_msg.detail_info}\n{ex}");
+                        }
+                        continue;
+                    }
+
                     // 查找目标接收者
-                    var _receiver_info = _receiver_infos.Find(_info => _info._name == _current_msg.action_target);
+                    Debug.Log("Msg_Dispatcher: _receiver_infos.count=" + _receiver_infos.Count);
+                    var _receiver_info = _receiver_infos.Find(_info => _info._receiver_msg_id == _current_msg.msg_id);
                     if (_receiver_info == null)
                     {
-                        Log.Error($"[MsgDispatcher] No receiver found for '{_current_msg.action_target}'");
+                        Log.Error($"[MsgDispatcher] No receiver registered for msg_id={_current_msg.msg_id}");
                         continue;
                     }
 
@@ -112,7 +143,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     }
 
                     // 安全调用接收者方法
-                    Debug.Log($"[MsgDispatcher] Dispatching to '{_receiver_info._name}'");
+                    Debug.Log($"[MsgDispatcher] Dispatching to '{_receiver_info._receiver_msg_id}'");
                     _receiver_info._receiver.receive_msg(_current_msg);
 
                     //SafeInvoke.TryInvoke(
@@ -139,11 +170,12 @@ namespace CLIP.Project_Mouse.Game_Play_System
         /// 注册一个消息接收者。
         /// 若名称重复，则更新已有接收者引用。
         /// </summary>
-        public void add_msg_receiver(string _name, IMsg_Receiver _receiver)
+        public void add_msg_receiver(int msg_id, IMsg_Receiver _receiver)
         {
+            Debug.Log("Add Msg Receiver: msg_id=" + msg_id + ", receiver=" + _receiver.ToString());
             for (int i = 0; i < _receiver_infos.Count; i++)
             {
-                if (_receiver_infos[i]._name == _name)
+                if (_receiver_infos[i]._receiver_msg_id == msg_id)
                 {
                     _receiver_infos[i]._receiver = _receiver;
                     return;
@@ -151,19 +183,23 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
 
             var _info = new Msg_Receicer_Info();
-            _info._name = _name;
+            _info._receiver_msg_id = msg_id;
             _info._receiver = _receiver;
+            if(msg_id == 1004)
+            {
+                Debug.Log("Register Msg Receiver: msg_id=" + msg_id + ", receiver=" + _receiver.ToString());
+            }
             _receiver_infos.Add(_info);
         }
 
         /// <summary>
         /// 移除指定接收者（根据名字和GameObject）。
         /// </summary>
-        public void remove_msg_receiver(string _name)
+        public void remove_msg_receiver(int msg_id)
         {
             _receiver_infos.RemoveAll((_info) =>
             {
-                return _info._name == _name;
+                return _info._receiver_msg_id == msg_id;
             });
         }
 

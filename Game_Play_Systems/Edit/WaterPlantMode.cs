@@ -1,8 +1,6 @@
-using System.Collections;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
-using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
 
@@ -10,8 +8,13 @@ public class WaterPlantMode : IEditMode
 {
     private float waterTimer;
     private GameObject waterObj;
+    private Task<GameObject> waterPrefabTask;
+
     public void Enter()
     {
+        waterTimer = 0;
+        waterObj = null;
+        waterPrefabTask = PlantManager.Instance.GetWaterPrefabAsync();
         CameraManager.Instance.Freeze();
     }
 
@@ -23,10 +26,15 @@ public class WaterPlantMode : IEditMode
 
     public void OnDrag(Vector2 screenPos)
     {
-        if(waterTimer == 0)
+        if (waterTimer < 0)
+            return;
+        if (waterObj == null)
         {
+            if (waterPrefabTask == null || !waterPrefabTask.IsCompleted)
+                return;
+            GameObject waterPrefab = waterPrefabTask.Result;
+            waterObj = GameObject.Instantiate(waterPrefab);
             AudioManager.Instance.PlayAudioByRefKey("water");
-            waterObj = GameObject.Instantiate(PlantManager.Instance.waterObj);
         }
         Vector3 worldPos = Camera.main.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, 1));
         waterObj.transform.position = worldPos;
@@ -37,7 +45,7 @@ public class WaterPlantMode : IEditMode
             PlantManager.Instance.WaterPlant();
             waterTimer = -9999;
             EditManager.Instance.ExitCurrentMode();
-            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "已浇水");
+            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "已浇水！");
             waterObj.GetComponent<ParticleSystem>().Stop();
         }
     }
@@ -50,7 +58,10 @@ public class WaterPlantMode : IEditMode
     {
         waterTimer = 0;
         EditManager.Instance.ExitCurrentMode();
-        waterObj.GetComponent<ParticleSystem>().Stop();
+        if (waterObj != null)
+        {
+            waterObj.GetComponent<ParticleSystem>().Stop();
+        }
     }
 
     public void OnLongPress(Vector2 screenPos)

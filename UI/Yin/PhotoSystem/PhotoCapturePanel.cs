@@ -1,6 +1,7 @@
 using System.Collections;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Kernel;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -153,9 +154,11 @@ namespace CLIP.Project_Mouse.UI
         private IEnumerator CaptureAndShowPhoto()
         {
             yield return new WaitForEndOfFrame();
-            Global_Photo_Manager.Instance.CapturePhoto(PhotoMode.Room);
-            yield return new WaitForEndOfFrame();
-            Global_Photo_Manager.Instance.Try_Load_Last_Image(photoDisplay);
+
+            PhotoRecordInfo savedPhoto = null;
+            Global_Photo_Manager.Instance.CaptureAndSavePhoto(PhotoType.Room, onSaved: info => savedPhoto = info);
+            yield return new WaitUntil(() => savedPhoto != null);
+            yield return Global_Photo_Manager.Instance.LoadImageByPath(savedPhoto.localPath, t => photoDisplay.texture = t);
 
             afterPhoto.SetActive(true);
             photoPanel.SetActive(true);

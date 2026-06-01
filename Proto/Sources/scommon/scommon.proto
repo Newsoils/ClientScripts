@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+// Minimal stub to satisfy imports for local C# generation.
+// Source proto set references `import "scommon/scommon.proto";` in `cmd/login.proto`.
+// If you have the full server-side `scommon.proto`, replace this file with the real one.
+
+package scommon;
+
+// 返回票据（login.proto 里仅用到这个类型）
+message ResponseTicket {
+  int32 Code = 1;        // 返回码/状态码（具体含义由服务端定义）
+  string Msg = 2;        // 返回信息（可选）
+  string TraceId = 3;    // 链路追踪ID（可选）
+}
+

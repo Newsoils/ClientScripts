@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel.Achievement;
-using CLIP.Project_Mouse.Kernel.Inventory;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -70,11 +69,6 @@ namespace CLIP
 
                 public void GetAward(AchievementUnit achievementUnit)
                 {
-                    foreach (var award in achievementUnit.info.item_reward)
-                    {
-                        var invItem = Global_Inventory_Manager.GameItem_DB.Find(i => i.name == award.item_name);
-                        Global_Inventory_Manager.Change_Item_Count(award.item_name, award.item_count);
-                    }
                     Quest_And_Achievement_Manager.instance.on_get_achievement_reward(achievementUnit.info.achievement_name);
                 }
 
@@ -235,38 +229,8 @@ namespace CLIP
                         detailConditionText.text = info.achievement_unlock_condition;
                     }
 
-                    List<shop_item> allAwards = new List<shop_item>();
-                    if (info.item_reward != null && info.item_reward.Count > 0)
-                    {
-                        allAwards.AddRange(info.item_reward);
-                    }
-
-                    int awardCount = 0;
                     int childCount = detailAwardsRoot.childCount;
-                    foreach (var item in allAwards)
-                    {
-                        GameObject awardObj;
-                        if (awardCount < childCount)
-                        {
-                            awardObj = detailAwardsRoot.GetChild(awardCount).gameObject;
-                            awardObj.SetActive(true);
-                        }
-                        else
-                        {
-                            awardObj = Instantiate(achievementAwardUnitPrefab, detailAwardsRoot);
-                        }
-
-                        var awardUnit = awardObj.GetComponent<AchievementAwardUnit>();
-                        if (awardUnit != null)
-                        {
-                            var dbItem = Global_Inventory_Manager.GameItem_DB.Find(db => db.name == item.item_name);
-                            string iconPath = dbItem != null ? dbItem.res_url : "";
-                            awardUnit.InitAwardUnit(iconPath, item.item_count, isMystery);
-                        }
-                        awardCount++;
-                    }
-
-                    for (int i = awardCount; i < childCount; i++)
+                    for (int i = 0; i < childCount; i++)
                     {
                         detailAwardsRoot.GetChild(i).gameObject.SetActive(false);
                     }

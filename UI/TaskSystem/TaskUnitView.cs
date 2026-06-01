@@ -22,13 +22,15 @@ namespace CLIP.Project_Mouse.UI
         [SerializeField] private TMP_Text _buttonText;
         [SerializeField] private Image _transparentMask;
 
-        [SerializeField] private Image _buttonImage;
+        private Image _buttonImage;
 
         public Button ConfirmButton => _confirmButton;
         public TMP_Text descriptionText => _descriptionText;
 
         private void Start()
         {
+            _buttonImage = _confirmButton.GetComponent<Image>();
+
             _transparentMask.gameObject.SetActive(false);
         }
 

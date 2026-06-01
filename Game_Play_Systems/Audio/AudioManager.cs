@@ -25,9 +25,22 @@ public class AudioManager : SingletonMono<AudioManager>
 
     void Start()
     {
-        string text = JsonData_Manager.Load_Single_JsonData("project_mouse_tb_music_info");
+        string text = JsonDataManager.Load_Single_JsonData("project_mouse_tb_music_info");
         audioInfos = JsonConvert.DeserializeObject<List<WavInfo>>(text);
         DontDestroyOnLoad(gameObject);
+        EvtDsp.AddEvt(EvtNames.Audio_Stop, OnAudioStop);
+    }
+
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
+        EvtDsp.RemoveEvt(EvtNames.Audio_Stop, OnAudioStop);
+    }
+
+    private void OnAudioStop()
+    {
+        StopMusic();
+        SoundEffectSource?.Stop();
     }
     private void Update()
     {

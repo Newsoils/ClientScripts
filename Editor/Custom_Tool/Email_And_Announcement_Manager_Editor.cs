@@ -193,22 +193,22 @@ namespace CLIP
 
 
 
-                // Parse comma/space separated integers
-                private List<int> ParseIdList(string input)
+                // Parse comma/space separated mail ids (uint64)
+                private List<ulong> ParseIdList(string input)
                 {
-                    var result = new List<int>();
+                    var result = new List<ulong>();
                     if (string.IsNullOrWhiteSpace(input)) return result;
 
                     var parts = input.Split(new char[] { ',', ' ', ';' }, System.StringSplitOptions.RemoveEmptyEntries);
                     foreach (var p in parts)
                     {
-                        if (int.TryParse(p.Trim(), out int v))
+                        if (ulong.TryParse(p.Trim(), out ulong v))
                         {
                             result.Add(v);
                         }
                         else
                         {
-                            Debug.LogWarning($"Failed to parse id '{p}' as int.");
+                            Debug.LogWarning($"Failed to parse id '{p}' as ulong.");
                         }
                     }
                     return result;

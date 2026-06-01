@@ -21,7 +21,7 @@ namespace CLIP
                 }
                 private void Refresh()
                 {
-                    level.text = "Lv." + ExpManager.Instance.curLevel;
+                    level.text = "Lv." + ExpManager.instance.curLevel;
                 }
             }
         }

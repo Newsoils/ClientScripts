@@ -1,0 +1,2236 @@
+syntax = "proto3";
+
+package cmd;
+
+option go_package = "github.com/xcompany/xgame/proto/cmd";
+
+import "common/error.proto";
+import "common/common.proto";
+
+//SEQ[1000,5000]
+//登录前验证版本号请求
+message UserVerifyVerReq {
+  string resVer = 1; //资源版本号
+  int32 serverid = 2; //服务器ID
+  string clientVer = 3; //客户端版本号
+  int32 platform = 4;//系统平台 1android 2ios
+}
+
+//登录前验证版本号响应
+message UserVerifyVerRes {
+  string resVer = 1; //资源版本号
+  int32 serverid = 2; //服务器ID
+  string clientVer = 3; //客户端版本号
+  int32 platform = 4;//系统平台 1android 2ios
+  common.Error error = 5; //错误码
+}
+
+//带token验证登录账号请求
+message UserVerifyLoginReq {
+  string  userID = 1;  //账号名
+  string  token = 2;   //token
+  int32   reconnect = 3; //是否重连 0 非重连 1重连
+  int32 languageID = 4; //语言ID
+  uint64 roleID = 5; //登陆的角色ID
+  string resVer = 6; //资源版本号
+  int32 serverid = 7; //服务器ID
+  string clientVer = 8; //客户端版本号
+  int32 platform = 9;//系统平台 1android 2ios
+  int32  chatTranslateLanguageID = 10; //聊天翻译语言ID
+  string deviceID = 11; //设备号
+  int32 clientTp = 12; //0 IDE  1 debug内网  2 debug外网 3 RELEASE
+  int32 guideStatus = 13; //是否新手引导完成 1 未完成 2 已完成
+}
+
+//带token验证登录账号响应
+message UserVerifyLoginRes {
+  int64 userID = 1;       //账号ID
+  common.ServerRoleInfo RoleInfo = 2; //roleInfo
+}
+
+//心跳请求
+message HeartBeatReq {
+}
+
+//心跳响应
+message HeartBeatRes {
+  int64 ts = 1;         //服务器时间戳
+}
+
+//心跳响应
+message HeartBeatS2C {
+  int64 ts = 1;         //服务器时间戳
+}
+
+//服务器登录请求
+message ServerRoleLoginReq {
+  string Token = 1; //Token
+  string DeviceID = 2; //DeviceID
+  string Platform = 3; //平台
+  string RemoteAddr = 4; //IP
+}
+
+//服务器登录响应
+message ServerRoleLoginRes {
+  int64 UID = 1;                      //uid
+  common.ServerRoleInfo RoleInfo = 2; //roleInfo
+  int32 IsCreate = 3;//是否是创角 0否1是
+  int64 ServerOpenTime = 4;//开服时间
+  int64 MergeTime = 5;    //合并时间
+}
+
+
+//拉取道具背包信息请求
+message GetItemBagReq {
+  string Token = 1; //Token
+}
+
+//拉取道具背包信息响应
+message GetItemBagRes {
+  repeated common.ItemInfo Items = 1; //道具信息
+  int64 ItemBagCapacity = 2;//道具背包上限
+}
+
+//好友列表请求
+message FriendsListReq {//module=chat
+}
+//好友列表响应
+message FriendsListRes {
+  common.FriendshipInfo Info = 1;
+}
+
+//vip信息获取 1021
+message VipInfoReq {
+}
+//vip信息响应
+message VipInfoRes {
+  int64 VipPurchaseRecord = 1; //位运算 0:未购买 1：已购买
+  int64 VipLevel = 2; //vip等级
+  int64 VipExp = 3; //vip经验
+  int64 UpdateTime = 4; //vip每日登录奖励刷新时间
+  int32 VipCumulativeDays = 5; //累计登录天数
+}
+
+//签到奖励领取请求 1029
+message SignInReq {
+  int32 GetType = 1;
+  int64 SignInID = 2;
+}
+//签到奖励领取响应 1030
+message SignInRes {
+  repeated common.ItemInfo Items = 1;
+}
+
+//领取连续签到奖励请求 1031
+message SignInTaskReq {
+}
+
+//领取连续签到奖励响应 1032
+message SignInTaskRes {
+  repeated common.ItemInfo Items = 1;
+}
+
+//添加道具请求
+message TestAddItemReq {
+  string Token = 1; //Token
+  repeated common.ItemInfo Items = 2;
+}
+
+//添加道具回应
+message TestAddItemRes {
+  common.ErrorCode err = 1;
+  string Token = 2; //Token
+}
+
+// ----------------------------
+// Cat 相关结构（小猫）
+// ----------------------------
+
+message CatWearInfo {
+  int32 Slot = 1; //穿戴位置
+  uint64 ItemUID = 2; //穿戴的道具UID
+  int32 ClothSlotType = 3; //穿戴的部位类型 0 单件 1 部分套装 2 全套装
+}
+
+message CatTravelBagInfo {
+  uint64 RecordUID = 1; //唱片UID(道具中的唱片是唯一的)
+  int64 LuckyItem = 2; //幸运小物ID
+  int64 FoodItem = 3; //便当ID
+}
+
+message CatTravelInfo {
+  int32 Destination = 1; //目的地
+  string Wears = 2; //出门时快照的穿戴 JSON：Dictionary<string,int>，key=槽位，value=服装id
+}
+
+message CatInfo {
+  int32 Status = 1; //0 在家 1 出游
+  string Wears = 2; //穿戴 JSON：Dictionary<string,int>，key=槽位，value=服装id
+  CatTravelBagInfo Bag1 = 3;
+  CatTravelBagInfo Bag2 = 4;
+  CatTravelBagInfo Bag3 = 5;
+  CatTravelInfo CurrentTravel = 6; //当前游历
+}
+
+// 场景照片（下发客户端）
+message RolePhotoInfo {
+  uint64 UID = 1;
+  uint64 RoleID = 2;
+  int32 MapID = 3;
+  int32 PhotoConfigID = 4;
+  string Wears = 5;
+}
+
+// 照片摘要（UID/地图/配置/穿戴）
+message PhotoInfo {
+  uint64 UID = 1;
+  int32 MapID = 2;
+  int32 PhotoConfigID = 3;
+  string Wears = 4;
+}
+
+//拉取签到表格请求 1035
+message SignInFormReq {
+}
+//拉取签到表格响应 1036
+message SignInFormRes {
+  map<int64, int32> SignIn = 1; //签到记录
+  map<int32, int32> RewardRecord = 2; //连签奖励领取记录
+  map<int64, int32> SignInAgain = 3; //再次领取记录
+  int32 ContinuousSignInDays = 4; //连续签到天数
+  int64 TodaySignInID = 5; //今日签到ID
+}
+
+//拉取邮件列表请求 1037
+message MailListReq {
+  string Token = 1;    //Token
+}
+//拉取邮件列表响应 1038
+message MailListRes {
+  string re = 1; //
+  repeated common.MailInfo Mails = 2;
+}
+
+//邮件奖励领取请求 1039
+message MailRewardReq {
+  string Token = 1;    //Token
+  repeated uint64 MailIDs = 2; //需要领取的邮件id
+}
+//邮件奖励领取响应 1040
+message MailRewardRes {
+  int32 Re = 1; //是否有未成功领取的邮件奖励 0：没有 1：有
+  repeated common.ItemInfo Items = 2; //奖励道具信息
+}
+
+//邮件删除请求
+message MailDeleteReq {
+  string Token = 1;    //Token
+  repeated uint64 MailIDs = 2; //需要领取的邮件id
+}
+//邮件删除响
+message MailDeleteRes {
+  string re = 1; //
+  repeated common.MailInfo Mails = 2; //返回剩下的邮件列表
+}
+
+//拉取指定卡池信息请求
+message GachaListReq {
+  repeated uint64 RecordUID = 1;//指定卡池数据拉取
+}
+
+//拉取指定卡池信息响应
+message GachaListRes {
+  repeated common.GachaRecord Infos = 1;//卡池记录
+  repeated common.GachaEnsureRecord EnInfos = 2;//保底信息
+  map<int64, common.Wishlist> WishListInfos = 3; //所有心愿单信息 Key：TagID Value:心愿单ID
+  map<int32, int64> Score = 4; //积分信息
+  int32 RechargeAmount = 5;//充值金额
+}
+
+//卡池抽卡请求
+message GachaTakeReq {
+  int32 Times = 1;//抽卡次数
+  uint64 RecordUID = 2;//对象ID
+}
+
+//卡池抽卡响应
+message GachaTakeRes {
+  repeated common.ItemInfo Items = 1;//抽卡获取
+  common.GachaRecord Info = 2;//卡池记录
+  common.GachaEnsureRecord EnInfo = 3;//保底信息
+  repeated common.ItemInfo ExItems = 4;//额外获取道具
+  map<int32, int64> Score = 5; //积分信息
+  map<int64, common.Wishlist> WishListInfos = 6; //所有心愿单信息 Key：TagID Value:心愿单ID
+  repeated common.GachaRecord AboutInfos = 7;//受关联卡池(同种类计数叠加)
+}
+
+//使用物品 1051
+message UseItemReq{
+  string Token = 1;
+  uint64 Uid = 2; //物品唯一ID
+  int64  Count = 3;  //物品使用数量
+  int32  Choice = 4; //手选宝箱选择的道具， 0：忽略； 1：奖励1； 2：奖励2；...
+}
+
+message UseItemRes{
+  string re = 1;
+  repeated common.ItemInfo Items = 2; //获得的物品反馈
+}
+
+//抽卡代币够买请求
+message GachaCostBuyReq{
+  uint64 RecordUID = 1;//对象ID
+  int64 ItemCount = 2;//购买道具数量
+}
+
+//抽卡代币够买响应
+message GachaCostBuyRes{
+  repeated common.ItemInfo Items = 1; //获得的物品反馈
+}
+
+//碎片合成请求
+message UseFragmentReq{
+  repeated  uint64 Uid = 1; //要合成的碎片ID
+  int64  Count = 2;  //指定合成时的合成数量,不能小于等于0
+}
+
+//碎片合成响应
+message UseFragmentRes{
+  repeated common.ItemInfo Items = 1; //获得的物品反馈
+}
+
+//读取邮件请求
+message MailReadReq{
+  string Token = 1;
+  repeated uint64 MailID = 2; //需要阅读的邮件id
+}
+
+//读取邮件响应
+message MailReadRes{
+}
+
+//获取排行榜请求
+message GetRankInfoReq {
+  repeated uint64 RankUIDs = 1;
+}
+
+//获取排行榜响应
+message GetRankInfoRes {
+  repeated common.NormalRankInfo Rank = 1;//排行数据
+  repeated common.ThumbsUpRecordInSingleRank ThumbsUpInfo = 2;//点赞数据
+}
+
+//简要获取排行榜请求(仅为special装填榜首
+message GetRankSimpleInfoReq {
+  repeated uint64 RankUIDs = 1;
+}
+
+//简要获取排行榜响应(仅为special装填榜首
+message GetRankSimpleInfoRes {
+  repeated common.NormalRankInfo Rank = 1;//排行数据
+}
+
+//排行榜点赞
+message RankThumbsUpReq {
+  uint64 RankUID = 1;//排行榜ID
+  uint64 UID = 2;//点赞对象UID
+}
+
+//排行榜点赞
+message RankThumbsUpRes {
+  uint64 RankUID = 1;//排行榜ID
+  repeated common.ItemInfo Rewards = 2;//点赞奖励
+  common.SingleRoleRankInfo Info = 3;//数据变动
+  int64 ThumbsUpTimes = 4;//已点赞次数
+}
+
+//登录后拉取所有红点请求
+message GetAllRedPointInfoReq {
+}
+
+//登录后拉取所有红点响应
+message GetAllRedPointInfoRes {
+  int64 FuncID = 1;       //功能编号
+  int64 SwitchFlag = 2;   //红点开关
+  map<string, int32> SubID = 3;//功能子红点
+}
+
+//VIP礼包购买请求 1073
+message VipPackagePurchaseReq{
+  int64 VipLevel = 1; //需要购买的礼包对应的Vip等级
+}
+
+//VIP礼包购买响应
+message VipPackagePurchaseRes{
+  int64 VipPurchaseRecord = 1; //位运算 0:未购买 1：已购买
+  repeated  common.ItemInfo Items = 2; //获得的物品
+}
+
+//VIP领取累计登录奖励请求
+message VipCumulativeLoginReq{
+}
+//VIP领取累计登录奖励响应
+message VipCumulativeLoginRes{
+  int32 VipCumulativeDays = 1; //累计登录的天数
+  repeated  common.ItemInfo Items = 2; //获得的物品
+  int64 UpdateTime = 3; //vip每日登录奖励刷新时间
+}
+
+//任务列表拉取请求
+message MissionListReq{
+  repeated int32 MissionType = 1; //要拉取的任务页签 1：日常  2：成就 3：竞技场 4:试炼任务
+}
+
+//任务列表拉取响应
+message MissionListRes{
+  repeated common.MissionInfo Missions = 1;//任务表
+  int64 DailyPoint = 2; //日常任务点数
+  int64 Achievement = 3; //成就任务点数
+  repeated  int64 AchievementRewardsRecord = 4;//成就奖励领取记录
+}
+
+//任务奖励领取请求
+message MissionRewardsReq{
+  int32 MissionType = 1; //要领取的任务页签 1：日常  2：成就  4：试炼
+  int64 ModuleID = 2;//模块ID
+  int64 GroupID = 3;//分组
+  uint64 MissionUID = 4; //领取的任务ID
+}
+
+//任务奖励领取响应
+message MissionRewardsRes{
+  repeated common.ItemInfo Items = 1; //获得的物品
+  int64 DailyPoint = 2; //日常任务点数
+  int64 Achievement = 3; //成就任务点数
+  repeated common.MissionInfo Missions = 4;//任务表
+}
+
+//任务累计点数奖励请求
+message MissionPointRewardsReq{
+  int32 PointType = 1; //要领取的点数奖励类型 1：日常点数奖励 2：成就点数奖励
+  int64 MissionUID = 2; //任务唯一ID
+}
+
+//任务累计点数奖励响应
+message MissionPointRewardsRes{
+  int64 DailyPoint = 1; //日常任务点数
+  int64 Achievement = 2; //成就任务点数
+  repeated  common.ItemInfo Items = 3; //获得的物品
+  repeated  int64 AchievementRewardsRecord = 4;//成就奖励领取记录
+}
+
+//获取排行榜奖励请求
+message RankMissionAwardTakeReq {
+  repeated uint64 RankUIDs = 1;//排行榜类型
+  int64 MissionID = 2; //任务ID
+  int32 IsTakeAward = 3;//是否领取 0否 1是
+}
+
+//获取排行榜奖励响应
+message RankMissionAwardTakeRes {
+  repeated common.ItemInfo Items = 1;//奖励内容
+  repeated common.CommonShareMissionInfo Infos = 2;//变动后排行榜数据
+}
+
+//拉取商店信息请求
+message GetAllShopInfoReq {
+  repeated int64 ShopIDs = 1;//指定商店<shop配置ID>
+}
+
+//拉取商店信息响应
+message GetAllShopInfoRes {
+  repeated UserShop Shops = 1; //商店信息
+  int32 RefreshTimes = 2; //今日手动刷新次数
+}
+
+//商店信息
+message UserShop {
+  uint64 ShopUID = 1; //商店UID
+  int64 PshopID = 2; //父商店ID
+  int64 ShopID = 3; //商店ID
+  int32 FreeBuy = 4; //免费商品是否已购买
+  int32 RefreshTimes = 5; //今日手动刷新次数
+  repeated common.UserShopGoods Goodss = 6; //商品
+  ShopAutoBuyRecord AutoBuyRecord = 7; //自动购买信息
+  uint64 OptionArg = 8; //可选参数
+  int32 RefreshTimesMax = 9; //今日手动刷新次数(最大
+}
+
+//商店每日自动购买次数
+message ShopAutoBuyRecord {
+  int32 AutoBuy = 1; //自动购买开关 0 未开启 1 开启
+  repeated AutoBuyGoodsInfo AutoBuyGoodsRecords = 2; //已选择的自动购买物品
+}
+
+//自动购买物品信息
+message AutoBuyGoodsInfo {
+  int64 GoodsID = 1; //商品ID
+  int32 Amount = 2;  //今日已自动购买数量
+  int32 Selected = 3; //是否选择购买
+}
+
+//手动刷新商店请求
+message ManualRefreshShopReq {
+  uint64 ShopUID = 1; //要刷新的商店UID
+}
+
+//手动刷新商店响应
+message ManualRefreshShopRes {
+  repeated UserShop Shop = 1; //刷新后变更的商店信息
+  repeated common.ItemInfo Items = 2; //自动购买的道具信息
+  int32 RefreshTimes = 3; //今日手动刷新次数
+}
+
+//购买商品请求
+message BuyGoodsReq {
+  uint64 ShopUID = 1; //要购买商品的商店UID
+  int64 GoodsID = 2; //要购买的商品ID
+  int32 BuyAmount = 3; //要购买的商品数量
+}
+
+//购买商品响应
+message BuyGoodsRes {
+  uint64 ShopUID = 1; //要购买商品的商店UID
+  common.UserShopGoods Goods = 2; //购买后的商品信息
+  repeated common.ItemInfo Items = 3; //购买的道具信息
+}
+
+//开启/关闭商店自动购买请求
+message OpenCloseAutoBuyReq {
+  uint64 ShopUID = 1; //要购买商品的商店UID
+  int32 AutoBuy = 2; //自动购买开关 0 未开启 1 开启
+}
+
+//开启/关闭商店自动购买响应
+message OpenCloseAutoBuyRes {
+  uint64 ShopUID = 1; //要购买商品的商店UID
+  int32 AutoBuy = 2; //自动购买开关 0 未开启 1 开启
+}
+
+//选择自动购买的商品请求
+message ChooseAutoBuyGoodsReq {
+  uint64 ShopUID = 1; //要购买商品的商店UID
+  repeated int64 GoodsIDs = 2; //自动购买的商品列表
+}
+
+//开启/关闭商店自动购买响应
+message ChooseAutoBuyGoodsRes {
+  uint64 ShopUID = 1; //要购买商品的商店UID
+  repeated AutoBuyGoodsInfo AutoBuyGoodsRecords = 2; //已选择的自动购买物品
+}
+
+//通用购买请求
+message CommonSaleReq {
+  int64 ID = 1;//通用购买表ID
+  int32 Times = 2;//次数
+}
+
+//通用购买响应
+message CommonSaleRes {
+  int32 PurchasedTimes = 1;//对应项剩余购买次数
+  repeated common.ItemInfo Add = 2;//获取物
+}
+
+// 指定任务奖励领取请求 （不适用于有点数奖励的任务）
+message MissionSingleRewardsReq{
+  repeated uint64 MissionUID = 1;
+}
+
+// 指定任务奖励领取响应 （不适用于有点数奖励的任务）
+message MissionSingleRewardsRes{
+  repeated common.ItemInfo Items = 1; //获得的物品
+  repeated common.MissionInfo Missions = 4;//相关任务表
+  repeated common.ActivityInfo Activities = 2; //变更的活动信息
+}
+
+//锁定状态变动请求
+message SetLockStatusReq {
+  repeated common.ItemInfo Targets = 1;//
+}
+
+//锁定状态变动响应
+message SetLockStatusRes{
+}
+
+//拉取通行证请求
+message GetAllPassportReq {
+  repeated uint64 Passports = 1;
+}
+
+//拉取通行证响应
+message GetAllPassportRes {
+  repeated UserPassport Passports = 1; //通行证信息
+}
+
+//通行证信息
+message UserPassport {
+  uint64 PassportUID = 1; //PassportUID
+  int64 PassportID = 2; //PassportID //通行证ID
+  int64 Score = 3; //积分(只有积分型通行证使用)
+  int32 BuyAdvance = 4; //是否已购买高级通行证 0 未购买 1 已购买
+  int64 NormalRewardFlag = 5; //普通奖励领取情况
+  int64 AdvanceRewardFlag = 6; //高级奖励领取情况
+  int64 EndTime = 7; //通行证结束时间
+  int64 ModuleType = 8; //所属模块ID 15 活动
+  int64 ModuleID = 9; //所属功能ID(活动UID)
+  int32 BuyMiddle = 10; //是否已购买中级通行证 0 未购买 1 已购买
+  int64 MiddleRewardFlag = 11; //中级奖励领取情况
+}
+
+//领取通行证奖励请求
+message ReceivePassportRewardReq {
+  uint64 PassportUID = 1; //PassportUID
+}
+
+//领取通行证奖励请求
+message ReceivePassportRewardRes {
+  int64 NormalRewardFlag = 1 ; //普通奖励领取情况
+  int64 AdvanceRewardFlag = 2; //高级奖励领取情况
+  repeated common.ItemInfo Items = 3; //购买的道具信息
+  int64 MiddleRewardFlag = 4; //中级奖励领取情况
+}
+
+//购买高级通行证请求
+message BuyAdvancePassportReq {
+  uint64 PassportUID = 1; //PassportUID
+  int32 Coupons = 2;
+  int32 UseGodType = 3;//使用金豆类型 0 不使用  1 使用档次1 2 使用档次2 3 使用档次3
+}
+
+//购买高级通行证请求
+message BuyAdvancePassportRes {
+  int32 BuyAdvance = 1; //是否已购买高级通行证 0 未购买 1 已购买
+  int64 Score = 2; //积分(只有积分型通行证使用)
+  repeated common.ItemInfo Items = 3; //购买的道具信息
+  string OrderUUID = 4; //支付订单号
+  int32 IsEnough = 5; // 金币余额是否足够 1:足够 2:不足（微信平台使用）
+}
+
+//购买通行证积分请求
+message BuyPassportScoreReq {
+  uint64 PassportUID = 1; //PassportUID
+  int32 Count = 2; //购买次数
+}
+
+//购买通行证积分响应
+message BuyPassportScoreRes {
+  int64 Score = 1; //积分(只有积分型通行证使用)
+}
+
+//GM请求
+message GMCmdReq {
+  int32 cmd = 1; //GM指令 30001:时间偏移 30002：发送测试邮件
+  repeated int64 args = 2; //指令参数
+}
+
+//GM响应
+message GMCmdRes {
+  int64 TimeUnix = 1;//玩家当前时间戳
+}
+
+//官职数据拉取
+message OfficialInfoReq{
+}
+
+//官职数据拉取
+message OfficialInfoRes{
+  int32 OfficialLevel = 1;//当前官职等级
+  repeated common.MissionInfo Missions = 2;//当前官职任务
+}
+
+//获取派遣偏好请求
+message DispatchEventGetSetReq {
+}
+
+//获取派遣偏好响应
+message DispatchEventGetSetRes {
+  int32 OneClickTimeGear = 2;//一键时间挡位
+  int32 OneClickOrderType = 3;//优先级类型 1事件品质 2据点顺序
+  map<int32, int32> BuildingOrder = 4;//据点顺序
+}
+
+//设置派遣偏好请求
+message DispatchEventSetSetReq {
+  int32 OneClickTimeGear = 2;//一键时间挡位
+  int32 OneClickOrderType = 3;//优先级类型 1事件品质 2据点顺序
+  map<int32, int32> BuildingOrder = 4;//据点顺序
+}
+
+//设置派遣偏好响应
+message DispatchEventSetSetRes {
+  int32 OneClickTimeGear = 2;//一键时间挡位
+  int32 OneClickOrderType = 3;//优先级类型 1事件品质 2据点顺序
+  map<int32, int32> BuildingOrder = 4;//据点顺序
+}
+
+//官职任务领取
+message OfficialMissionTakeReq{
+}
+//官职任务领取
+message OfficialMissionTakeRes{
+  int32 OldLevel = 1;//领取前等级
+  int32 NewLevel = 2;//领取后等级
+  repeated common.MissionInfo Missions = 3;//当前官职任务
+  repeated common.ItemInfo Items = 4;//获取道具
+  //int32 BuyAdvance = 5;//是否购买高级战令 0未 1已
+  int64 OldPower = 6;//旧战力
+  int64 NewPower = 7;//新战力
+}
+
+message OfficialSimpleBarReq{
+}
+
+message OfficialSimpleBarRes{
+  int32 Status = 1; //0有未完成任务 1可升级官职 2最大官职
+  common.MissionInfo Mission = 3;
+}
+
+//获取礼包信息
+message GetGiftInfoReq{
+  repeated int32 GiftType = 1;//礼包类型 1：每日礼包 2：每周礼包 3：每月礼包 4：活动限时礼包 5：呼脸礼包 6：特权礼包 7：皮肤礼包 8：荒兽礼包
+}
+message GetGiftInfoRes{
+  repeated common.GiftInfo Info = 1;
+}
+
+//rmb购买礼包请求
+message GiftPurchaseReq{
+  uint64 UID = 1;//购买礼包UID
+  repeated int64 FreeChoice = 2;//自由选择项
+  int32 Coupons = 3;
+  int32 UseGodType = 4;//使用金豆类型 0 不使用  1 使用档次1 2 使用档次2 3 使用档次3
+}
+message GiftPurchaseRes{
+  string OrderUUID = 1; //支付订单号
+  int32 IsEnough = 2; // 金币余额是否足够 1:足够 2:不足（微信平台使用）
+}
+
+//设置心愿单请求
+message SetWishListReq{
+  int64 tagID = 1;//抽卡页签ID
+  repeated int64 ID = 2;//心愿单英雄id
+}
+
+//设置心愿单响应
+message SetWishListRes{
+  common.Wishlist WishListInfo = 1; //心愿单信息
+}
+
+//获取聚宝盆信息请求
+message GetCornucopiaInfoReq{
+}
+
+//获取聚宝盆信息响应
+message GetCornucopiaInfoRes{
+  int32 CornucopiaFreeTimes = 1;//免费次数
+  int64 CornucopiaFreeCoin = 2;//免费银币数量
+  int32 CornucopiaPaidTimes1 = 3;//付费次数1
+  int64 CornucopiaPaidCoin1 = 4;//付费银币数量1
+  int32 CornucopiaPaidTimes2 = 5;//付费次数2
+  int64 CornucopiaPaidCoin2 = 6;//付费银币数量2
+}
+
+//抽取进度奖励请求
+message GetTimesRewardReq{
+  int32 ID = 1; //进度奖励ID
+  int32 Times = 2; //次数
+}
+
+//抽取进度奖励响应
+message GetTimesRewardRes{
+  repeated common.ItemInfo Items = 1;//进度奖励
+  map<int32, int64> Score = 2; //积分信息
+}
+
+//收发侠义值
+message ChivalrousPointReq{//module=chat
+  int32 Type = 1;//收发类型 1：单独发送 2：单独收取 3：一键收发
+  uint64 UID = 2;
+}
+message ChivalrousPointRes{
+  repeated common.ItemInfo Items = 1;//侠义值
+  repeated common.PlayerDetailedInfo Info = 2;//好友列表信息
+}
+
+//拉取后台跑马灯请求
+message GetMarqueeReq{
+}
+
+//拉取后台跑马灯响应
+message GetMarqueeRes{
+  repeated common.MarqueeInfo Marquee = 1;//跑马灯
+}
+
+//获取活动列表信息
+message GetActivityListReq{
+}
+message GetActivityListRes{
+  repeated common.ActivityInfo Info = 1;//活动信息
+  map<string, int32> SubID = 3;//活动红点
+}
+
+//获取活动具体信息请求
+message GetActivityInfoReq{
+  repeated uint64 UID = 1;//活动UID
+}
+
+//获取活动具体信息响应
+message GetActivityInfoRes{
+  repeated common.ActivityInfo Info = 1;//活动信息
+}
+
+//领取活动奖励请求
+message GetActivityRewardReq{
+  uint64 UID = 1;//活动UID
+  repeated int32 Args = 2;//参数
+}
+
+//领取活动奖励响应
+message GetActivityRewardRes{
+  repeated common.ItemInfo Items = 1;
+}
+
+//购买聚宝盆请求
+message GetCornucopiaItemsReq{
+  int32 Type = 1; //1：免费 2：付费1 3：付费2
+  int32 Times = 2; //次数
+}
+
+//购买聚宝盆响应
+message GetCornucopiaItemsRes{
+  repeated common.ItemInfo Items = 1;
+  int32 Crit = 2; //0：未暴击 1：暴击
+}
+
+//角色引导记录请求
+message RoleGuideRecordReq{
+  string Record = 1;//数据字符串(仅记录，role信息中携带)
+}
+
+//角色引导记录请响应
+message RoleGuideRecordRes{
+  common.ServerRoleInfo Role = 1;
+}
+
+//拉取游历事件列表
+message TravelEventListReq{
+
+}
+
+message TravelEventListRes{
+  TravelInfo Info = 1; //游历信息
+}
+
+//游历信息
+message TravelInfo{
+  int32 TravelLv = 1; //游历等级
+  int32 RedExp = 2; //红经验
+  int32 BlueExp = 3; //蓝经验
+  int64 NextEventRefreshTime = 4; //下次事件刷新时间
+  repeated TravelEvent Events = 5; //游历事件
+  int32 BossChallenge = 6; //boss挑战事件 0 是无挑战 1 是红色挑战 2 是蓝色挑战
+  int64 BossChallengeEndTime = 7; //boss挑战事件结束时间
+  int32 BossChallengePosX = 8; //boss挑战事件点位X
+  int32 BossChallengePosY = 9; //boss挑战事件点位Y
+}
+
+//游历事件
+message TravelEvent{
+  uint64 TravelEventUID = 1; //游历事件唯一ID
+  int64 TravelEventID = 2; //游历事件配置ID
+  int32 PosX = 3; //时间位置X
+  int32 PosY = 4; //时间位置Y
+}
+
+//后台推送及红点开关
+message OpenBackPushReq{
+}
+
+message OpenBackPushRes{
+}
+
+//获取某玩家具体信息
+message GetPlayerReq{
+  int32 SeverID = 1;//服务器ID
+  uint64 RoleID = 2;//玩家roleID
+}
+message GetPlayerRes{
+  common.PlayerDetailedInfo Info = 1;//玩家信息
+}
+
+//首充礼包购买请求 1291
+message FirstChargeGiftBuyReq {
+  uint64 ActivityUID = 1; //活动ID
+  int64 GiftID = 2;     //首充礼包ID
+  int32 Coupons = 3;
+  int32 UseGodType = 4;//使用金豆类型 0 不使用  1 使用档次1 2 使用档次2 3 使用档次3
+}
+message FirstChargeGiftBuyRes {
+  map<int64, int64> FirstChargeGiftRecord = 1; //首充礼包信息(key是礼包id,val是礼包状态) 同common.ServerRoleInfo同字段
+  repeated common.ItemInfo Rewards = 2;//奖励  
+  string OrderUUID = 3; //自有系统订单号
+  int32 IsEnough = 4; // 金币余额是否足够 1:足够 2:不足（微信平台使用）
+}
+
+//编辑黑名单
+message EditBlacklistReq{//module=chat
+  int32 Type = 1;//0：移除黑名单 1：添加黑名单
+  uint64 RoleID = 2;//玩家roleID
+  int32 ServerID = 3;//玩家服务器ID
+}
+message EditBlacklistRes{
+  common.FriendshipInfo Info = 1;//好友信息
+}
+
+//编辑好友列表
+message EditFriendsListReq{//module=chat
+  int32 Type = 1;//0：删除好友 1：发送好友申请
+  uint64 RoleID = 2;//玩家roleID
+}
+message EditFriendsListRes{
+  repeated common.PlayerDetailedInfo FriendsInfo = 1;//好友列表
+}
+
+//编辑申请列表
+message EditApplicationListReq{//module=chat
+  int32 Type = 1;//0：拒绝申请 1：同意申请 2:一键拒绝 3:一键同意
+  uint64 RoleID = 2;//玩家roleID
+}
+
+message EditApplicationListRes{
+  repeated common.PlayerDetailedInfo ApplicationListInfo = 1;//申请列表
+  repeated common.PlayerDetailedInfo FriendsList = 2;//好友列表
+}
+
+//批量删除好友
+message BatchDeleteFriendsReq{//module=chat
+  repeated uint64 RoleID = 1;//要删除的好友ID
+}
+message BatchDeleteFriendsRes{
+  repeated common.PlayerDetailedInfo FriendsInfo = 1;//好友列表
+}
+
+//推荐好友
+message RecommendFriendsReq{//module=chat
+}
+message RecommendFriendsRes{
+  repeated common.PlayerDetailedInfo RecommendInfo = 1;//推荐好友列表
+}
+
+//搜索
+message SearchPlayerReq{//module=chat
+  string Search = 1;//搜素文字，搜索id格式为#+id
+}
+message SearchPlayerRes{
+  repeated common.PlayerDetailedInfo Info = 1;//搜索列表
+  map<uint64, int32> SearchRoleBaseInfo = 2;//搜索结果的基础信息 key:roleID value:result, 随src传递方便后续查询
+}
+
+//一键申请
+message ApplyAllReq{//module=chat
+  repeated uint64 RoleIDs = 1;//申请列表
+}
+message ApplyAllRes{
+}
+
+//创建联盟请求
+message CreateLeagueReq{
+  string Name = 1; //联盟名字
+  string Declaration = 2; //联盟宣言
+  string Announcement = 3; //联盟公告
+  int32 FlagIcon = 4; //联盟旗帜
+  int32 ApplyType = 5; //申请方式 1 验证加入 2 自动加入 3 不可加入
+  int32 ApplyLv = 6; //申请等级要求
+}
+
+//创建联盟响应
+message CreateLeagueRes{
+  common.LeagueInnerDetailInfo League = 1; //创建成功后返回联盟内部信息
+  common.LeagueMemberSimpleInfo SelfInfo = 2; //自己的成员信息
+}
+
+//联盟推荐请求
+message LeagueRecommendReq{
+}
+
+//联盟推荐请求
+message LeagueRecommendRes{
+  repeated common.LeagueSimpleInfo Leagues = 1;
+  common.RoleLeagueInfo Info = 2; //玩家的联盟数据信息
+}
+
+
+//联盟申请请求
+message LeagueApplyReq{
+  int32 Op = 1; //操作 1 申请  2 取消申请
+  uint64 LeagueID = 2; //联盟ID
+}
+
+//联盟申请响应
+message LeagueApplyRes{
+  int32 Ret = 1; //申请结果 1 申请/取消申请成功 2 直接加入
+  common.LeagueInnerDetailInfo League = 2; //加入成功后返回联盟内部信息(Ret=2时才有)
+  common.RoleLeagueInfo Info = 3; //玩家的联盟数据信息(返回申请列表)
+  common.LeagueMemberSimpleInfo SelfInfo = 4; //自己的成员信息
+}
+
+//联盟搜索请求
+message LeagueSearchReq{
+  string KeyWorlds = 1; //搜索关键字
+}
+
+//联盟搜索响应
+message LeagueSearchRes{
+  repeated common.LeagueSimpleInfo Leagues = 1;
+}
+
+//查看军团信息请求(非同盟人员请求)
+message GetLeagueDetailInfoReq{
+  uint64 LeagueID = 1; //联盟ID
+}
+
+//查看军团信息响应
+message GetLeagueDetailInfoRes{
+  common.LeagueOuterDetailInfo League = 1; //联盟详情
+  common.RoleLeagueInfo Info = 2; //玩家的联盟数据信息(返回申请列表)
+}
+
+//查看军团信息请求(内部人员请求)
+message GetLeagueInnerDetailInfoReq{
+}
+
+//查看军团信息响应
+message GetLeagueInnerDetailInfoRes{
+  common.LeagueInnerDetailInfo League = 1; //联盟详情
+  common.RoleLeagueInfo RoleLeagueInfo = 2; //个人的奖励领取等信息
+  repeated common.SimpleRoleInfo Applys = 3; //申请列表(只有管理员会有)
+}
+
+//快速加入军团
+message QuickJoinLeagueReq{
+}
+
+//快速加入军团响应
+message QuickJoinLeagueRes{
+  common.LeagueInnerDetailInfo League = 1; //加入成功后返回联盟内部信息
+  common.LeagueMemberSimpleInfo SelfInfo = 2; //自己的成员信息
+}
+
+//查看军团大厅请求
+message QueryLeagueMallInfoReq{
+}
+
+//查看军团大厅请求
+message QueryLeagueMallInfoRes{
+  repeated common.LeagueMemberSimpleInfo Members = 1; //联盟成员
+  repeated common.SimpleRoleInfo Applys = 2; //申请列表
+  repeated common.LeagueLogInfo Logs = 3; //联盟动态信息
+  map<int32, int32> Badges = 4;//军团勋章 <类型,等级>
+  map<int32, common.LeagueTaskInfoGroup> BadgeTaskGroup = 5;//勋章任务 <类型，任务组>
+}
+
+//修改联盟设置
+message ChangeLeagueInfoReq{
+  string Declaration = 1; //联盟宣言
+  int32 FlagIcon = 2; //联盟旗帜
+  int32 ApplyType = 3; //申请方式 1 验证加入 2 自动加入 3 不可加入
+  int32 ApplyLv = 4; //申请等级要求
+}
+
+//修改联盟设置响应
+message ChangeLeagueInfoRes{
+  common.LeagueInnerDetailInfo League = 1; //联盟详情
+}
+
+//联盟申请处理请求
+message LeagueApplyHandleReq{
+  int32 HandleWay = 1; //操作方式 1 单个处理  2 一键处理
+  int32 Op = 2; //操作 1 同意  2 拒绝
+  uint64 RoleID = 3; //申请人RoleID
+}
+
+//联盟申请处理响应
+message LeagueApplyHandleRes{
+  repeated common.SimpleRoleInfo Applys = 1; //申请列表
+}
+
+//修改公告
+message ChangeLeagueAnnouncementReq{
+  string Announcement = 1; //联盟公告
+}
+
+//修改公告响应
+message ChangeLeagueAnnouncementRes{
+}
+
+//退出同盟
+message LeaveLeagueReq{
+}
+
+//退出同盟响应
+message LeaveLeagueRes{
+}
+
+//同盟成员踢出
+message LeagueMemberKickOutReq{
+  uint64 RoleID = 1; //角色ID
+}
+
+//同盟成员踢出响应
+message LeagueMemberKickOutRes{
+  repeated common.LeagueMemberSimpleInfo Members = 1; //联盟成员
+}
+
+//同盟成员头衔管理
+message ChangeLeagueTitleChangeReq{
+  uint64 RoleID = 1; //受让者ID
+  int32 Title = 2; //目标角色
+}
+
+//同盟成员头衔管理响应
+message ChangeLeagueTitleChangeRes{
+  common.LeagueMemberSimpleInfo SelfInfo = 1; //自己的信息
+  common.LeagueMemberSimpleInfo HeInfo = 2; //受让者的信息
+}
+
+//加盟邀请
+message LeagueInviteReq{
+}
+
+//加盟邀请响应
+message LeagueInviteRes{
+  int64 InviteSendTime = 1; //军团邀请发送时间
+}
+
+//通过邀请加入同盟
+message JoinLeagueByInviteReq{
+  uint64 MsgID = 1; //消息ID
+}
+
+//通过邀请加入同盟响应
+message JoinLeagueByInviteRes{
+  common.LeagueInnerDetailInfo League = 1; //加入成功后返回联盟内部信息
+  common.LeagueMemberSimpleInfo SelfInfo = 2; //自己的成员信息
+}
+
+//领取军团奖励
+message ReceiveLeagueTaskAwardReq{
+  int64 TaskID = 1; //领取的任务ID
+}
+
+//领取军团奖励响应
+message ReceiveLeagueTaskAwardRes{
+  repeated common.ItemInfo Rewards = 1;//奖励  
+  common.RoleLeagueInfo Info = 2; //玩家的联盟数据信息
+}
+
+//拉取充值列表请求
+message GetDiamondRechargeListReq{
+}
+
+//拉取充值列表请求
+message GetDiamondRechargeListRes{
+  repeated int64 RechargeID = 1; //充值表中的ID
+  map<string, bool> DiamondRechargeRecordMap = 2; //充值档位是否首充过
+}
+
+//购买钻石请求
+message DiamondRechargeReq{
+  int64 DiamondRechargeID = 1; //钻石充值ID
+  int32 Coupons = 2; //是否使用代金券 >0是
+  int32 UseGodType = 3;//使用金豆类型 0 不使用  1 使用档次1 2 使用档次2 3 使用档次3
+}
+
+//购买钻石响应
+message DiamondRechargeRes{
+  string OrderUUID = 1; //支付订单号
+  int32 IsEnough = 2; // 金币余额是否足够 1:足够 2:不足（微信平台使用）
+}
+
+//获取付费订单请求
+message VerifyOrderReq{
+  string OrderTicket = 1; //支付票据
+  int32 PayChannel = 2; //支付渠道 1 自充 2 电魂 3 微信
+}
+
+//获取付费订单响应
+message VerifyOrderRes{
+  int32 Ret = 1; //验证结果 
+  int32 ProductType = 2; //产品类型 1 充值 2 首充礼包 3 战令 4 礼包 5 月卡 6 自选升星活动 7 特惠基金活动
+  repeated uint64 Args = 3; //参数(购买商品时的参数 返还,各个充值类型自己定义)
+  int64 VipLevel = 4; //当前vip等级
+  int64 VipExp = 5; //当前vip经验
+  repeated common.ItemInfo Rewards = 6;//奖励
+  map<string, bool> DiamondRechargeRecordMap = 7; //直冲信息变更key是某一档的包的标识,val是是否有首充奖励
+  map<int64, int64> FirstChargeGiftRecord = 8; //首充礼包信息(key是礼包id,val是礼包状态) 同common.ServerRoleInfo同字段
+  repeated UserPassport passports = 9; //通行证信息
+  repeated common.GiftInfo Info = 10; //礼包
+  PushOrder Order = 11; //订单信息
+  common.MonthlyCard2 Card = 12; //月卡2
+}
+
+//月卡每日领奖
+message MonthlyCardAwardReceiveReq{
+  int64 MonthlyCardID = 1;
+}
+
+//月卡每日领奖响应
+message MonthlyCardAwardReceiveRes{
+  common.MonthlyCard Card = 1; //更新后的月卡信息
+  repeated common.ItemInfo Rewards = 2;//奖励
+}
+
+//根据UID获取任务信息
+message GetMissionInfoByUIDReq{
+  repeated uint64 MissionUID = 1;
+}
+
+message GetMissionInfoByUIDRes{
+  repeated common.MissionInfo Missions = 1;//任务表
+}
+
+//根据UID获取礼包信息
+message GetGiftInfoByUIDReq{
+  repeated uint64 GiftUID = 1;
+}
+
+message GetGiftInfoByUIDRes{
+  repeated common.GiftInfo Gifts = 1;//礼包信息
+}
+
+//角色红包
+message RoleRedBag {
+  uint64 RedbagUID = 1; //红包UID
+  int64 RedbagConfigID = 2; //红包配置ID
+  int64 ActiveTime = 3; //红包激活时间
+}
+
+//玩家每日已领取信息
+message RoleDailyRedbagInfo {
+  int64 Count = 1;  //今日已领取的数量(普通红包个数)
+  int64 Total = 2;  //今日已领取的数量(元宝数量)
+}
+
+//联盟红包
+message LeagueRedBag {
+  uint64 LeagueRedbagUID = 1; //联盟红包唯一ID
+  int64 RedbagConfigID = 2; //联盟红包配置ID
+  int64 SendTime = 3; //联盟红包发送时间
+  common.SimpleRoleInfo Sender = 4; //联盟红包发送人信息
+  repeated LeagueRedBagReceiver Receivers = 5; //抢到联盟红包的人的信息
+}
+
+//抢到红包的人的信息
+message LeagueRedBagReceiver {
+  common.SimpleRoleInfo Receiver = 1; //抢到联盟红包的人的信息
+  int64 ReceiveTime = 2; //抢红包的时间
+  int64 Num = 3; //抢到的数量
+}
+
+//查询红包列表请求
+message GetRedbagListReq {
+}
+
+//查询红包响应
+message GetRedbagListRes {
+  repeated RoleRedBag RoleRedBags = 1; //个人红包
+  repeated LeagueRedBag LeagueRedBags = 2; //联盟红包
+  RoleDailyRedbagInfo Info = 3; //个人今日已领取信息
+}
+
+//发红包响应
+message SendRedbagToLeagueReq {
+  uint64 RoleRedbagUID = 1; //要发的红包
+}
+
+//发红包响应
+message SendRedbagToLeagueRes {
+  repeated RoleRedBag RoleRedBags = 1; //个人红包
+  repeated LeagueRedBag LeagueRedBags = 2; //联盟红包
+}
+
+//抢红包请求
+message GetRedbagReq {
+  uint64 LeagueRedbagUID = 1; //要抢的红包
+}
+
+//抢红包响应
+message GetRedbagRes {
+  int32 Ret = 1; //抢的结果  1 抢到了 2 抢完了 3 已经抢过了
+  LeagueRedBag LeagueRedBag = 2; //抢后的红包信息
+  RoleDailyRedbagInfo Info = 3; //个人今日已领取信息
+}
+
+//活动通用购买
+message ActivityPurchaseReq{
+  int64 ProductID = 1; //产品ID
+  repeated int64 Args = 2;//参数,不同活动参数不同,Args[0]必须为活动UID
+  int32 Coupons = 3;//是否使用代金券 >0是
+  int32 UseGodType = 4;//使用金豆类型 0 不使用  1 使用档次1 2 使用档次2 3 使用档次3
+}
+message ActivityPurchaseRes{
+  string OrderUUID = 1;//订单UID
+  int32 IsEnough = 2; // 金币余额是否足够 1:足够 2:不足（微信平台使用）
+}
+
+//自选升星活动选择英雄
+message RisingStarChooseHeroReq{
+  uint64 HeroUID = 1;//英雄uid
+  uint64 ActivityUID = 2;//活动UID
+}
+message RisingStarChooseHeroRes{
+}
+
+//千抽活动抽取
+message ThousandGachaReq{
+  uint64 ActivityUID = 1;
+}
+message ThousandGachaRes{
+  repeated uint64 HeroIDs = 1;//抽卡获取
+}
+
+//千抽活动替换抽卡记录
+message ThousandGachaReplaceReq{
+  uint64 ActivityUID = 1;
+  int32 TargetRecord = 2; //更换目标
+}
+message ThousandGachaReplaceRes{
+}
+
+//设置堆金叠玉活动排名匿名
+message SetRechargeRankAnonymousReq{
+  uint64 activityID = 1; //活动ID
+  int32 Anonymous = 2; //是否匿名 0 不匿名  1 匿名
+}
+//设置堆金叠玉活动排名匿名
+message SetRechargeRankAnonymousRes{
+  int32 Anonymous = 1; //是否匿名 0 不匿名  1 匿名
+}
+
+//游园会排行榜分数上报
+message CarnivalRankSendReq{
+  int64 PlayType = 1;//玩法类型
+  int64 Score = 2;//获得分数
+}
+message CarnivalRankSendRes{
+  int32 OldRank = 1;
+  int32 NewRank = 2;
+  int64 OldScore = 3;
+  int64 NewScore = 4;
+}
+
+//元宝购买礼包
+message GiftGoldIngotPurchaseReq{
+  uint64 UID = 1;//购买礼包UID
+  repeated int64 FreeChoice = 2;//自由选择项
+}
+message GiftGoldIngotPurchaseRes{
+  repeated common.ItemInfo Items = 1;//礼包物品
+}
+
+//功能预览信息拉取
+message GetFunctionPreviewInfoReq{
+}
+message GetFunctionPreviewInfoRes{
+  map<int64, int32> FunctionPreviewReward = 1;
+}
+
+//功能预览奖励获取
+message GetFunctionPreviewRewardReq{
+}
+message GetFunctionPreviewRewardRes{
+  repeated common.ItemInfo Items = 1;
+}
+
+//荒兽抽卡进度奖励
+message BeastGachaTimesRewardReq{
+  int64 TabID = 1;
+}
+message BeastGachaTimesRewardRes{
+  repeated common.ItemInfo Items = 1;//获得的道具
+  map<int64, common.BeastGachaInfo> GachaNum = 2;
+  map<int64, int32> GachaTimesReward = 3;
+}
+
+message PushVerifyOrdersS2C {
+  repeated PushOrder Orders = 1; //已支付的订单
+}
+
+message PushOrder {
+  int32 ProductType = 2; //产品类型 1 充值 2 首充礼包 3 战令 4 礼包 5 月卡 6 自选升星活动 7 特惠基金活动
+  repeated uint64 Args = 3; //参数(购买商品时的参数 返还,各个充值类型自己定义)
+  int64 VipLevel = 4; //当前vip等级
+  int64 VipExp = 5; //当前vip经验
+  repeated common.ItemInfo Rewards = 6;//奖励
+  map<string, bool> DiamondRechargeRecordMap = 7; //直冲信息变更key是某一档的包的标识,val是是否有首充奖励
+  map<int64, int64> FirstChargeGiftRecord = 8; //首充礼包信息(key是礼包id,val是礼包状态) 同common.ServerRoleInfo同字段
+  repeated UserPassport passports = 9; //通行证信息
+  repeated common.GiftInfo Info = 10; //礼包
+  common.SuperSigninActivityInfo SuperSigninActivityInfo = 11; //超值签到活动
+  common.MonthlyCard2 Card = 12; //月卡2
+  common.SuperSignin2ActivityInfo SuperSignin2ActivityInfo = 13; //超值签到2活动
+}
+
+//设置个人信息
+message SetRoleInfoReq{
+  int32 Type = 1;//改变类型 1:昵称修改(str) 2：头像修改 3：头像框修改 4：个人形象修改 5：称号修改 6：气泡框修改
+  int64 NumChange = 2;//数值类改变
+  string StrChange = 3;//字符串类改变
+}
+
+message SetRoleInfoRes{
+  common.ServerRoleInfo RoleInfo = 1;
+  int64 OldPower = 2;
+  int64 NewPower = 3;
+}
+
+//获取玩家自己的个人信息
+message GetRoleSelfInfoReq{
+}
+message GetRoleSelfInfoRes{
+  common.ServerRoleInfo RoleInfo = 1; //roleInfo
+}
+
+//武将抽卡活动修改主题武将
+message ChangeHeroChooseReq{
+  uint64 ActivityUID = 1;//武将抽卡活动UID
+  int64 HeroTeamID = 2;
+}
+message ChangeHeroChooseRes{
+  common.ActivityInfo Info = 1;//活动信息
+}
+
+//获取所有个人装饰
+message GetAllAdornmentReq{
+}
+message GetAllAdornmentRes{
+  map<int64, common.Adornment> Adornments = 1;
+}
+
+//设置抽卡活动排名匿名
+message SetGachaRankAnonymousReq{
+  uint64 ActivityUID = 1; //活动UID
+  int32 Anonymous = 2; //是否匿名 0 不匿名  1 匿名
+}
+message SetGachaRankAnonymousRes{
+  int32 Anonymous = 1; //是否匿名 0 不匿名  1 匿名
+}
+
+//前端记录器
+message SetClientRecordReq {
+  map<string, string> Records = 1;
+}
+message SetClientRecordRes {
+  int32 Add = 1;//新增条目数
+  int32 Upd = 2;//更新条目数
+}
+
+//前端记录器
+message GetClientRecordReq {
+  repeated string RecordKeys = 1;//需要的记录key
+}
+message GetClientRecordRes {
+  map<string, string> Records = 1;
+}
+
+message GetBraveBingoReq{
+  uint64 ActivityUID = 1;
+  int32 Piece = 2;
+}
+message GetBraveBingoRes{
+  common.ActivityInfo Info = 1;
+  repeated common.ItemInfo Rewards = 2;
+}
+
+//武魂抽卡选择武魂
+message HeroGemGachaChooseReq{
+  uint64 ActivityUID = 1;
+  int32 ChooseID = 2;
+  repeated int64 HeroGemRandomChoose = 3;
+}
+message HeroGemGachaChooseRes{
+}
+
+//活动任务领取
+message ActivityMissionRewardGetReq{
+  uint64 ActivityUID = 1;//活动uid
+  repeated uint64 MissionUID = 2;//任务uid
+}
+
+message ActivityMissionRewardGetRes{
+  common.ActivityInfo ActivityInfo = 1; //变更的活动信息
+  repeated common.ItemInfo Items = 2; //获得的物品
+  repeated common.MissionInfo Missions = 3; //改变后的任务信息
+}
+
+//超值签到购买
+message SuperSigninBuyReq{
+  uint64 ActivityUID = 1;//活动uid
+  int32 Coupons = 2;
+  int32 UseGodType = 3;//使用金豆类型 0 不使用  1 使用档次1 2 使用档次2 3 使用档次3
+}
+
+//超值签到购买
+message SuperSigninBuyRes{
+  string OrderUUID = 1; //支付订单号
+  int32 IsEnough = 2; // 金币余额是否足够 1:足够 2:不足（微信平台使用）
+}
+
+//超值签到免费领取
+message SuperSigninFreeGetReq{
+  uint64 ActivityUID = 1;//活动uid
+}
+
+//超值签到免费领取
+message SuperSigninFreeGetRes{
+  repeated common.ItemInfo Rewards = 1;//奖励
+  common.SuperSigninActivityInfo SuperSigninActivityInfo = 2; //超值签到信息
+}
+
+//成长宝箱祈愿
+message GrownBoxPrayReq{
+  uint64 ActivityUID = 1;//活动uid
+}
+
+//成长宝箱祈愿
+message GrownBoxPrayRes{
+  repeated common.ItemInfo Rewards = 1;//奖励
+  int32 Score = 2; //获得的积分
+  common.GrownBoxInfo GrownBoxInfo = 3; //成长宝箱信息变更
+}
+
+//成长宝箱开箱
+message GrownBoxOpenReq{
+  uint64 ActivityUID = 1;//活动uid
+}
+
+//成长宝箱开箱
+message GrownBoxOpenRes{
+  repeated common.ItemInfo Rewards = 1;//奖励
+  common.GrownBoxInfo GrownBoxInfo = 2; //成长宝箱信息变更
+}
+
+//通知客户端服务器跨天
+message NotifyServerDayPassS2C {
+}
+
+//展示活动奖励领取接口请求
+message ShowActivityRewardTakeReq{
+  uint64 ActivityUID = 1;//活动uid
+}
+
+//展示活动奖励领取接口响应
+message ShowActivityRewardTakeRes{
+  repeated common.ItemInfo Rewards = 1;//奖励
+  common.ShowInfo ShowInfo = 2; //展示活动信息变更
+}
+
+//神将自选英雄选择
+message HeroGiftActivityChooseReq{
+  uint64 ActivityUID = 1;
+  int64 HeroID = 2;
+}
+message HeroGiftActivityChooseRes{
+  common.ActivityInfo Info = 1;
+}
+
+//兑换屋兑换
+message ExchangeItemsReq{
+  uint64 ActivityUID = 1;
+  int64 GoodID = 2;
+  int32 Times = 3;
+}
+message ExchangeItemsRes{
+  repeated common.ItemInfo Items = 1;
+}
+
+//祈愿
+message GetPrayersReq{
+  uint64 ActivityUID = 1;
+  uint64 FireWorkID = 2;
+}
+message GetPrayersRes{
+  int64 CriticalTimes = 1;
+  repeated common.ItemInfo Items = 2;
+}
+
+//兑换码验证
+message GetRedeemCodeRewardReq{//module=chat
+  string Code = 1;
+}
+message GetRedeemCodeRewardRes{
+  repeated common.ItemInfo Items = 1;
+}
+
+//获得战区内已跨服的服务器信息
+message GetCrossServerListReq{//module=cross
+}
+message GetCrossServerListRes{
+  repeated common.GameServer Servers = 1;
+}
+
+message UseMissionCompleteCardReq{
+  uint64 MissionUID = 1;
+}
+message UseMissionCompleteCardRes{
+  common.MissionInfo missionInfo = 1;
+}
+
+//秘境寻遗活动选择奖励
+message ChooseFlipCardReq{
+  uint64 ActivityUID = 1;
+  int64 RewardGroupID = 2;
+  repeated int64 RewardID = 3;
+}
+
+message ChooseFlipCardRes{
+  common.ActivityInfo Info = 1;//活动信息
+}
+
+//秘境寻遗活动翻牌
+message FlipCardReq{
+  uint64 ActivityUID = 1;
+  int32 FlipID = 2;
+}
+
+message FlipCardRes{
+  common.ActivityInfo Info = 1;//活动信息
+  repeated common.ItemInfo Items = 2;//奖励信息
+  int64 RewardID = 3;//奖励ID
+}
+
+//秘境寻遗活动进入下一层
+message FlipCardIntoNextReq{
+  uint64 ActivityUID = 1;
+}
+
+message FlipCardIntoNextRes{
+  common.ActivityInfo Info = 1;//活动信息
+}
+
+//选择轮盘大奖
+message ActivityTurntableChooseReq{
+  uint64 ActivityUID = 1;//活动UID
+  int64 GreatRewardID = 2;//选中的大奖ID
+}
+
+message ActivityTurntableChooseRes{
+}
+
+//执行轮盘抽卡
+message ActivityTurntableGachaReq{
+  uint64 ActivityUID = 1;//活动UID
+  int32 Times = 2;//抽卡数 1或10
+}
+
+message ActivityTurntableGachaRes{
+  repeated common.PiscesTurntableActivityResult Result = 1;//结果
+  repeated common.ItemInfo Items = 2;//道具整合
+}
+
+//设置转盘抽卡活动排名匿名
+message SetTurntableGachaRankAnonymousReq{
+  uint64 ActivityUID = 1; //活动UID
+  int32 Anonymous = 2; //是否匿名 0 不匿名  1 匿名
+}
+message SetTurntableGachaRankAnonymousRes{
+  int32 Anonymous = 1; //是否匿名 0 不匿名  1 匿名
+}
+
+//执行轮盘抽卡
+message ActivityTurntable2GachaReq{
+  uint64 ActivityUID = 1;//活动UID
+}
+
+message ActivityTurntable2GachaRes{
+  repeated common.PiscesTurntableActivityResult Result = 1;//结果
+  repeated common.ItemInfo Items = 2;//道具整合
+}
+
+//月卡2每日领奖
+message MonthlyCard2AwardReceiveReq{
+  int64 MonthlyCardID = 1;
+}
+
+//月卡2每日领奖响应
+message MonthlyCard2AwardReceiveRes{
+  common.MonthlyCard2 Card = 1; //更新后的月卡信息
+  repeated common.ItemInfo Rewards = 2;//奖励
+}
+
+//月卡2购买请求 
+message MonthlyCard2BuyReq {
+  int64 MonthlyCardID = 1;
+  int32 Coupons = 2;
+  int32 UseGodType = 3;//使用金豆类型 0 不使用  1 使用档次1 2 使用档次2 3 使用档次3
+}
+
+message MonthlyCard2BuyRes {
+  common.MonthlyCard2 Card = 1; //更新后的月卡信息
+  string OrderUUID = 2; //自有系统订单号
+  int32 IsEnough = 3; // 金币余额是否足够 1:足够 2:不足（微信平台使用）
+}
+
+//购买中级通行证请求
+message BuyMiddlePassportReq {
+  uint64 PassportUID = 1; //PassportUID
+  int32 Coupons = 2;
+  int32 UseGodType = 3;//使用金豆类型 0 不使用  1 使用档次1 2 使用档次2 3 使用档次3
+}
+
+//购买中级通行证请求
+message BuyMiddlePassportRes {
+  int32 BuyMiddle = 1; //是否已购买高级通行证 0 未购买 1 已购买
+  repeated UserPassport passports = 2; //通行证信息 //如果非付费购买可直接获得
+  string OrderUUID = 3; //支付订单号(如果是货币支付的)
+  repeated common.ItemInfo Rewards = 4;//奖励
+  int32 IsEnough = 5; // 金币余额是否足够 1:足够 2:不足（微信平台使用）
+}
+
+//活动链式礼包领取
+message ActivityAdChainGiftPackClaimReq{
+  uint64 ActivityUID = 1;//活动UID
+  int64 TargetID = 2;//目标链条
+  int32 GiftOrder = 3;//目标礼包所在序号
+  int32 IsAd = 4;//是否已经观看广告
+}
+//活动链式礼包领取
+message ActivityAdChainGiftPackClaimRes{
+  common.ActivityInfo Info = 1;//活动信息
+  repeated common.ItemInfo Items = 2;//道具整合
+}
+
+//活动免费补给领取
+message ActivityAdFreeSupplyClaimReq{
+  uint64 ActivityUID = 1;//活动UID
+  int32 ClaimType = 2;//领取类型 1礼包 2累计奖励
+  int64 ClaimID = 3;//领取对象ID 礼包ID 累计奖励ID
+  int64 GachaID = 4 ;//宝物配置ID、藏品卡池UID、幻武卡池UID
+  uint64 TargetActivityUID = 5;//关联活动UID(每日特惠)
+}
+//活动免费补给领取
+message ActivityAdFreeSupplyClaimRes{
+  common.ActivityInfo Info = 1;//活动信息
+  repeated common.ItemInfo Items = 2;//道具整合
+  int64 OldPower = 4;//旧战力
+  int64 NewPower = 5;//新战力
+  int64 FoundryUpTime = 6; //使用后升级完成的时间戳，若为0则升级完成
+  int32 FoundryManExp = 7; //铸造师经验
+  int32 FoundryManLevel = 8; //铸造师等级
+  repeated common.ItemInfo UndergoRandItem = 9;//历练奖励
+  repeated common.ItemInfo ExItems = 10;//额外获取道具
+  int32 UndergoRefreshTimes = 11;//试炼塔历练已用次数
+}
+
+//游园会数据拉取
+message GetCarnivalInfoReq {
+}
+//游园会次数拉取
+message GetCarnivalInfoRes {
+  map<int64,int32> CanUesTimes = 1;//可用次数
+  map<int64,int64> PassedDungeon = 2;//已通过关卡
+  map<int64,int32> CanUseADTimes = 3;//广告可叠加次数
+  map<int64,int64> Achievement = 4;//成就已领取游标<玩法类型,成就需求关卡>
+}
+
+//游园会过关请求
+message PassCarnivalDungeonReq {
+  int64 MiniGameType = 1;//游玩的小游戏
+  int64 DungeonID = 2;//完成的关卡
+}
+//游园会过关请求
+message PassCarnivalDungeonRes {
+  map<int64,int32> CanUesTimes = 1;//可用次数
+  map<int64,int64> PassedDungeon = 2;//已通过关卡
+  repeated common.ItemInfo Items = 3;//奖励
+}
+
+//抢红包请求
+message OneClickGetRedbagReq {
+}
+
+//抢红包响应
+message OneClickGetRedbagRes {
+  repeated common.ItemInfo Items = 1;
+  repeated LeagueRedBag LeagueRedBag = 2; //抢后的红包信息
+  RoleDailyRedbagInfo Info = 3; //个人今日已领取信息
+}
+
+//招财猫活动
+message LuckyCatActivityReq{
+  uint64 ActivityUID = 1;
+}
+
+message LuckyCatActivityRes{
+  repeated common.ItemInfo Items = 1;
+}
+
+//翻牌活动的翻牌请求
+message FlopCardActivityFlopReq{
+  uint64 ActivityUID = 1;
+  int32 Op = 2; //模式 1 翻一次 2 翻10次 3 自动翻
+}
+
+//翻牌活动的翻牌响应
+message FlopCardActivityFlopRes{
+  int32 LastNum = 1; //最新一次翻牌结果
+  repeated int32 Results = 2; //翻到的结果
+  int32 StopAutoReason = 3; // 自动停止原因 1 翻到最大次数或者道具用完 2 翻到超过目标值
+  int32 NewNum = 4; //新的记录
+  int32 OldRank = 5; // 旧的排名
+  int32 NewRank = 6; // 新的排名
+  repeated common.ItemInfo Items = 7; //翻牌奖励
+}
+
+//翻牌活动的设置目标分数请求
+message FlopCardActivitySetTargetNumReq{
+  uint64 ActivityUID = 1;
+  int32 TargetNum = 2; //模式 1 翻一次 2 翻10次 3 自动翻
+}
+
+//翻牌活动的设置目标分数响应
+message FlopCardActivitySetTargetNumRes{
+  int32 TargetNum = 1;
+}
+
+//出售道具
+message SoldItemReq {
+  uint64 ItemID = 1; //需要出售的道具的配置ID
+  int64 Count = 2; //需要出售的道具的数量只能是正数>0
+}
+
+message SoldItemRes {
+  repeated common.ItemInfo Items = 1; //出售获得的道具信息
+}
+
+message LuckyGiftBagPurchaseReq {
+  uint64 ActivityUID = 1;//指定活动uid
+  int32 TartgetOrder = 2;//目标档次
+}
+message LuckyGiftBagPurchaseRes {
+  repeated common.ItemInfo Items = 1;//获取
+  common.ActivityInfo Activity = 2; //活动信息
+}
+
+//超值签到2大奖领取
+message SuperSignin2FreeGetReq{
+  uint64 ActivityUID = 1;//活动uid
+}
+
+//超值签到2大奖领取
+message SuperSignin2FreeGetRes{
+  repeated common.ItemInfo Rewards = 1;//奖励
+  common.SuperSignin2ActivityInfo SuperSignin2ActivityInfo = 2; //超值签到信息
+}
+
+//超值签到2购买
+message SuperSignin2BuyReq{
+  uint64 ActivityUID = 1;//活动uid
+  int32 Coupons = 2;
+  int32 UseGodType = 3;//使用金豆类型 0 不使用  1 使用档次1 2 使用档次2 3 使用档次3
+}
+
+//超值签到2购买
+message SuperSignin2BuyRes{
+  string OrderUUID = 1; //支付订单号
+  int32 IsEnough = 2; // 金币余额是否足够 1:足够 2:不足（微信平台使用）
+}
+
+//获取房间数据请求
+message GetRoomDataReq{
+  
+}
+
+//获取房间数据响应
+message GetRoomDataRes{
+  repeated string RoomData = 1; //房间信息 前期由客户端上传,后期改为服务器处理
+}
+
+//变更房间数据请求
+message ChangeRoomDataReq{
+  repeated RoomItemData Add = 1; //新增的装饰
+  repeated RoomItemData Upd = 2; //变更的装饰(调整位置朝向等)
+  repeated uint64 Del = 3; //删除的装饰(只需要UID)
+  repeated string RoomData = 4; //房间信息 前期由客户端上传,后期改为上面3个数据
+  int32 RoomType = 5; //房间类型
+}
+
+//变更房间数据响应
+message ChangeRoomDataRes{
+  repeated RoomItemData Add = 1; //新增的装饰
+  repeated RoomItemData Upd = 2; //变更的装饰
+  repeated uint64 Del = 3; //删除的装饰
+  repeated string RoomData = 4; //房间信息
+  int32 RoomType = 5; //房间类型
+}
+
+//房间装饰数据
+message RoomItemData{
+  uint64 RoomItemUID = 1; //房间物件UID(作为新增字段时不填)
+  common.InnerPos Pos = 2; //所处位置(选填参数,删除时用不到)
+  RoomItemDataFrom SrcData = 3; //使用的物品来源(选填参数,只有新增时用的到)
+}
+
+//装饰数据来源
+message RoomItemDataFrom{
+  int32 Src = 1; //使用的道具来源 1 背包
+  common.ItemInfo Target = 2; //使用的道具信息
+}
+
+//取得所有服饰
+message GetAllClothesReq{
+  
+}
+
+//取得所有服饰
+message GetAllClothesRes{
+  string ClothData = 1; //服饰信息
+}
+
+//保存所有服饰
+message SaveClothesReq{
+  string ClothData = 1; //服饰信息
+}
+
+//保存所有服饰
+message SaveClothesRes{
+  
+}
+
+//取得所有NPC信息
+message GetAllNpcInfoReq{
+  
+}
+
+message NpcFavovInfo{
+  int32 npcId = 1;
+  // 当前好感度等级
+  int32 favorLevel = 2;
+  // 当前好感度经验
+  int32 favorValue = 3;
+  // 遇到次数
+  int32 encounterCount = 4;
+  // 是否遇到过 (bool -> int32)
+  int32 isMet = 5;
+  // 是否“结识”（遇到三次之后结识） (bool -> int32)
+  int32 isAcquainted = 6;
+  // 上次互动时间 (DateTime -> long)
+  int64 lastInteractionTime = 7;
+  // 服务器生成的 NPC 实例唯一 ID
+  uint64 UID = 8;
+
+  // NPC的对话记录
+  NPCDialogueHistoryInfo NPCDialogueHistoryInfo = 9; 
+  bool isTodayGiftSend = 10; //今日是否已送过礼物
+}
+
+// 单个 NPC 的完整对话历史
+message NPCDialogueHistoryInfo {
+  int32 npcId = 1;
+  int32 lastDialogueId = 2;                       // 该 NPC 最后播放到的对话 id，-1 表示未开始
+  repeated NPCDialogueProgress dialogueProgressList = 3; // 各段落进度
+  repeated NPCDialogueChoiceRecord optionChoices = 4;     // 选项对话选择记录
+}
+
+// 单个段落的进度（仅按 paragraphId 索引，不再按 favorLevel）
+message NPCDialogueProgress {
+  int32 paragraphId = 1;   // 段落 id
+  bool isUnlocked = 2;    // 是否已解锁
+  bool isFinished = 3;    // 该段落是否已完成
+}
+
+// 选项对话选择记录
+message NPCDialogueChoiceRecord {
+  int32 dialogueId = 1; // 选项对话 id
+  int32 choiceIndex = 2; // 玩家选择的序号（0-based）
+}
+
+//取得所有NPC信息
+message GetAllNpcInfoRes{
+  repeated NpcFavovInfo npcFavovInfos = 1;
+}
+
+//取得首登奖励是否领取
+message GetFirstLoginRewardReq{
+
+}
+
+//取得首登奖励是否领取
+message GetFirstLoginRewardRes{
+  int32 Ret = 1; 
+}
+
+//获取服务器当前时间
+message GetServerCurrentTimeReq{
+
+}
+
+//取得首登奖励是否领取
+message GetServerCurrentTimeRes{
+  int64 ServerCurrentTime = 1; 
+}
+
+//空消息
+message EmptyReq{
+}
+
+//空消息
+message EmptyRes{
+}
+
+//领取首登奖励
+message ClaimFirstLoginRewardReq{
+}
+
+//领取首登奖励
+message ClaimFirstLoginRewardRes{
+  int32 Ret = 1;
+  repeated common.ItemInfo Items = 2; //获得的奖励信息
+}
+
+//角色数据变动
+message RoleInfoChangeS2C {
+    common.ServerRoleInfo Info = 1;//角色信息
+}
+
+//道具数据变动
+message ItemChangeS2C {
+    repeated common.ItemInfo ItemAdd = 1;//物品
+    repeated common.ItemInfo ItemUpd = 2;
+    repeated common.ItemInfo ItemDel = 3;//删除道具
+}
+
+// 领取下一段等级奖励（包含下一段需要的经验）
+message GetNextLevelRewardReq{
+}
+
+message GetNextLevelRewardRes{
+  int32 Ret = 1;
+  int32 NextLevel = 2;   // 将领取的等级
+  int32 NextSegment = 3; // 将领取的段位（0-based）
+  int64 NeedExp = 4;     // 领取该段位所需经验（段位0时为0）
+  repeated common.ItemInfo Items = 5; //获得的奖励信息
+}
+
+// 获取小猫信息
+message GetCatInfoReq {
+}
+
+message GetCatInfoRes {
+  CatInfo Cat = 1; //小猫信息
+}
+
+// 小猫信息变动（服务器推送）
+message CatInfoChangeS2C {
+  CatInfo Cat = 1;
+}
+
+// 小猫旅行背包打包
+message PackageBagReq {
+  int32 BagIndex = 1; // 背包编号 1-3
+  CatTravelBagInfo Bag = 2; // 打包后的背包内容
+}
+
+message PackageBagRes {
+  int32 BagIndex = 1; // 背包编号 1-3
+  CatTravelBagInfo Bag = 2; // 更新后的背包内容
+}
+
+// 使用爱心车票使在外游历的小猫立刻回家
+message CatBackImmediatelyReq {
+}
+
+message CatBackImmediatelyRes {
+}
+
+// 小苔回家任务完成推送（出门奖励摘要；照片与 NPC 好感快照）
+message BackToHomeRewardS2C {
+  repeated common.ItemInfo Rewards = 1; // 出门获得的奖励（与游历结算发放一致）
+  RolePhotoInfo PhotoInfo = 2; // 出门获得的照片
+  NpcFavovInfo NpcFriendInfo = 3; // 出门遇到的 NPC 好感快照
+}
+
+// NPC 好感增删改推送（仿 ItemChangeS2C）
+message NpcChangeS2C {
+  repeated NpcFavovInfo NpcAdd = 1;
+  repeated NpcFavovInfo NpcUpd = 2;
+  repeated NpcFavovInfo NpcDel = 3;
+}
+
+
+// 任务增删改推送（仿 ItemChangeS2C）
+message MissionChangeS2C {
+  repeated common.MissionInfo MissionAdd = 1;
+  repeated common.MissionInfo MissionUpd = 2;
+  repeated common.MissionInfo MissionDel = 3;
+}
+
+// 打开相册
+message OpenPhotoBookReq {
+}
+
+message OpenPhotoBookRes {
+}
+
+// 种植：种子配置 id + 花盆 uid
+message PlantReq {
+  int64 SeedID = 1; //种子配置 id
+  string PotUID = 2; //花盆 uid
+}
+
+message PlantRes {
+}
+
+// 操作植物
+message PlantOpReq {
+  int32 Op = 1; //1 浇水 2 施肥 3 收获 4 铲除
+  int64 ItemID = 2; //操作使用的道具ID
+  uint64 PlantUID = 3; //植物 uid
+}
+
+message PlantOpRes {
+  repeated common.ItemInfo Rewards = 1; // 收获操作时获得的东西
+}
+
+// 加载全部植物信息
+message GetAllPlantReq {
+}
+
+message GetAllPlantRes {
+  repeated PlantInfo Plants = 1; //全部植物信息
+}
+
+// 植物数据
+message PlantInfo {
+  uint64 UID = 1; //植物 uid
+  string PotUID = 2; //花盆 uid
+  int64 PlantSeed = 3; //植物/种子配置 id
+  string VariantKey = 4; //变体 key
+  int32 GrowStage = 5; //生长阶段1(大阶段)  1 生长期 2 成熟期 3 枯萎期
+  int32 GrowStage2 = 6; //生长阶段2(小阶段) 1 种子期 2 发芽期 3 生长期 4 结果期
+  int64 PlantTime = 7; //到下一阶段的倒计时(仅生长期使用,到下个小阶段需要的时间)
+  int32 HarvestTime = 8; //剩余收获次数
+  bool IsFertilize = 9; //是否已施肥
+}
+
+// 植物变化推送（服务器推送）
+message PlantChangeS2C {
+  repeated PlantInfo PlantAdd = 1;
+  repeated PlantInfo PlantUpd = 2;
+  repeated PlantInfo PlantDel = 3;
+}
+
+// 给 NPC 送礼请求（送礼物成功后，好感度等数据由 NpcChangeS2C 推送，不单独写 Res）
+message GiveGiftToNpcReq {
+  int32 npcId = 1;              // NPC id
+  int64 ItemID = 2;             //礼物ID
+}
+
+message GiveGiftToNpcRes {
+
+}
+
+// NPC 送给玩家的礼物推送（服务器主动通知）
+message NpcGiftToPlayerS2C {
+  int32 npcId = 1;    // 送礼 NPC id
+  int64 giftId = 2;   // 礼物配置 id（与物品表对应）
+  repeated common.ItemInfo rewardItems = 3; // 玩家实际获得的道具（可为空）
+}
+
+message NPCChatHistroyUpdateReq{
+    NPCDialogueHistoryInfo History = 1; // NPC 对话历史信息
+}
+
+//取得新手引导信息请求
+message GetGuideReq{
+  
+}
+
+//取得新手引导信息响应
+message GetGuideRes{
+  string GuideData = 1; //新手引导信息
+}
+
+//保存新手引导信息请求
+message SaveGuideReq{
+  string GuideData = 1; //新手引导信息
+}
+
+//保存新手引导信息响应
+message SaveGuideRes{
+  
+}
+
+//取得照片信息请求
+message GetPhotosReq{
+  
+}
+
+//取得照片信息响应
+message GetPhotosRes{
+  repeated RolePhotoInfo Photos = 1; //照片信息
+}
+
+//购买票据请求
+message BuyTicketsReq{
+  int64 ItemID = 1; //道具ID
+  int64 Count = 2; //购买数量
+}
+
+//购买票据响应
+message BuyTicketsRes{
+  repeated common.ItemInfo rewardItems = 1; // 购买到的道具
+}
+
+//删除照片请求
+message DelPhotosReq{
+  uint64 UID = 1; //要删除的照片
+}
+
+//删除照片响应
+message DelPhotosRes{
+}
+
+//开放NPC(非正式接口)
+message OpenNpcReq{
+  int32 npcId = 1;              // NPC id
+}
+
+//开放NPC(非正式接口)
+message OpenNpcRes{
+}
+
+//添加NPC亲密度
+message AddNpcExpReq{
+  int32 npcId = 1;   // NPC id
+  int64 addExp = 2;  // 需要增加的亲密度
+}
+
+//添加NPC亲密度
+message AddNpcExpRes{
+}
+
+//购买钻石
+message BuyDiamondTimesReq{
+  int32 index = 1;   // 礼包序号 0-5是买罐罐 6-11是罐罐换鱼币
+}
+
+//购买钻石
+message BuyDiamondTimesRes{
+}
+
+//上报首次登录视频已播放完
+message ReportFirstLoginVideoFinishReq{
+}
+
+//上报首次登录视频已播放完响应
+message ReportFirstLoginVideoFinishRes{
+}
+
+//好友信息变动
+message FriendChangeS2C {
+    repeated common.PlayerDetailedInfo FriendAdd = 1;//好友添加
+    repeated common.PlayerDetailedInfo FriendDel = 2;//好友删除
+    repeated common.PlayerDetailedInfo FriendApplyAdd = 3;//好友申请添加
+    repeated common.PlayerDetailedInfo FriendApplyDel = 4;//好友申请删除
+}

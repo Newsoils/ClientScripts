@@ -5,6 +5,9 @@ using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel.Dispatch;
+using Cmd;
+using Google.Protobuf;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
@@ -24,7 +27,7 @@ namespace CLIP
                 /// - 持有玩家派遣状态对象 player_dispatch_state
                 /// - 与 UI / Server / 仓库系统交互
                 /// </summary>
-                public class Dispatch_Manager : MonoBehaviour
+                public class Dispatch_Manager : SerializedMonoBehaviour
                 {
                     // -------------------- 基础引用 --------------------
 
@@ -86,20 +89,26 @@ namespace CLIP
                     {
                         get
                         {
-                            return _instance != null
-                                && _instance._player_dispatch_state != null
-                                && _instance._player_dispatch_state.player_state == "On_Dispatch";
+                            if (_instance?._player_dispatch_state == null)
+                                return false;
+                            var ggm = Global_Game_Manager.Instance;
+                            return ggm?._current_cat_info != null && ggm.IsCatCurrentlyTraveling();
                         }
                     }
 
-                    /// <summary>
-                    /// 服端 JSON 覆盖、清除派遣等改写了 <c>player_state</c> 后调用：只同步主角/小地图等展示，不触发 <c>Dispatch_On_End</c>（避免误触回家拍照流程）。
-                    /// </summary>
-                    public static void NotifyDispatchVisualsFromState()
+                    /// <summary>Tick 分支与 <see cref="Global_Game_Manager._current_cat_info"/>.Status 对齐（0 在家 / 1 出游）。无数据时视为在家。</summary>
+                    private static int GetCatStatusForDispatchTick()
                     {
-                        if (_instance == null || _instance._player_dispatch_state == null)
-                            return;
-                        EvtDsp.TriggerEvt(EvtNames.Dispatch_VisualsSync);
+                        var ggm = Global_Game_Manager.Instance;
+                        if (ggm?._current_cat_info == null)
+                            return Global_Game_Manager.CatStatusAtHome;
+                        return ggm._current_cat_info.Status;
+                    }
+
+                    /// <summary>与服端/本地派遣对齐：CatInfo.Status（0 在家 / 1 出游）。</summary>
+                    private void ApplyCatStatusForLocalDispatch(int status)
+                    {
+                        Global_Game_Manager.Instance?.EnsureCatInfoAndSetStatus(status);
                     }
 
                     /// <summary>
@@ -110,14 +119,9 @@ namespace CLIP
 
                     // -------------------- 事件系统 --------------------
 
-                    [Header("Event_System")]
-                    //public Warehouse_UI_Event_Hub_SO _warehouse_UI_event_hub_so; // 仓库UI事件中心
 
                     public UnityEvent _on_get_middle_way_photo = new UnityEvent();     // 中途照片事件
                     public UnityEvent _on_finishing_dispatch = new UnityEvent();       // 派遣完成事件
-                    public UnityEvent _update_dispatch_info_from_server = new UnityEvent(); // 从服务器更新派遣信息
-                    public UnityEvent _upload_dispatch_info_to_server = new UnityEvent();   // 上传派遣信息到服务器
-                    public UnityEvent _on_clear_previous_dispatch = new UnityEvent();  // 清除上次派遣事件
 
                     public static Dictionary<Mood_Tag, string> chineseMoodMap = new Dictionary<Mood_Tag, string>()
                     {
@@ -272,39 +276,19 @@ namespace CLIP
                     /// </summary>
                     public void dispatch_tick()
                     {
-                        string report = _player_dispatch_state.dispatch_system_tick();
+                        int catStatus = GetCatStatusForDispatchTick();
+                        string report = _player_dispatch_state.dispatch_system_tick(catStatus);
 
                         if (report == "At_Home")
                         {
-                            //Notice_To_UI($"鼠鼠在家_\n{_player_dispatch_state.player_at_home_length_in_minute}_分钟");
-                            Log.Info($"小苔在家_\n{_player_dispatch_state.player_at_home_length_in_minute}_分钟");
+                            Log.Info("小苔在家");
                         }
 
                         else if (report == "On_Dispatch")
                         {
-                            //Notice_To_UI("鼠鼠外出中_\n" +
-                            //    _player_dispatch_state._current_dispatch_info.dispatch_info_to_str() + "\n" +
-                            //    "将于_" + _player_dispatch_state._current_dispatch_info.end_time + "_回家\n");
                             Log.Info("小苔外出中_\n" +
                                 _player_dispatch_state._current_dispatch_info.dispatch_info_to_str() + "\n" +
                                 "将于_" + _player_dispatch_state._current_dispatch_info.end_time + "_回家\n");
-                        }
-
-                        else if (report == "On_Dispatch_Start")
-                        {
-                            On_Start_Dispatch();
-                        }
-
-                        else if (report == "On_Dispatch_End")
-                        {
-                            hasShowReward = false;
-                            On_End_Dispatch((_player_dispatch_state.last_reward_currency, _player_dispatch_state.last_reward_exp, _player_dispatch_state.last_reward_photo_name));
-                            //Notice_To_UI("鼠鼠回家_\n" +
-                            //    "获得如下奖励_\n" +
-                            //    _player_dispatch_state.last_reward_info + "_\n");
-                            Log.Info("小苔回家_\n" +
-                                "获得如下奖励_\n" +
-                                _player_dispatch_state.last_reward_info + "_\n");
                         }
                     }
 
@@ -327,7 +311,8 @@ namespace CLIP
                         //    Notice_To_UI("未完成准备，无法开始派遣！");
                         //    return;
                         //}
-                        if (_player_dispatch_state.player_state != "At_Home")
+                        if (Global_Game_Manager.Instance?._current_cat_info != null
+                            && Global_Game_Manager.Instance.IsCatCurrentlyTraveling())
                         {
                             Notice_To_UI("鼠鼠不在家");
                             return;
@@ -344,13 +329,15 @@ namespace CLIP
                     /// </summary>
                     public void force_dispatch_end()
                     {
-                        if (_player_dispatch_state.player_state != "On_Dispatch")
+                        if (Global_Game_Manager.Instance?._current_cat_info == null
+                            || !Global_Game_Manager.Instance.IsCatCurrentlyTraveling())
                         {
                             Log.Custom("鼠鼠不在派遣中");
                             return;
                         }
 
                         var reward = _player_dispatch_state.on_end_dispatch();
+                        ApplyCatStatusForLocalDispatch(Global_Game_Manager.CatStatusAtHome);
                         On_End_Dispatch(reward);
 
                         Log.Custom("小苔立刻返回");
@@ -360,9 +347,8 @@ namespace CLIP
                     {
                         ApplyDispatchDepartConsumePreparedBag();
                         _player_dispatch_state.on_start_dispatch();
-                        upload_dispatch_info_to_server();
+                        ApplyCatStatusForLocalDispatch(Global_Game_Manager.CatStatusTraveling);
 
-                        EvtDsp.TriggerEvt(EvtNames.Dispatch_On_Start);
                         //Notice_To_UI("立刻出发!!_鼠鼠刚刚出发!!_\n" +
                         //    _player_dispatch_state._current_dispatch_info.dispatch_info_to_str());
 
@@ -383,11 +369,9 @@ namespace CLIP
                         ClearDispatchCarriedSlotNamesAfterTrip();
 
                         List<(string, int)> rewardItems = new List<(string, int)> { ("鱼币", reward.Item1), ("亲密度", reward.Item2) };
-                        Global_Inventory_Manager.Change_Items_Count(rewardItems);
+                        // TODO zhaorui
+                        // Global_Inventory_Manager.Change_Items_Count(rewardItems);
                         rewardItems.Add((reward.Item3, 1));
-
-                        EvtDsp.TriggerEvt(EvtNames.Dispatch_On_End);
-
 
                         // 上传成就系统记录
                         if (Quest_And_Achievement_Manager.instance != null)
@@ -632,7 +616,7 @@ namespace CLIP
                             slot.snackName = bagInfo.snackName;
                             slot.tapeName = bagInfo.tapeName;
                         }
-                        slot.isPacked = true;
+                        slot.SyncPackedFlag();
 
                         // 强制让各 slot 保持不同引用，防御上游重复赋值
                         for (int i = 0; i < dispatch_Bags.Count; i++)
@@ -652,8 +636,31 @@ namespace CLIP
                         }
 
                         Debug.Log($"Dispatch_Manager.SetBagContent: index={index}, food={slot.foodName}, snack={slot.snackName}, tape={slot.tapeName}");
+                    }
 
-                        upload_dispatch_info_to_server();
+                    /// <summary>
+                    /// 向服务器发送旅行背包打包请求（<see cref="PackageBagReq"/>，msg_id 1335）；成功后由 <see cref="PackageBagRes"/> 回写 <see cref="Global_Game_Manager._current_cat_info"/>。
+                    /// </summary>
+                    public void SendPackageBagRequest(int bagIndex0Based, DispatchBagInfo bagInfo)
+                    {
+                        if (bagInfo == null || bagIndex0Based < 0 || bagIndex0Based > 2)
+                            return;
+                        var travel = Global_Game_Manager.BuildCatTravelBagInfoFromDispatchBag(bagInfo);
+                        var req = new PackageBagReq
+                        {
+                            BagIndex = bagIndex0Based + 1,
+                            Bag = travel
+                        };
+                        EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, req);
+                    }
+
+                    /// <summary>
+                    /// 使用爱心车票让在外游历的小猫立刻回家（<see cref="Cmd.CatBackImmediatelyReq"/>，msg_id 1337）。
+                    /// </summary>
+                    public void SendCatBackImmediatelyRequest()
+                    {
+                        var req = new CatBackImmediatelyReq();
+                        EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, req);
                     }
 
                     // -------------------- 各类事件回调 --------------------
@@ -668,35 +675,11 @@ namespace CLIP
                     //}
 
                     /// <summary>
-                    /// 从服务器更新派遣信息
-                    /// </summary>
-                    public void update_dispatch_info_from_server()
-                    {
-                        _update_dispatch_info_from_server.Invoke();
-                    }
-
-                    /// <summary>
-                    /// 上传派遣信息到服务器
-                    /// </summary>
-                    public void upload_dispatch_info_to_server()
-                    {
-                        _upload_dispatch_info_to_server.Invoke();
-                    }
-
-                    /// <summary>
                     /// 获取中途照片事件触发
                     /// </summary>
                     public void on_get_middle_way_photo()
                     {
                         _on_get_middle_way_photo.Invoke();
-                    }
-
-                    /// <summary>
-                    /// 清理上次派遣记录
-                    /// </summary>
-                    public void on_clear_previous_dispatch()
-                    {
-                        _on_clear_previous_dispatch?.Invoke();
                     }
 
                     public void SwitchBag(int bagIndex)

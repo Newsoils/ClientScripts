@@ -44,6 +44,7 @@ public class SocialPanel : UIPanelBase
     public Sprite defaultAvatarSprite;
 
     private SocialTab _currentTab = SocialTab.Friends;
+    private Player_Social_Manager _boundSocialManager;
 
 
     Player_Social_Manager SM => Player_Social_Manager._instance;
@@ -61,16 +62,13 @@ public class SocialPanel : UIPanelBase
         tabNpc.onClick.AddListener(() => SwitchTab(SocialTab.Npc));
 
 
-        if (SM != null)
-        {
-            SM._on_refresh_social_state.AddListener(RefreshCurrentTab);
-        }
+        TryBindSocialRefresh();
 
         exitButton.onClick.AddListener(ClosePanel);
 
         SwitchTab(SocialTab.Friends);
         obj.SetActive(false);
-        NPCManager.Instance.Ask_For_All_NPC_Data();
+        //NPCManager.Instance.Ask_For_All_NPC_Data();
     }
 
     public override void OnDestroy()
@@ -84,10 +82,7 @@ public class SocialPanel : UIPanelBase
         exitButton.onClick.RemoveAllListeners();
 
 
-        if (SM != null)
-        {
-            SM._on_refresh_social_state.RemoveListener(RefreshCurrentTab);
-        }
+        UnbindSocialRefresh();
     }
 
     #endregion
@@ -97,6 +92,8 @@ public class SocialPanel : UIPanelBase
     public override void OpenPanel(params object[] data)
     {
         obj.SetActive(true);
+        TryBindSocialRefresh();
+        SM?.on_update_social_info_from_server();
         SwitchTab(SocialTab.Friends);
         EvtDsp.TriggerEvt(EvtNames.Show_TopPanel_Close_Other);
     }
@@ -162,6 +159,27 @@ public class SocialPanel : UIPanelBase
         UpdateRequestRedDot();
     }
 
+    private void TryBindSocialRefresh()
+    {
+        if (_boundSocialManager != null)
+            return;
+
+        if (SM == null)
+            return;
+
+        _boundSocialManager = SM;
+        _boundSocialManager._on_refresh_social_state.AddListener(RefreshCurrentTab);
+    }
+
+    private void UnbindSocialRefresh()
+    {
+        if (_boundSocialManager == null)
+            return;
+
+        _boundSocialManager._on_refresh_social_state.RemoveListener(RefreshCurrentTab);
+        _boundSocialManager = null;
+    }
+
 
     #endregion
 
@@ -171,7 +189,7 @@ public class SocialPanel : UIPanelBase
     private void UpdateRequestRedDot()
     {
         if (requestRedDot == null) return;
-        var pending = SM._current_social_info._friend_pending_info_record;
+        var pending = SM.ApplyInfos;
         requestRedDot.SetActive(pending != null && pending.Count > 0);
     }
 
@@ -181,33 +199,23 @@ public class SocialPanel : UIPanelBase
 
     public void AcceptRequest(Friend_Social_Record record)
     {
-        SM.on_confirm_friend(record.friend_name);
-        SM._current_social_info._friend_accepted_info_record.Add(record);
-        SM._current_social_info._friend_pending_info_record.Remove(record);
-        RefreshCurrentTab();
-        friendRequestPanel.RefreshPanel();
-        friendPanel.RefreshPanel();
+        SM.on_confirm_friend(record.FriendId);
     }
 
     public void RefuseRequest(Friend_Social_Record record)
     {
-        SM.on_refuse_friend(record.friend_name);
-        SM._current_social_info._friend_pending_info_record.Remove(record);
-        RefreshCurrentTab();
-        friendRequestPanel.RefreshPanel();
+        SM.on_refuse_friend(record.FriendId);
     }
 
-    public void RemoveFriend(string friendName)
+    public void RemoveFriend(Friend_Social_Record record)
     {
-        SM.on_remove_friend(friendName);
-        SM._current_social_info._friend_accepted_info_record.RemoveAll(f => f.friend_name == friendName);
-        RefreshCurrentTab();
-        friendPanel.RefreshPanel();
+        if (record == null) return;
+        SM.on_remove_friend(record.RoleId.ToString());
     }
 
-    public void AddFriend(string friendName)
+    public void AddFriend(string friendId)
     {
-        SM.on_try_add_friend(friendName);
+        SM.on_try_add_friend(friendId);
     }
 
     public void OpenFriendDetail(Friend_Social_Record record)

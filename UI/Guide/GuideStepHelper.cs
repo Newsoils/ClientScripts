@@ -145,7 +145,7 @@ public class GuideStepHelper : MonoBehaviour
     }
     private void OnPutPlacement(GridObject obj)
     {
-        if (GuideManager.Instance.currentStep != step) return;
+        if (GuideManager.Instance == null || !GuideManager.Instance.IsCurrentStep(step.StepId)) return;
         GuideManager.Instance.NextStep();
         EvtDsp.RemoveEvt<GridObject>(EvtNames.OnPutPlacement, OnPutPlacement);
     }
@@ -157,7 +157,7 @@ public class GuideStepHelper : MonoBehaviour
     }
     private void OnClickPlacement(GridObject placement, string text, Vector3 pos)
     {
-        if (GuideManager.Instance.currentStep != step) return;
+        if (GuideManager.Instance == null || !GuideManager.Instance.IsCurrentStep(step.StepId)) return;
         GuideManager.Instance.NextStep();
         EvtDsp.RemoveEvt<GridObject, string, Vector3>(EvtNames.Open_Edit_Placement_Panel, OnClickPlacement);
     }

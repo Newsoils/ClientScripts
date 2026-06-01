@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
-using TMPro;
+using CLIP.Project_Mouse.Network;
+using Cmd;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,9 +11,6 @@ namespace CLIP.Project_Mouse.UI
 {
     public class ShoppingPanel : UIPanelBase
     {
-        [Header("商店数据")]
-        public Shop_List_DB_SO shopListDB;
-
         [Header("Render Texture")]
         public RenderTexture characterRT;
         public RenderTexture furnitureRT;
@@ -27,20 +25,14 @@ namespace CLIP.Project_Mouse.UI
 
         public Button exitButton;
 
-        [Header("购物车")]
-        public GameObject shoppingCartItemPrefab;
-        public Transform shoppingCartItemRoot;
-        public List<ShoppingCartItem> shoppingCartItems = new List<ShoppingCartItem>();
-        public GameObject shoppingCartCanvas;
-        public TMP_Text totalCoin;
-        public TMP_Text totalDiamond;
-
         [Header("面板")]
         public DailyMagazinePanel dailyMagazinePanel;
         public LimitMagazineUI limitMagazineUI;
 
         private GameObject dailyMagazineObj;
         private GameObject limitMagazineObj;
+
+        private GetAllShopInfoRes _cachedShopData;
 
         private void Start()
         {
@@ -50,11 +42,12 @@ namespace CLIP.Project_Mouse.UI
             dailyMagazineObj = dailyMagazinePanel.gameObject;
             limitMagazineObj = limitMagazineUI.gameObject;
 
-            foreach (Transform child in shoppingCartItemRoot)
-            {
-                shoppingCartItems.Add(child.GetComponent<ShoppingCartItem>());
-            }
             OpenChooseMagazine();
+
+            EvtDsp.AddEvt<GetAllShopInfoRes>(EvtNames.OnShopInfoReceived, OnGetAllShopInfoRes);
+            EvtDsp.AddEvt<ManualRefreshShopRes>(EvtNames.OnManualRefreshShopReceived, OnManualRefreshShopRes);
+            EvtDsp.AddEvt<BuyGoodsRes>(EvtNames.OnBuyGoodsReceived, OnBuyGoodsRes);
+            EvtDsp.AddEvt(EvtNames.OpenShoppingPanel, OnOpenShoppingPanelEvent);
 
             dailyMagazine.onClick.AddListener(OpenOrChooseDailyMagazine);
             limitMagazine.onClick.AddListener(OpenOrChooseLimitMagazine);
@@ -66,26 +59,26 @@ namespace CLIP.Project_Mouse.UI
         public override void OnDestroy()
         {
             base.OnDestroy();
+            EvtDsp.RemoveEvt<GetAllShopInfoRes>(EvtNames.OnShopInfoReceived, OnGetAllShopInfoRes);
+            EvtDsp.RemoveEvt<ManualRefreshShopRes>(EvtNames.OnManualRefreshShopReceived, OnManualRefreshShopRes);
+            EvtDsp.RemoveEvt<BuyGoodsRes>(EvtNames.OnBuyGoodsReceived, OnBuyGoodsRes);
+            EvtDsp.RemoveEvt(EvtNames.OpenShoppingPanel, OnOpenShoppingPanelEvent);
             dailyMagazine.onClick.RemoveListener(OpenOrChooseDailyMagazine);
             limitMagazine.onClick.RemoveListener(OpenOrChooseLimitMagazine);
-
             exitButton.onClick.RemoveAllListeners();
         }
 
         #region 接口方法实现
 
-
-        // 打开商店面板
         public override void OpenPanel(params object[] data)
         {
             obj.SetActive(true);
-
+            RequestShopData();
             GuideManager.Instance.CheckShopFinished();
             EvtDsp.TriggerEvt(EvtNames.OnShoppingPanelOpen);
             EvtDsp.TriggerEvt(EvtNames.RefreshUI);
         }
 
-        // 关闭商店面板
         public override void ClosePanel()
         {
             obj.SetActive(false);
@@ -93,124 +86,80 @@ namespace CLIP.Project_Mouse.UI
             EvtDsp.TriggerEvt(EvtNames.RefreshUI);
         }
 
+        private void OnOpenShoppingPanelEvent()
+        {
+            OpenPanel();
+        }
+
         #endregion
 
+        #region 服务器数据
 
-        // 购买物品
-        //public bool PurchaseItem()
-        //{
-        //    List<(string, int)> price = new List<(string, int)>();
-        //    List<(string, int)> buyList = new List<(string, int)>();
-        //    List<ShoppingCartItem> itemToRemove = new List<ShoppingCartItem>();
-        //    foreach (var cartItem in shoppingCartItems)
-        //    {
-        //        if (cartItem.isSelected)
-        //        {
-        //            price.Add((cartItem.shoppingCartItem.currency_unit, cartItem.shoppingCartItem.sell_price));
-        //            buyList.Add((cartItem.shoppingCartItem.name, cartItem.itemCount));
-        //            itemToRemove.Add(cartItem);
-        //        }
-        //    }
-
-        //    TaskTriggers.TriggerEvent(2, 1, () =>
-        //    {
-        //        // 是否存在物品  0 --> Food;  1 --> Tape
-        //        bool[] hasItem = new bool[2];
-
-        //        foreach (var item in itemToRemove)
-        //        {
-        //            if (item.shoppingCartItem.type == Project_Mouse.ENUM.Item_Type.Food)
-        //            {
-        //                hasItem[0] = true;
-        //            }
-        //            else if (item.shoppingCartItem.type == Project_Mouse.ENUM.Item_Type.Tape)
-        //            {
-        //                hasItem[1] = true;
-        //            }
-        //        }
-        //        foreach (bool has in hasItem)
-        //        {
-        //            if (!has)
-        //            {
-        //                return false;
-        //            }
-        //        }
-
-        //        return true;
-        //    });
-        //    _ = MoneyManager.Instance.ChangeCurrencyMulti(price, "商城购物", (string result) =>
-        //    {
-        //        if (result != "success") return;
-        //        Global_Inventory_Manager.Change_Items_Count(buyList);
-        //        EvtDsp.TriggerEvt(EvtNames.RefreshUI);
-        //        foreach (var cartItem in itemToRemove)
-        //        {
-        //            if (cartItem.shoppingCartItem.type == Project_Mouse.ENUM.Item_Type.Food)
-        //            {
-        //                TaskTriggers.TriggerEvent(2, 1);
-        //            }
-        //            cartItem.DeleteItem();
-        //        }
-        //        CloseShoppingCart();
-        //    });
-        //    return true;
-        //}
-
-        // 更新购物车UI
-        public void UpdateCartUI()
+        public void RequestShopData()
         {
-            int totalGold = 0;
-            int totalCan = 0;
+            var req = new GetAllShopInfoReq();
+            for (long shopID = 1; shopID <= 10; shopID++)
+                req.ShopIDs.Add(shopID);
+            NetWork_Center_WSS.SendMsg(req);
+        }
 
-            foreach (var cartItem in shoppingCartItems)
+        public void OnGetAllShopInfoRes(GetAllShopInfoRes res)
+        {
+            _cachedShopData = res;
+            ApplyShopList(res.Shops);
+        }
+
+        private void OnManualRefreshShopRes(ManualRefreshShopRes res)
+        {
+            if (res == null)
+                return;
+
+            var roleInfo = Global_Game_Manager.Instance.get_current_player_role_info();
+            if (roleInfo != null)
+                roleInfo.TodayShopRefreshTimes = res.RefreshTimes;
+
+            ApplyShopList(res.Shop);
+            PromptMessage.Instance.ShowUpPrompt("刷新成功");
+        }
+
+        private void ApplyShopList(IEnumerable<UserShop> shops)
+        {
+            if (shops == null)
+                return;
+
+            dailyMagazinePanel.ApplyServerShopData(shops);
+
+            UserShop limitedClothShop1 = null;
+            UserShop limitedClothShop2 = null;
+            bool hasLimitedShop = false;
+            foreach (var shop in shops)
             {
-                if (cartItem.isSelected)
+                if (shop.ShopID == 9)
                 {
-                    if (cartItem.shoppingCartItem.currency_unit == "鱼币")
-                    {
-                        totalGold += cartItem.shoppingCartItem.sell_price * cartItem.itemCount;
-                    }
-                    else if (cartItem.shoppingCartItem.currency_unit == "罐罐")
-                    {
-                        totalCan += cartItem.shoppingCartItem.sell_price * cartItem.itemCount;
-                    }
+                    limitedClothShop1 = shop;
+                    hasLimitedShop = true;
+                }
+                else if (shop.ShopID == 10)
+                {
+                    limitedClothShop2 = shop;
+                    hasLimitedShop = true;
                 }
             }
 
-            totalCoin.text = totalGold.ToString();
-            totalDiamond.text = totalCan.ToString();
+            if (hasLimitedShop)
+                limitMagazineUI.ApplyServerShopData(limitedClothShop1, limitedClothShop2);
         }
 
-        // 打开购物车
-        public void OpenShoppingCart()
+        public GetAllShopInfoRes CachedShopData => _cachedShopData;
+
+        private void OnBuyGoodsRes(BuyGoodsRes res)
         {
-            shoppingCartCanvas.SetActive(true);
-            UpdateCartUI();
+            PromptMessage.Instance.ShowUpPrompt("购买成功");
+            RequestShopData();
         }
 
-        // 关闭购物车
-        public void CloseShoppingCart()
-        {
-            shoppingCartCanvas.SetActive(false);
-        }
+        #endregion
 
-        // 增加一个购物车物品
-        public ShoppingCartItem CreateCartItem(Game_Item_Info item)
-        {
-            if (item == null) return null;
-
-            var cartItemObject = Instantiate(shoppingCartItemPrefab, shoppingCartItemRoot);
-
-            var cartItemComponent = cartItemObject.GetComponent<ShoppingCartItem>();
-            shoppingCartItems.Add(cartItemComponent);
-
-            cartItemComponent.shoppingCartItem = item;
-            cartItemComponent.InitShoppingCartItem();
-
-            return cartItemComponent;
-        }
-
-        // 给角色模型换装
         public void ChangeCharacterCloth(string clothName)
         {
             CharacterClothesManager.Instance.ChangeClothes(CharacterType.Shopping, clothName);
@@ -221,19 +170,17 @@ namespace CLIP.Project_Mouse.UI
             CharacterClothesManager.Instance.InitCharacter(CharacterType.Shopping);
         }
 
-        // 选择日刊
         public void OpenOrChooseDailyMagazine()
         {
             if (BringButtonToFront(dailyMagazine))
             {
                 dailyMagazineObj.SetActive(true);
                 chooseMagazine.SetActive(false);
-                dailyMagazinePanel.OnPrimaryCategoryButtonClick(DailyShoppingPrimaryCategory.Clothes);
+                dailyMagazinePanel.OnTabButtonClick(DailyShoppingTab.Clothes);
                 InitCharacterCloth();
             }
         }
 
-        // 选择限定刊
         public void OpenOrChooseLimitMagazine()
         {
             if (BringButtonToFront(limitMagazine))
@@ -250,42 +197,21 @@ namespace CLIP.Project_Mouse.UI
             limitMagazineObj.SetActive(false);
         }
 
-        // 把按钮调整到最上层
         public void ChooseMagazineOrCategory(Button button)
         {
             BringButtonToFront(button);
         }
 
-        // 将按钮调整到最上层
         public bool BringButtonToFront(Button button)
         {
             RectTransform buttonTransform = button.GetComponent<RectTransform>();
-
             Transform parentTransform = buttonTransform.parent;
 
             if (buttonTransform.GetSiblingIndex() == parentTransform.childCount - 1)
-            {
-                Debug.Log("按钮已经在最上层！");
                 return true;
-            }
 
             buttonTransform.SetSiblingIndex(parentTransform.childCount - 1);
-            Debug.Log("按钮已调整到最上层！");
             return false;
         }
-
-        // 设置物体的层级
-        public void SetLayer(GameObject obj, int layer)
-        {
-            obj.layer = layer;
-
-            foreach (Transform child in obj.transform)
-            {
-                SetLayer(child.gameObject, layer);
-            }
-        }
-
-
     }
-
 }

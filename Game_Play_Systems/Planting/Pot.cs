@@ -18,6 +18,12 @@ public class Pot : GridObject, IClick
         renderers = GetComponentsInChildren<Renderer>(true).ToList();
         colliders = GetComponentsInChildren<Collider>(true).ToList();
     }
+
+    private void Start()
+    {
+        if (Root == null) Root = transform.Find("Root");
+        ApplyRotation();
+    }
     public void Init(PotData info)
     {
         if(info != null)

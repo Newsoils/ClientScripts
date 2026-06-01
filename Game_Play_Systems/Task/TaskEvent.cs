@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
@@ -6,14 +5,14 @@ using CLIP.Project_Mouse.ENUM;
 namespace CLIP.Project_Mouse.Game_Play_System
 {
     /// <summary>
-    /// 任务触发入口。按 taskId 触发，或按 Item_Type 自动触发所有相关任务。
+    /// 任务触发入口。按 missionId 触发，或按 Item_Type 自动触发所有相关任务。
     /// 用法：TaskEvent.Trigger(2);  或  TaskEvent.TriggerByCategory(Item_Type.Food);
     /// </summary>
     public static class TaskEvent
     {
         public const string Task_Progress = "Task_Progress";
 
-        // ===== taskId 常量（便于代码阅读）=====
+        // ===== missionId 常量（便于代码阅读）=====
         // 名称规则：Task_[类别]_[目标数量]
         // 其中 "首次" 固定对应 targetCount=1
 
@@ -107,20 +106,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public const int Task_PlaceFurniture_40 = 81; // 累计摆放40个新家具
         public const int Task_PlaceFurniture_50 = 87; // 累计摆放50个新家具
 
-
-        public const int Task_Cost_FishCoin_100_1 = 11;
-        public const int Task_Cost_FishCoin_100_2 = 18;
-        public const int Task_Cost_FishCoin_100_3 = 24;
-        public const int Task_Cost_FishCoin_100_4 = 30;
-        public const int Task_Cost_FishCoin_500_1 = 36;
-        public const int Task_Cost_FishCoin_500_2 = 42;
-        public const int Task_Cost_FishCoin_500_3 = 48;
-        public const int Task_Cost_FishCoin_500_4 = 54;
-        public const int Task_Cost_FishCoin_1000_1 = 56;
-        public const int Task_Cost_FishCoin_1000_2 = 67;
-        public const int Task_Cost_FishCoin_2000_1 = 74;
-        public const int Task_Cost_FishCoin_5000_1 = 80;
-        public const int Task_Cost_FishCoin_10000_1 = 86;
         // ===== 内部映射 =====
 
         private static readonly int[] _foodIds = {
@@ -165,19 +150,9 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         private static readonly int[] _xiaoTaiReturnHomeIds = { Task_XiaoTaiReturnHome, 55 }; // 累计回家
 
-        private static readonly int[] _costCoinIds = {
-            Task_Cost_FishCoin_10000_1, Task_Cost_FishCoin_5000_1,
-            Task_Cost_FishCoin_1000_1, Task_Cost_FishCoin_1000_2,
-            Task_Cost_FishCoin_2000_1,
-            Task_Cost_FishCoin_100_1, Task_Cost_FishCoin_100_2,
-            Task_Cost_FishCoin_100_3, Task_Cost_FishCoin_100_4,
-            Task_Cost_FishCoin_500_1, Task_Cost_FishCoin_500_2,
-            Task_Cost_FishCoin_500_3, Task_Cost_FishCoin_500_4
-        };
-
         // ===== 公开 API =====
 
-        /// <summary>直接按 taskId 触发单个任务。</summary>
+        /// <summary>直接按 missionId 触发单个任务。</summary>
         public static void Trigger(int taskId, int triggerTimes = 1)
         {
             EvtDsp.TriggerEvt(Task_Progress, taskId, triggerTimes);
@@ -218,19 +193,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             foreach (var id in _xiaoTaiReturnHomeIds)
                 EvtDsp.TriggerEvt(Task_Progress, id, triggerTimes);
-        }
-
-        public static void TriggerCostCoin(List<(string, int)> changes)
-        {
-            foreach(var change in changes )
-            {
-                if(change.Item1 == "鱼币" && change.Item2<0)
-                {
-                    foreach (var id in _costCoinIds)
-                        EvtDsp.TriggerEvt(Task_Progress, id, (int)MathF.Abs(change.Item2));
-                }
-            }
-
         }
     }
 }

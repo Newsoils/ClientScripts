@@ -1,11 +1,12 @@
 using CLIP.Project_Mouse.ENUM;
+using System;
 using System.Collections.Generic;
 
 namespace CLIP
 {
     namespace Project_Mouse
     {
-        [System.Serializable]
+        [Serializable]
         public class Game_Item_Info
         {
             /// <summary>

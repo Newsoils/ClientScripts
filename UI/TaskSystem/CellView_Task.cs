@@ -1,10 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using CLIP.Framework_Core.Event;
-using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
-using CLIP.Project_Mouse.Kernel;
 using EnhancedUI.EnhancedScroller;
 using TMPro;
 using UnityEngine;
@@ -19,6 +14,8 @@ namespace CLIP.Project_Mouse.UI
         [SerializeField] private Image _mainSlider;
         [SerializeField] private Image _leftSlider;
         [SerializeField] private Image _rightSlider;
+        public TMP_Text progressText;
+
         [SerializeField] private Button _confirmButton;
         [SerializeField] private Image _rewardIconPrefab;
         [SerializeField] private Sprite _greenSprite;
@@ -26,75 +23,72 @@ namespace CLIP.Project_Mouse.UI
         [SerializeField] private TMP_Text _buttonText;
         [SerializeField] private Image _transparentMask;
         [SerializeField] private Image _buttonImage;
-        public GameObject unlockLevelObj;
-        public TMP_Text unlockLevelText;
 
-        private int _currentTaskId = -1;
+        public TMP_Text unlockText;
 
         private ScrollData_Task mData;
 
         public void OnEnable()
         {
-            if(mData!=null)
-            RefreshTaskState(mData);
+            if (mData != null)
+                RefreshTaskState(mData);
         }
 
-        public void SetData(ScrollData_Task data, Action<int> claimCallback)
+        public void SetData(ScrollData_Task data, Action<ulong> claimCallback)
         {
             if (data == null)
                 return;
             mData = data;
-            _currentTaskId = data.model.taskId;
-            _descriptionText.text = data.model.desc;
-
+            if (data.isLocked)
+            {
+                progressText.text = "??/??";
+            }
+            else
+            {
+                progressText.text = data.runtime.current.ToString() + "/" + data.runtime.target.ToString();
+            }
             _confirmButton.onClick.RemoveAllListeners();
-            _confirmButton.onClick.AddListener(() => claimCallback?.Invoke(data.model.taskId));
+            if (!data.isLocked)
+                _confirmButton.onClick.AddListener(() => claimCallback?.Invoke(data.runtime.missionUId));
 
-            _transparentMask.gameObject.SetActive(false);
+            SetRewardIcons();
 
             RefreshTaskState(data);
-
-            data.runtime.OnProgressChange -= OnProgressChanged;
-            data.runtime.OnProgressChange += OnProgressChanged;
-            data.runtime.OnTaskFinished -= OnTaskFinished;
-            data.runtime.OnTaskFinished += OnTaskFinished;
         }
 
         private void RefreshTaskState(ScrollData_Task data)
         {
-            //if (data.runtime.IsFinish)
-            //{
-            //    SetAsFinished();
-            //    return;
-            //}
-
-            if (!data.runtime.IsAccept)
+            if (data.isLocked)
             {
-                SetAsLocked(data.model.unlockExp);
+                _transparentMask.gameObject.SetActive(true);
+                _confirmButton.interactable = false;
+                _descriptionText.text = data.model.desc;
+                unlockText.text = data.model.unlockExp.ToString();
+                _buttonText.text = "未解锁";
+                UpdateProgress(0f);
                 return;
             }
 
-            _confirmButton.interactable = true;
             _transparentMask.gameObject.SetActive(false);
-            unlockLevelObj?.SetActive(false);
+            _confirmButton.interactable = true;
+            _descriptionText.text = data.model.desc;
+            unlockText.text = data.model.unlockExp.ToString();
+            //任务状态 0：进行中 1：已完成 2：已领取奖励
+            switch (data.runtime.status)
+            {
+                case 0:
+                    _buttonText.text = "未完成";
+                    break;
+                case 1:
+                    _buttonText.text = "可领取";
+                    break;
+                case 2:
+                    _buttonText.text = "已领取";
+                    break;
+            }
             UpdateProgress(data.runtime.Progress);
         }
 
-        private void OnProgressChanged(float progress)
-        {
-            UpdateProgress(progress);
-        }
-
-        private void OnTaskFinished()
-        {
-            _confirmButton.interactable = true;
-            _transparentMask.gameObject.SetActive(false);
-            _buttonImage.sprite = _greenSprite;
-            _buttonText.text = "已领取";
-            _mainSlider.fillAmount = 1f;
-            _leftSlider.gameObject.SetActive(false);
-            _rightSlider.gameObject.SetActive(false);
-        }
 
         public void UpdateProgress(float progress)
         {
@@ -107,55 +101,33 @@ namespace CLIP.Project_Mouse.UI
             if (progress >= 1f)
             {
                 _buttonImage.sprite = _greenSprite;
-                _buttonText.text = "可领取";
             }
             else
             {
-                _buttonText.text = "未完成";
                 _buttonImage.sprite = _whiteSprite;
             }
-        }
-
-        //public void SetAsFinished()
-        //{
-        //    gameObject.SetActive(false);
-        //}
-
-        private void SetAsLocked(int unlockExp)
-        {
-            _confirmButton.interactable = false;
-            _transparentMask.gameObject.SetActive(true);
-            _buttonImage.sprite = _whiteSprite;
-            _buttonText.text = "未解锁";
-            _mainSlider.fillAmount = 0f;
-            _leftSlider.gameObject.SetActive(false);
-            _rightSlider.gameObject.SetActive(false);
-            _descriptionText.color = Color.gray;
-            unlockLevelObj?.SetActive(true);
-            unlockLevelText.text = unlockExp.ToString();
         }
 
         private void OnDisable()
         {
             _confirmButton.onClick.RemoveAllListeners();
-            if (mData != null)
-            {
-                mData.runtime.OnProgressChange -= OnProgressChanged;
-                mData.runtime.OnTaskFinished -= OnTaskFinished;
-            }
         }
 
-        public async Task SetRewardIcons(List<string> iconNames)
+        public void SetRewardIcons()
         {
-            foreach (Transform child in _rewardField)
-                Destroy(child.gameObject);
+            Unity_Tools.ClearAllChildren(_rewardField);
 
-            foreach (var iconName in iconNames)
+            for (int i = 0; i < mData.model.Rewards.Count; i++)
             {
-                var icon = Instantiate(_rewardIconPrefab, _rewardField);
-                var sprite = await GameAssets.Instance.LoadAsycByKey<Sprite>(iconName);
-                icon.transform.Find("ItemImage").GetComponent<Image>().sprite = sprite;
+                var reward = mData.model.Rewards[i];
+                var iconName = mData.model.RewardNames[i];
+
+                var rewardCell = Instantiate(_rewardIconPrefab, _rewardField).GetComponent<TaskRewardCell>();
+                GameAssets.Instance.LoadAndSetByKey<Sprite>(iconName, sp => rewardCell.itemImage.sprite = sp);
+                rewardCell.itemCount.text = reward.amount.ToString();
+                Debug.Log($"Reward: {reward}");
             }
+
         }
     }
 }

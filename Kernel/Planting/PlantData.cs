@@ -14,6 +14,7 @@ public class PlantLocalData
 
     #region 生长
     public int growStage;
+    public int growStage2;
     public double plantTime;
     public double lastUpdateTime;
     public double curGrowTime;

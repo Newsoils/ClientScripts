@@ -1,25 +1,33 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
 
 public class RemovePlantMode : IEditMode
 {
-    private LayerMask gridLayerMask = LayerMask.GetMask("GridLayer");
     private LayerMask placementMask = LayerMask.GetMask("Placement");
     private bool canInteract;
+    private static RemovePlantMode current;
 
     public void Enter()
     {
+        current = this;
         EvtDsp.TriggerEvt(EvtNames.ShowRemovePop);
         canInteract = true;
     }
 
     public void Exit()
     {
+        if (current == this)
+            current = null;
         EvtDsp.TriggerEvt(EvtNames.ClosePlantPop);
+    }
+
+    public static void HandleRemoveCompleted()
+    {
+        if (current == null)
+            return;
+        current.canInteract = true;
+        EvtDsp.TriggerEvt(EvtNames.ShowRemovePop);
     }
 
     public void OnDrag(Vector2 screenPos)
@@ -47,12 +55,12 @@ public class RemovePlantMode : IEditMode
         if (canInteract)
         {
             canInteract = false;
-            _ = TapToRemove(screenPos);
+            TapToRemove(screenPos);
         }
 
     }
 
-    public async Task TapToRemove(Vector2 screenPos)
+    public void TapToRemove(Vector2 screenPos)
     {
         var pot = RaycastPot(screenPos);
         if (pot != null)
@@ -60,14 +68,14 @@ public class RemovePlantMode : IEditMode
             Plant plant = PlantManager.Instance.GetPlantByPot(pot);
             if (plant != null)
             {
-                await PlantManager.Instance.RemovePlant(plant);
-                EvtDsp.TriggerEvt(EvtNames.ShowRemovePop);
+                PlantManager.Instance.RemovePlant(plant);
+                return;
             }
-
         }
         else
         {
             EditManager.Instance.ExitCurrentMode();
+            return;
         }
         canInteract = true;
     }

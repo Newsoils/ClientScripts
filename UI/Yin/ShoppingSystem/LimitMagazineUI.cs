@@ -1,9 +1,10 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
+using CLIP.Project_Mouse.Network;
+using Cmd;
+using Common;
+using Newtonsoft.Json;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,7 +20,6 @@ namespace CLIP.Project_Mouse.UI
         public Button btnFirstFurniture;
         public Button btnSecondFurniture;
         public Button btnExit;
-        public Button btnAddToCart1;
         public Button btnGachaOne;
         public Button btnGachaFive;
         public Button btnBuyAllItem;
@@ -36,12 +36,18 @@ namespace CLIP.Project_Mouse.UI
         public Image previewClothes;
 
         [Header("商品")]
-        public Shop_List_DB_SO shopListDB;
         public GameObject shopItemPrefab;
+        public GameObject gachaItemPrefab;
         public Transform clothItemListParent;
         public Transform furnitureItemListParent;
-        private List<ShoppingItemUnit> itemSelected = new List<ShoppingItemUnit>();
-        private List<string> curItems = new List<string>();
+        private readonly List<ShoppingItemUnit> itemSelected = new List<ShoppingItemUnit>();
+        private readonly List<ShopGoodsViewData> limitedClothes1 = new List<ShopGoodsViewData>();
+        private readonly List<ShopGoodsViewData> limitedClothes2 = new List<ShopGoodsViewData>();
+        private ShopGoodsViewData limitedClothesSuit1;
+        private ShopGoodsViewData limitedClothesSuit2;
+        private ShopGoodsViewData currentSuitGoods;
+        private Cmd.UserShop serverClothShop1;
+        private Cmd.UserShop serverClothShop2;
         public List<Sprite> previewClothesSprites;
         public List<Sprite> previewFurnitureSprites;
 
@@ -55,8 +61,21 @@ namespace CLIP.Project_Mouse.UI
 
         [Header("抽卡")]
         private int currentPool;
+        private bool pendingSingleMintPurchase;
+        private int pendingGachaAfterMintPullCount;
+        private static List<GachaPoolDisplayConfig> gachaPoolDisplayConfigs;
 
         private const string ColorMintItemName = "许愿薄荷";
+        private const string GachaPoolConfigFileName = "project_mouse_tb_gacha_pool";
+
+        private class GachaPoolDisplayConfig
+        {
+            [JsonProperty("pool_id")]
+            public int PoolId;
+
+            [JsonProperty("items")]
+            public List<int> Items;
+        }
 
         /// <summary>用罐罐补足许愿薄荷时的单价（枚），读表 sell_price，缺省 60。</summary>
         private static int GetColorMintPriceInCans()
@@ -76,7 +95,6 @@ namespace CLIP.Project_Mouse.UI
         private void Start()
         {
             InitButtons();
-            itemSelected = new List<ShoppingItemUnit>();
             curBtn = null;
             btnFirstClothes.onClick?.Invoke();
         }
@@ -86,50 +104,50 @@ namespace CLIP.Project_Mouse.UI
             btnFirstClothes.onClick.AddListener(() =>
             {
                 if (curBtn == btnFirstClothes) return;
-                ClickClothesBtn(shopListDB._limited_cloth_item_list[0].group_item_list);
+                curBtn = btnFirstClothes;
+                ClickClothesBtn(1);
                 SetButtonAlpha(btnFirstClothes);
                 previewClothes.sprite = previewClothesSprites[0];
-                curBtn = btnFirstClothes;
             });
             btnSecondClothes.onClick.AddListener(() =>
             {
                 if (curBtn == btnSecondClothes) return;
-                ClickClothesBtn(shopListDB._limited_cloth_item_list[1].group_item_list);
+                curBtn = btnSecondClothes;
+                ClickClothesBtn(2);
                 SetButtonAlpha(btnSecondClothes);
                 previewClothes.sprite = previewClothesSprites[1];
-                curBtn = btnSecondClothes;
             });
             btnFirstFurniture.onClick.AddListener(() =>
             {
                 if (curBtn == btnFirstFurniture) return;
-                ClickFurnitureBtn(shopListDB._limited_placement_item_list[0].group_item_list);
-                SetButtonAlpha(btnFirstFurniture);
                 curBtn = btnFirstFurniture;
+                currentPool = 1;
+                ClickFurnitureBtn(currentPool);
+                SetButtonAlpha(btnFirstFurniture);
                 previewFurniture.sprite = previewFurnitureSprites[0];
-                currentPool = 0;
             });
             btnSecondFurniture.onClick.AddListener(() =>
             {
                 if (curBtn == btnSecondFurniture) return;
-                ClickFurnitureBtn(shopListDB._limited_placement_item_list[1].group_item_list);
-                SetButtonAlpha(btnSecondFurniture);
                 curBtn = btnSecondFurniture;
+                currentPool = 2;
+                ClickFurnitureBtn(currentPool);
+                SetButtonAlpha(btnSecondFurniture);
                 previewFurniture.sprite = previewFurnitureSprites[1];
-                currentPool = 1;
             });
             btnExit.onClick.AddListener(ExitButton);
-            btnAddToCart1.onClick.AddListener(AddToCartButton);
-            //btnAddToCart2.onClick.AddListener(AddToCartButton);
             btnGachaOne.onClick.AddListener(GachaOneBtn);
             btnGachaFive.onClick.AddListener(GachaFiveBtn);
             btnBuyAllItem.onClick.AddListener(BuyAllItems);
             btnBuyColorMint.onClick.AddListener(OnBuyColorMintClicked);
             EvtDsp.AddEvt(EvtNames.RefreshUI, OnRefreshUi);
+            EvtDsp.AddEvt<BuyTicketsRes>(EvtNames.OnBuyTicketsReceived, OnBuyTicketsRes);
             OnRefreshUi();
         }
         private void OnDestroy()
         {
             EvtDsp.RemoveEvt(EvtNames.RefreshUI, OnRefreshUi);
+            EvtDsp.RemoveEvt<BuyTicketsRes>(EvtNames.OnBuyTicketsReceived, OnBuyTicketsRes);
         }
 
         private void OnRefreshUi()
@@ -146,88 +164,90 @@ namespace CLIP.Project_Mouse.UI
         private void OnBuyColorMintClicked()
         {
             int price = GetColorMintPriceInCans();
-            PromptMessage.Instance.ShowPrompt($"是否花费{price}罐罐购买1枚许愿薄荷？", () => _ = BuyOneColorMintWithCansAsync());
+            PromptMessage.Instance.ShowPrompt($"是否花费{price}罐罐购买1枚许愿薄荷？", BuyOneColorMintWithTicketsReq);
         }
 
-        private async Task BuyOneColorMintWithCansAsync()
+        private void BuyOneColorMintWithTicketsReq()
         {
-            int price = GetColorMintPriceInCans();
-            Action<string> onPay = (string data) =>
+            if (!TryGetColorMintItemId(out long itemId))
+                return;
+
+            pendingSingleMintPurchase = true;
+            NetWork_Center_WSS.SendMsg(new BuyTicketsReq
             {
-                if (data == "success")
-                {
-                    Global_Inventory_Manager.Change_Items_Count(new List<(string, int)> { (ColorMintItemName, 1) }, "罐罐购买许愿薄荷");
-                    PromptMessage.Instance.ShowUpPrompt("购买成功");
-                    EvtDsp.TriggerEvt(EvtNames.RefreshUI);
-                }
-                else if (data == "罐罐不足")
-                {
-                    PromptMessage.Instance.ShowPrompt("罐罐数量不足，是否前往充值页面？", () => PayPanel.Instance.OpenPanel());
-                }
-                else if (!string.IsNullOrEmpty(data))
-                {
-                    PromptMessage.Instance.ShowUpPrompt(data);
-                }
-            };
-            await MoneyManager.Instance.ChangeCurrency("罐罐", -price, "购买许愿薄荷", onPay);
+                ItemID = itemId,
+                Count = 1
+            });
+        }
+
+        private bool TryGetColorMintItemId(out long itemId)
+        {
+            var info = Global_Inventory_Manager.GetItemInfo(ColorMintItemName);
+            if (info == null)
+            {
+                itemId = 0;
+                PromptMessage.Instance.ShowUpPrompt("许愿薄荷配置不存在");
+                return false;
+            }
+
+            itemId = info.item_id;
+            return true;
+        }
+
+        private void OnBuyTicketsRes(BuyTicketsRes res)
+        {
+            if (pendingSingleMintPurchase)
+            {
+                pendingSingleMintPurchase = false;
+                PromptMessage.Instance.ShowUpPrompt("购买成功");
+                RefreshColorMintCountDisplay();
+                return;
+            }
+
+            if (pendingGachaAfterMintPullCount > 0)
+            {
+                int pullCount = pendingGachaAfterMintPullCount;
+                pendingGachaAfterMintPullCount = 0;
+                SendGachaRequestToServer(pullCount);
+            }
         }
         private void BuyAllItems()
         {
-            int price = 0;
-            List<(string, int)> items = new List<(string, int)>();
-            List<string> itemNames = new List<string>();
-            foreach (var item in curItems)
+            if (currentSuitGoods == null)
+                return;
+
+            ulong shopUID = GetCurrentShopUID();
+            if (shopUID == 0UL)
             {
-                var info = Global_Inventory_Manager.GetItem(item);
-                if (info == null || info._item_count <= 0)
-                {
-                    price += Global_Inventory_Manager.GetItemInfo(item).sell_price;
-                    items.Add((item, 1));
-                    itemNames.Add(item);
-                }
+                PromptMessage.Instance.ShowUpPrompt("商店数据未同步，请重新打开商店");
+                return;
             }
 
-            string namesJoined = string.Join("，", itemNames);
-            string message = $"是否要花费{price}罐罐购买{namesJoined}?";
-
-            PromptMessage.Instance.ShowPrompt(message, () =>
+            int price = currentSuitGoods.CostCount;
+            string currencyName = string.IsNullOrEmpty(currentSuitGoods.CurrencyName) ? "鱼币" : currentSuitGoods.CurrencyName;
+            PromptMessage.Instance.ShowPrompt($"是否花费{price}{currencyName}购买整套？", () =>
             {
-                Action<string> onPayComplete = (string result) =>
+                NetWork_Center_WSS.SendMsg(new BuyGoodsReq
                 {
-                    if (result == "success")
-                    {
-                        PromptMessage.Instance.ShowUpPrompt("购买成功");
-                        Global_Inventory_Manager.Change_Items_Count(items, "商店购买");
-                        ExpManager.TempAddExpForRoomPlacementGains(items);
-                        EvtDsp.TriggerEvt(EvtNames.RefreshUI);
-                    }
-                    else
-                    {
-                        PromptMessage.Instance.ShowUpPrompt(result);
-                    }
-                };
-                MoneyManager.Instance.ChangeCurrency("罐罐", -price, "购买物品", onPayComplete);
+                    ShopUID = shopUID,
+                    GoodsID = currentSuitGoods.GoodsID,
+                    BuyAmount = 1
+                });
             });
+        }
+        private ulong GetCurrentShopUID()
+        {
+            if (currentSuitGoods == limitedClothesSuit1)
+                return serverClothShop1.ShopUID;
+            if (currentSuitGoods == limitedClothesSuit2)
+                return serverClothShop2.ShopUID;
+            return 0UL;
         }
         private void CheckBuyAllItemState()
         {
-            int price = 0;
-            foreach (var item in curItems)
-            {
-                var info = Global_Inventory_Manager.GetItem(item);
-                if (info == null || info._item_count <= 0)
-                {
-                    price += Global_Inventory_Manager.GetItemInfo(item).sell_price;
-                }
-            }
-            if (price == 0)
-            {
-                SetBuyItemState(false);
-            }
-            else
-            {
-                SetBuyItemState(true);
-            }
+            RefreshCurrentSuitGoods();
+            bool isCanBuy = currentSuitGoods != null && currentSuitGoods.CostCount > 0 && currentSuitGoods.LeftBuyTimes != 0;
+            SetBuyItemState(isCanBuy);
         }
         private void SetBuyItemState(bool isCanBuy)
         {
@@ -246,22 +266,38 @@ namespace CLIP.Project_Mouse.UI
                 BuyAllItemText.color = BuyButtonTextColorUnavailable;
             }
         }
-        private void ClickClothesBtn(List<string> items)
+        private void ClickClothesBtn(int suitIndex)
         {
             clothesPanel.SetActive(true);
             furniturePanel.SetActive(false);
-            RefreshClothesItemCell(items, clothItemListParent, true);
-            curItems = items;
+            RefreshClothesItemCell(suitIndex);
+            RefreshCurrentSuitGoods();
+            CheckBuyAllItemState();
             EvtDsp.TriggerEvt(EvtNames.RefreshUI);
         }
-        private void ClickFurnitureBtn(List<string> items)
+        private void ClickFurnitureBtn(int poolId)
         {
             clothesPanel.SetActive(false);
             furniturePanel.SetActive(true);
-            RefreshFurnitureItemCell(items, furnitureItemListParent, false);
-            curItems = items;
+            currentSuitGoods = null;
+            RefreshFurnitureItemCell(poolId);
+            CheckBuyAllItemState();
             EvtDsp.TriggerEvt(EvtNames.RefreshUI);
         }
+        private void RefreshCurrentSuitGoods()
+        {
+            if (curBtn == btnFirstClothes)
+                currentSuitGoods = limitedClothesSuit1;
+            else if (curBtn == btnSecondClothes)
+                currentSuitGoods = limitedClothesSuit2;
+            else
+                currentSuitGoods = null;
+
+            var items = curBtn == btnFirstClothes ? limitedClothes1 : curBtn == btnSecondClothes ? limitedClothes2 : null;
+            if (currentSuitGoods != null && items != null)
+                currentSuitGoods.SetCostCount(ShopConfigResolver.CalculateSuitRemainPrice(currentSuitGoods.ShopItem, items));
+        }
+
         private void SetButtonAlpha(Button button)
         {
             List<Button> buttons = new List<Button> { btnFirstClothes, btnSecondClothes, btnFirstFurniture, btnSecondFurniture };
@@ -283,25 +319,6 @@ namespace CLIP.Project_Mouse.UI
             sp.OpenChooseMagazine();
             sp.InitCharacterCloth();
         }
-        private void AddToCartButton()
-        {
-            foreach (var item in itemSelected)
-            {
-
-                var existingItem = UIManager.Instance.GetPanel<ShoppingPanel>().shoppingCartItems.Find(cartItem => cartItem.shoppingCartItem.name == item.itemInShop.name);
-
-                if (existingItem != null)
-                {
-                    existingItem.itemCount++;
-                    return;
-                }
-                else
-                {
-                    UIManager.Instance.GetPanel<ShoppingPanel>().CreateCartItem(item.itemInShop);
-                }
-            }
-
-        }
         private void GachaOneBtn()
         {
             TryStartGacha(1);
@@ -312,6 +329,22 @@ namespace CLIP.Project_Mouse.UI
             TryStartGacha(5);
         }
 
+        private void SendGachaRequestToServer(int pullCount)
+        {
+            if (GachaManager.Instance == null || !GachaManager.Instance.TryGetRecordUIDByPoolID(currentPool, out ulong recordUID))
+            {
+                PromptMessage.Instance.ShowUpPrompt("奖池数据未同步，请稍后再试");
+                return;
+            }
+
+            var req = new GachaTakeReq
+            {
+                RecordUID = recordUID,
+                Times = pullCount
+            };
+            NetWork_Center_WSS.SendMsg(req);
+        }
+
         private void TryStartGacha(int pullCount)
         {
             int mintCost = GetMintCostForPullCount(pullCount);
@@ -320,7 +353,7 @@ namespace CLIP.Project_Mouse.UI
 
             if (haveMint >= mintCost)
             {
-                PromptMessage.Instance.ShowPrompt($"是否花费{mintCost}枚许愿薄荷进行{pullLabel}次许愿？", () => CompleteGachaConsumingMint(pullCount, mintCost));
+                PromptMessage.Instance.ShowPrompt($"是否花费{mintCost}枚许愿薄荷进行{pullLabel}次许愿？", () => SendGachaRequestToServer(pullCount));
                 return;
             }
 
@@ -330,85 +363,139 @@ namespace CLIP.Project_Mouse.UI
 
             PromptMessage.Instance.ShowPrompt(
                 $"许愿薄荷不足，是否花费{cansNeeded}罐罐购买{shortfall}枚许愿薄荷并进行{pullLabel}次许愿？",
-                () => _ = BuyMintWithCansThenGachaAsync(pullCount, mintCost, shortfall, cansNeeded));
+                () => BuyMintWithTicketsThenGacha(pullCount, shortfall));
         }
 
-        private async Task BuyMintWithCansThenGachaAsync(int pullCount, int mintCost, int shortfall, int cansNeeded)
+        private void BuyMintWithTicketsThenGacha(int pullCount, int shortfall)
         {
-            Action<string> onPay = (string data) =>
-            {
-                if (data == "success")
-                {
-                    Global_Inventory_Manager.Change_Items_Count(new List<(string, int)> { (ColorMintItemName, shortfall) }, "罐罐购买许愿薄荷");
-                    CompleteGachaConsumingMint(pullCount, mintCost);
-                }
-                else if (data == "罐罐不足")
-                {
-                    PromptMessage.Instance.ShowPrompt("罐罐数量不足，是否前往充值页面？", () => PayPanel.Instance.OpenPanel());
-                }
-                else if (!string.IsNullOrEmpty(data))
-                {
-                    PromptMessage.Instance.ShowUpPrompt(data);
-                }
-            };
-            await MoneyManager.Instance.ChangeCurrency("罐罐", -cansNeeded, "购买许愿薄荷", onPay);
-        }
-
-        private void CompleteGachaConsumingMint(int pullCount, int mintCost)
-        {
-            if (GetColorMintHeld() < mintCost)
-            {
-                PromptMessage.Instance.ShowUpPrompt("许愿薄荷数量不足");
+            if (!TryGetColorMintItemId(out long itemId))
                 return;
-            }
 
-            Global_Inventory_Manager.Change_Items_Count(new List<(string, int)> { (ColorMintItemName, -mintCost) }, "许愿");
-            List<int> item = GachaManager.Instance.Gacha_Multi_Pull(currentPool, pullCount);
-            List<(string, int)> itemNames = item.Select(x => (Global_Inventory_Manager.GetItemInfo(x).name, 1)).ToList();
-
-            UIManager.Instance.OpenPanel<RewardPanel>(itemNames);
-            Global_Inventory_Manager.Change_Items_Count(itemNames, "许愿");
-            ExpManager.TempAddExpForRoomPlacementGains(itemNames);
-            EvtDsp.TriggerEvt(EvtNames.RefreshUI);
+            pendingGachaAfterMintPullCount = pullCount;
+            NetWork_Center_WSS.SendMsg(new BuyTicketsReq
+            {
+                ItemID = itemId,
+                Count = shortfall
+            });
         }
+
         #endregion
 
         #region 商品列表
-        private void RefreshClothesItemCell(List<string> itemList, Transform itemListParent, bool isClothes)
+        public void ApplyServerShopData(Cmd.UserShop clothShop1, Cmd.UserShop clothShop2)
+        {
+            serverClothShop1 = clothShop1;
+            serverClothShop2 = clothShop2;
+            RefreshLimitedClothesCache(serverClothShop1, limitedClothes1, out limitedClothesSuit1);
+            RefreshLimitedClothesCache(serverClothShop2, limitedClothes2, out limitedClothesSuit2);
+
+            if (curBtn == btnFirstClothes)
+                RefreshClothesItemCell(1);
+            else if (curBtn == btnSecondClothes)
+                RefreshClothesItemCell(2);
+        }
+
+        private void RefreshLimitedClothesCache(Cmd.UserShop shop, List<ShopGoodsViewData> target, out ShopGoodsViewData suitGoods)
+        {
+            target.Clear();
+            suitGoods = null;
+            if (shop == null)
+                return;
+
+            UserShopGoods suitServerGoods = null;
+            foreach (var goods in shop.Goodss)
+            {
+                var shopItem = ShopConfigResolver.GetShopItemConfig(goods.GoodsID);
+                if (shopItem == null)
+                    continue;
+
+                if (shopItem.showType == 2)
+                {
+                    suitServerGoods = goods;
+                    continue;
+                }
+
+                if (ShopConfigResolver.TryCreateGoodsViewData(goods, out var viewData))
+                    target.Add(viewData);
+            }
+
+            target.Sort((a, b) =>
+            {
+                int orderCompare = ShopConfigResolver.GetSortOrder(a).CompareTo(ShopConfigResolver.GetSortOrder(b));
+                return orderCompare != 0 ? orderCompare : ShopConfigResolver.GetStableId(a).CompareTo(ShopConfigResolver.GetStableId(b));
+            });
+
+            if (suitServerGoods != null)
+                ShopConfigResolver.TryCreateSuitGoodsViewData(suitServerGoods, target, out suitGoods);
+        }
+
+        private void ClearItemList(Transform itemListParent)
+        {
+            foreach (Transform child in itemListParent)
+                Destroy(child.gameObject);
+        }
+
+        private void RefreshClothesItemCell(int suitIndex)
         {
             itemSelected.Clear();
-            foreach (Transform child in itemListParent)
+            ClearItemList(clothItemListParent);
+
+            var clothes = suitIndex == 1 ? limitedClothes1 : limitedClothes2;
+            var shop = suitIndex == 1 ? serverClothShop1 : serverClothShop2;
+            if (shop == null)
+                return;
+
+            foreach (var goods in clothes)
             {
-                Destroy(child.gameObject);
-            }
-            foreach (var item in itemList)
-            {
-                GameObject obj = Instantiate(shopItemPrefab, itemListParent);
+                GameObject obj = Instantiate(shopItemPrefab, clothItemListParent);
                 ShoppingItemUnit cell = obj.GetComponent<ShoppingItemUnit>();
-                var gameItem = Global_Inventory_Manager.GameItem_DB.Find(dbItem => dbItem.name == item);
                 cell.useLimitMagazineBuyRule = true;
-                cell.InitGameItemUnit(gameItem);
-                cell.itemButton.onClick.AddListener(() => SelectItem(cell, isClothes));
+                cell.InitShopGoodsUnit(goods, shop.ShopUID);
+                cell.itemButton.onClick.AddListener(() => SelectItem(cell, true));
             }
         }
-        private void RefreshFurnitureItemCell(List<string> itemList, Transform itemListParent, bool isClothes)
+
+        private void RefreshFurnitureItemCell(int poolId)
         {
             itemSelected.Clear();
-            foreach (Transform child in itemListParent)
+            ClearItemList(furnitureItemListParent);
+
+            var itemIds = GetGachaPoolItemIds(poolId);
+            foreach (int itemId in itemIds)
             {
-                Destroy(child.gameObject);
-            }
-            foreach (var item in itemList)
-            {
-                GameObject obj = Instantiate(shopItemPrefab, itemListParent);
+                var itemInfo = Global_Inventory_Manager.GetItemInfo(itemId);
+                if (itemInfo == null)
+                    continue;
+
+                GameObject obj = Instantiate(gachaItemPrefab, furnitureItemListParent);
                 ShoppingItemUnit cell = obj.GetComponent<ShoppingItemUnit>();
-                var gameItem = Global_Inventory_Manager.GameItem_DB.Find(dbItem => dbItem.name == item);
-                cell.useLimitMagazineBuyRule = true;
-                cell.InitGameItemUnit(gameItem);
-                //cell.itemButton.onClick.AddListener(() => SelectItem(cell, isClothes));
-                cell.buyButton.gameObject.SetActive(false);
+                cell.InitGachaPoolPreviewUnit(itemInfo);
             }
         }
+
+        private static List<int> GetGachaPoolItemIds(int poolId)
+        {
+            EnsureGachaPoolDisplayConfigsLoaded();
+            foreach (var config in gachaPoolDisplayConfigs)
+            {
+                if (config.PoolId == poolId)
+                    return config.Items ?? new List<int>();
+            }
+
+            return new List<int>();
+        }
+
+        private static void EnsureGachaPoolDisplayConfigsLoaded()
+        {
+            if (gachaPoolDisplayConfigs != null)
+                return;
+
+            string json = JsonDataManager.Load_Single_JsonData(GachaPoolConfigFileName);
+            gachaPoolDisplayConfigs = string.IsNullOrEmpty(json)
+                ? new List<GachaPoolDisplayConfig>()
+                : JsonConvert.DeserializeObject<List<GachaPoolDisplayConfig>>(json) ?? new List<GachaPoolDisplayConfig>();
+        }
+
         private void SelectItem(ShoppingItemUnit cell, bool isClothes)
         {
             if (itemSelected.Contains(cell))

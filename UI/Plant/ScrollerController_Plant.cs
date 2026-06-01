@@ -180,7 +180,7 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
             {
                 var currentRoom = RoomSystem.currentRoom;
                 EditManager.Instance.SetMode(new CreateGridObjectMode( pot));
-                var placingType = potData.category == Plant_Second_Category.HangingPot? Room_Placing_Type.Surface_Furniture : Room_Placing_Type.Ceiling_Furniture;
+                var placingType = potData.category == Plant_Second_Category.HangingPot ? Room_Placing_Type.Ceiling_Furniture : Room_Placing_Type.Surface_Furniture;
 
                 Enum_Helper.GridLayerMap.TryGetValue(placingType, out var gridLayerTypes);
 
@@ -191,6 +191,7 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
                     pot.transform.position = pos;
                 }
             }
+            EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
             return;
         }
         if(_fertilizerItemList.Find(x => x.item_name == data.name) != null)
@@ -199,7 +200,7 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
             int fertCount = fertItem != null ? fertItem._item_count : 0;
             if (fertCount <= 0)
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "肥料数量不足");
+                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "肥料数量不足！");
                 return;
             }
             EditManager.Instance.SetMode(new FertilizePlantMode(data.name));
@@ -210,7 +211,7 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
             int seedCount = seedItem != null ? seedItem._item_count : 0;
             if (seedCount <= 0)
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "种子数量不足");
+                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "种子数量不足！");
                 return;
             }
             EditManager.Instance.SetMode(new PlantPlantMode(data.name));

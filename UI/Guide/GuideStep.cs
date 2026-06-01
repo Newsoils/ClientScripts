@@ -19,6 +19,9 @@ public class GuideStep : MonoBehaviour
 
     private Action onClickEvent;
 
+    public event Action OnStepCompleted;
+    public string StepId => name;
+
     //// 引导超时时间（秒，可Inspector配置）
     //public float waitTimeout = 10f;
     //private Coroutine _timeoutCoroutine;
@@ -30,7 +33,7 @@ public class GuideStep : MonoBehaviour
     {
         highlightTarget = guideImage.GetComponent<RectTransform>();
     }
-    public void Show()
+    public void Show(GuideMask mask)
     {
         if (autoTrackButton)
         {
@@ -50,7 +53,7 @@ public class GuideStep : MonoBehaviour
             guideImage.SetActive(true);
 
         if (highlightTarget != null)
-            GuideManager.Instance.mask.Show(highlightTarget);
+            mask?.Show(highlightTarget);
 
         // 1. 绑定空洞点击事件（核心：点击即下一步）
         //GuideManager.Instance.mask.OnHoleClicked.AddListener(OnClick);
@@ -139,6 +142,6 @@ public class GuideStep : MonoBehaviour
 
     void OnClick()
     {
-        GuideManager.Instance.NextStep();
+        OnStepCompleted?.Invoke();
     }
 }

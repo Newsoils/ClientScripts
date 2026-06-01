@@ -41,7 +41,7 @@
 
 //                    yield return null;
 
-//                    photoPaths = Dispatch_Manager._instance._dispatch_photo_path_list;
+//                    photoPaths = Dispatch_Manager.Instance.dispatchPhotoPathList;
 
 //                    textures.Clear();
 //                    foreach (string photoPath in photoPaths)
@@ -89,8 +89,8 @@
 //                    if (selectedIndex >= 0 && selectedIndex < photoPaths.Count)
 //                    {
 //                        string url = photoPaths[selectedIndex];
-//                        var infoList = Global_Photo_Manager.Instance._local_image_list;
-//                        photo_info_saved info = infoList.Find(p => p._local_path == url);
+//                        var infoList = Global_Photo_Manager.Instance.imageList;
+//                        PhotoRecordInfo info = infoList.Find(p => p.localPath == url);
 //                        if (info != null)
 //                        {
 //                            //manager.photoInfoList[manager.imageToChangeIndex] = info;
@@ -99,7 +99,7 @@
 //                        }
 //                        else
 //                        {
-//                            Debug.LogWarning($"未找到对应的 photo_info_saved, url: {url}");
+//                            Debug.LogWarning($"未找到对应的 PhotoRecordInfo, url: {url}");
 //                        }
 //                    }
 

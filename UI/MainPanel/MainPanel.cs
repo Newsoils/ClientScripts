@@ -5,6 +5,8 @@ using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Project_Mouse.UI;
 using UnityEngine;
 using UnityEngine.UI;
+using System;
+using System.Linq;
 
 public class MainPanel : UIPanelBase
 {
@@ -20,10 +22,12 @@ public class MainPanel : UIPanelBase
 
     private void Start()
     {
+        TryAttachEnterDebugPopup();
+        TryAttachTabNpcDebugPopup();
+
         editRoom.onClick.AddListener(OpenPlacementInventory);
         dispatchButton.onClick.AddListener(Dispatch);
         RefreshDispatchWarningVisibility();
-
 
         EvtDsp.AddEvt<Room>(EvtNames.SwitchRoom, SwitchPanelByRoomType);
 
@@ -50,6 +54,32 @@ public class MainPanel : UIPanelBase
         EvtDsp.AddEvt(EvtNames.OnTakePhotoPanelOpen, CloseAllUI);
         EvtDsp.AddEvt(EvtNames.OnTakePhotoPanelClose, ShowAll);
         EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshDispatchWarningVisibility);
+
+        EvtDsp.AddEvt(EvtNames.Guide_Skip_Current, CloseTicketBack);
+    }
+
+    private void TryAttachEnterDebugPopup()
+    {
+        const string typeName = "CLIP.Project_Mouse.UI.EnterTestAddItemPopup";
+        var t = AppDomain.CurrentDomain.GetAssemblies()
+            .Select(a => a.GetType(typeName))
+            .FirstOrDefault(x => x != null);
+
+        if (t == null) return;
+        if (GetComponent(t) != null) return;
+        gameObject.AddComponent(t);
+    }
+
+    private void TryAttachTabNpcDebugPopup()
+    {
+        const string typeName = "CLIP.Project_Mouse.UI.TabTestNpcPopup";
+        var t = AppDomain.CurrentDomain.GetAssemblies()
+            .Select(a => a.GetType(typeName))
+            .FirstOrDefault(x => x != null);
+
+        if (t == null) return;
+        if (GetComponent(t) != null) return;
+        gameObject.AddComponent(t);
     }
 
     public override void OnDestroy()
@@ -83,6 +113,7 @@ public class MainPanel : UIPanelBase
         EvtDsp.RemoveEvt(EvtNames.OnTakePhotoPanelOpen, ShowTopPanelOnly);
         EvtDsp.RemoveEvt(EvtNames.OnTakePhotoPanelClose, ShowAll);
         EvtDsp.RemoveEvt(EvtNames.RefreshUI, RefreshDispatchWarningVisibility);
+        EvtDsp.RemoveEvt(EvtNames.Guide_Skip_Current, CloseTicketBack);
     }
 
     #region 开关面板元素
@@ -202,6 +233,7 @@ public class MainPanel : UIPanelBase
 
     }
 
+
     public void Dispatch()
     {
         if (!SceneLoadHelper.IsDispatchScene)
@@ -284,4 +316,11 @@ public class MainPanel : UIPanelBase
 
         return true;
     }
+
+
+    public void CloseTicketBack()
+    {
+        mainFunctionPanel.TicketConfirmObj.SetActive(false);
+    }
+
 }

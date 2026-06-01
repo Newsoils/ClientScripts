@@ -5,7 +5,9 @@ using Newtonsoft.Json;
 
 namespace CLIP.Project_Mouse.Kernel
 {
-
+    /// <summary>
+    /// 家具/摆放物<strong>静态配置</strong>（表数据，与房间内存档实例 <see cref="PlacementData"/> 区分）。
+    /// </summary>
     [System.Serializable]
     public class Room_Placement_Info
     {

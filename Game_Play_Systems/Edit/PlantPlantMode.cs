@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
@@ -13,6 +10,7 @@ public class PlantPlantMode : IEditMode
     private string curSeedName;
     private PlantData plantData;
     private bool canInteract;
+    private static PlantPlantMode current;
     public PlantPlantMode(string seedName)
     {
         curSeedName = seedName;
@@ -20,13 +18,24 @@ public class PlantPlantMode : IEditMode
     }
     public void Enter()
     {
+        current = this;
         EvtDsp.TriggerEvt<PlantData>(EvtNames.ShowSeedPop, plantData);
         canInteract = true;
     }
 
     public void Exit()
     {
+        if (current == this)
+            current = null;
         EvtDsp.TriggerEvt(EvtNames.ClosePlantPop);
+    }
+
+    public static void HandlePlantCompleted()
+    {
+        if (current == null)
+            return;
+        current.canInteract = true;
+        EvtDsp.TriggerEvt<PlantData>(EvtNames.ShowSeedPop, current.plantData);
     }
 
     public void OnDrag(Vector2 screenPos)
@@ -54,12 +63,12 @@ public class PlantPlantMode : IEditMode
         if(canInteract)
         {
             canInteract = false;
-            _ = TapToPlant(screenPos);
+            TapToPlant(screenPos);
         }
 
     }
 
-    public async Task TapToPlant(Vector2 screenPos)
+    public void TapToPlant(Vector2 screenPos)
     {
         var pot = RaycastPot(screenPos);
         if(pot != null)
@@ -70,26 +79,13 @@ public class PlantPlantMode : IEditMode
                 int seedCount = seedItem != null ? seedItem._item_count : 0;
                 if (seedCount <= 0)
                 {
-                    EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "种子数量不足");
+                    EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "种子数量不足！");
                     EditManager.Instance.ExitCurrentMode();
                     return;
                 }
 
-                await PlantManager.Instance.PlantPlant(curSeedName, pot.UId);
-
-                Global_Inventory_Manager.Change_Items_Count(
-                    new List<(string, int)> { (curSeedName, -1) }, "种植");
-                EvtDsp.TriggerEvt(EvtNames.ReloadPlantData);
-
-                var seedItemAfter = Global_Inventory_Manager.GetItem(curSeedName);
-                int seedCountAfter = seedItemAfter != null ? seedItemAfter._item_count : 0;
-                if (seedCountAfter <= 0)
-                {
-                    EditManager.Instance.ExitCurrentMode();
-                    return;
-                }
-
-                EvtDsp.TriggerEvt<PlantData>(EvtNames.ShowSeedPop, plantData);
+                PlantManager.Instance.PlantPlant(curSeedName, pot.UId);
+                return;
             }
             else
             {
@@ -116,8 +112,6 @@ public class PlantPlantMode : IEditMode
                 }
                 EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "该植物只能种在" + result);
             }
-
-            
         }
         canInteract = true;
     }

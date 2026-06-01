@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System;
+using UnityEngine;
 namespace CLIP.Framework_Core.Event
 {
     public class EventException : Exception
@@ -643,6 +644,7 @@ namespace CLIP.Framework_Core.Event
                     Func<T, V, U, R> func = invocationList[i] as Func<T, V, U, R>;
                     if (func == null)
                     {
+                        Debug.Log($"ReturnEvent 123 #{arg1}");
                         throw new EventException(string.Format(
                             "TriggerEvent {0}error: types of parameters are not match.",
                             eventType));
@@ -706,6 +708,7 @@ namespace CLIP.Framework_Core.Event
                     Action<T> action = invocationList[i] as Action<T>;
                     if (action == null)
                     {
+                        Debug.Log($"ReturnEvent 1233 #{arg1}");
                         throw new EventException(string.Format(
                             "TriggerEvent {0}error: types of parameters are not match.",
                             eventType));

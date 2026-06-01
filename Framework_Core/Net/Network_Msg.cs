@@ -26,6 +26,9 @@ namespace CLIP.Framework_Core.Network
         public byte[] detail_data;
 
         public int msg_id;
+
+        public int ErrorCode;
+        public string[] ErrorArgs;
         public Network_Msg(int _id = -1, string _player_id = "Default_Player_id")
         {
             player_id = "Default_Player_id";
@@ -38,6 +41,8 @@ namespace CLIP.Framework_Core.Network
             msg_id = _id;
 
             detail_data = null;
+            ErrorCode = 0;
+            ErrorArgs = null;
         }
     }
 }

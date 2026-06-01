@@ -27,7 +27,7 @@ public class PotProcessor : EditorWindow
 
     public void ProcessAllPots()
     {
-        string data = JsonData_Manager.Load_Single_JsonData("project_mouse_tb_pot_info");
+        string data = JsonDataManager.Load_Single_JsonData("project_mouse_tb_pot_info");
         potDataList = JsonConvert.DeserializeObject<List<PotData>>(data);
         if (potDataList == null || potDataList.Count == 0)
         {

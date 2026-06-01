@@ -1,25 +1,18 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
+
+using Google.Protobuf;
 
 namespace CLIP.Project_Mouse.Kernel
 {
     public class ServerTask
     {
-        public bool isSendToServer;
-        public string data;
+        public IMessage data;
         public Action<string, ServerTask> onReceiveMsg;
         public bool isBreak;
         public string result;
-        public ServerTask(string data, Action<string, ServerTask> onReceiveMsg)
+        public ServerTask(IMessage data, Action<string, ServerTask> onReceiveMsg)
         {
-            this.isSendToServer = true;
             this.data = data;
-            this.onReceiveMsg = onReceiveMsg;
-        }
-        public ServerTask(Action<string, ServerTask> onReceiveMsg)
-        {
-            this.isSendToServer = false;
             this.onReceiveMsg = onReceiveMsg;
         }
     }

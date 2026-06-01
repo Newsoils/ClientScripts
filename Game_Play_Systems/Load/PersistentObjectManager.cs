@@ -115,6 +115,10 @@ namespace CLIP.Project_Mouse.Game_Play_System
             GameObject instance = Instantiate(prefab);
    
             instance.transform.SetParent(this.transform);
+            if (config.overrideLocalPosition)
+            {
+                instance.transform.localPosition = config.localPosition;
+            }
 
             // 标记不销毁
             if (config.dontDestroyOnLoad)

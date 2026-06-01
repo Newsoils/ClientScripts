@@ -3,7 +3,9 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
+using CLIP.Project_Mouse.Network;
 using CLIP.Project_Mouse.UI;
+using Cmd;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,7 +13,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 回收箱点击物品后的出售弹窗。数量范围 [1, 持有数量]，SellPrice = 单价 × 选择数量。
 /// "确认回收" 走 <see cref="TryConfirmRecycle"/> → <see cref="PromptMessage"/> 二次确认 →
-/// <see cref="DoRecycle"/> 一次性扣库存 + 入账鱼币 + 派发 <c>ReloadRecycleData</c>。
+/// <see cref="DoRecycle"/> 发送 <see cref="Cmd.SoldItemReq"/>，回包后刷新列表并关闭弹窗。
 /// </summary>
 public class RecycleSellPopup : MonoBehaviour
 {
@@ -68,6 +70,12 @@ public class RecycleSellPopup : MonoBehaviour
         btnMinus.onClick.AddListener(OnMinus);
         btnPlus.onClick.AddListener(OnPlus);
         btnConfirm.onClick.AddListener(TryConfirmRecycle);
+        EvtDsp.AddEvt(EvtNames.OnSoldItemReceived, OnSoldItemReceived);
+    }
+
+    private void OnSoldItemReceived()
+    {
+        ClosePanel();
     }
 
     private void OnDestroy()
@@ -76,6 +84,7 @@ public class RecycleSellPopup : MonoBehaviour
         btnMinus.onClick.RemoveAllListeners();
         btnPlus.onClick.RemoveAllListeners();
         btnConfirm.onClick.RemoveAllListeners();
+        EvtDsp.RemoveEvt(EvtNames.OnSoldItemReceived, OnSoldItemReceived);
     }
 
     /// <summary>打开弹窗并绑定物品数据，数量初始值 = 1。</summary>
@@ -190,12 +199,10 @@ public class RecycleSellPopup : MonoBehaviour
     }
 
     /// <summary>
-    /// 真正执行回收：扣库存 + 返鱼币（<c>Global_Inventory_Manager.Change_Items_Count</c>，
-    /// "鱼币" 内部路由到 <c>MoneyManager</c>），完成后派发 <c>ReloadRecycleData</c> + 关弹窗。
+    /// 发送 <see cref="SoldItemReq"/>；背包与鱼币由服务端 <see cref="SoldItemRes"/> / <see cref="Cmd.ItemChangeS2C"/> 同步。
     /// </summary>
     private void DoRecycle(string itemName, int quantity, int coins)
     {
-        // 二次确认期间持有数量可能变化，再校验一次防止超扣。
         var latest = Global_Inventory_Manager.GetItem(itemName);
         int haveCount = latest != null ? latest._item_count : 0;
         if (haveCount < quantity)
@@ -204,17 +211,28 @@ public class RecycleSellPopup : MonoBehaviour
             return;
         }
 
-        var changes = new List<(string, int)>
+        if (latest == null || latest.item_id <= 0)
         {
-            (itemName, -quantity),
-            ("鱼币", coins),
-        };
-        Global_Inventory_Manager.Change_Items_Count(changes, "回收箱");
+            PromptMessage.Instance.ShowUpPrompt("物品数据异常，无法回收");
+            return;
+        }
 
-        Debug.Log($"[RecycleSellPopup] Recycle '{itemName}' x{quantity} -> +{coins} 鱼币");
+        if (quantity <= 0)
+            return;
 
-        EvtDsp.TriggerEvt(EvtNames.ReloadRecycleData);
-        ClosePanel();
+        if (!NetWork_Center_WSS.IsConnectedToPlayerServer)
+        {
+            PromptMessage.Instance.ShowUpPrompt("网络未连接");
+            return;
+        }
+
+        NetWork_Center_WSS.SendMsg(new SoldItemReq
+        {
+            ItemID = (ulong)latest.item_id,
+            Count = quantity,
+        });
+
+        Debug.Log($"[RecycleSellPopup] SoldItemReq ItemID={latest.item_id} Count={quantity} item={itemName}");
     }
 
     private static void TrySetRaritySprite(Image target, List<Sprite> sprites, int idx)
