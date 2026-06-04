@@ -5,6 +5,7 @@ using CLIP.Project_Mouse.Network;
 using Cmd;
 using UnityEngine;
 using UnityEngine.UI;
+using CLIP.Project_Mouse.Kernel;
 
 
 namespace CLIP.Project_Mouse.UI
@@ -33,11 +34,17 @@ namespace CLIP.Project_Mouse.UI
         private GameObject limitMagazineObj;
 
         private GetAllShopInfoRes _cachedShopData;
+        private RenderTexture originalCharacterRT;
+        private RenderTexture originalFurnitureRT;
 
         private void Start()
         {
+            originalCharacterRT = characterRT;
+            originalFurnitureRT = furnitureRT;
+
             characterRT = RenderTextureCompatUtility.EnsureCompatible(characterRT, "ShoppingCharacterRT");
             furnitureRT = RenderTextureCompatUtility.EnsureCompatible(furnitureRT, "ShoppingFurnitureRT");
+            EnsureRenderTextureBindings();
 
             dailyMagazineObj = dailyMagazinePanel.gameObject;
             limitMagazineObj = limitMagazineUI.gameObject;
@@ -53,6 +60,32 @@ namespace CLIP.Project_Mouse.UI
             limitMagazine.onClick.AddListener(OpenOrChooseLimitMagazine);
 
             exitButton.onClick.AddListener(ClosePanel);
+        }
+
+        public void EnsureRenderTextureBindings()
+        {
+            RebindRenderTextureTargets(originalCharacterRT, characterRT);
+            RebindRenderTextureTargets(originalFurnitureRT, furnitureRT);
+        }
+
+        private void RebindRenderTextureTargets(RenderTexture source, RenderTexture target)
+        {
+            if (source == null || target == null || ReferenceEquals(source, target))
+                return;
+
+            Camera[] cameras = Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (Camera camera in cameras)
+            {
+                if (camera.targetTexture == source)
+                    camera.targetTexture = target;
+            }
+
+            RawImage[] rawImages = Object.FindObjectsByType<RawImage>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (RawImage rawImage in rawImages)
+            {
+                if (rawImage.texture == source)
+                    rawImage.texture = target;
+            }
         }
 
 
@@ -73,6 +106,7 @@ namespace CLIP.Project_Mouse.UI
         public override void OpenPanel(params object[] data)
         {
             obj.SetActive(true);
+            EnsureRenderTextureBindings();
             RequestShopData();
             GuideManager.Instance.CheckShopFinished();
             EvtDsp.TriggerEvt(EvtNames.OnShoppingPanelOpen);
@@ -119,7 +153,7 @@ namespace CLIP.Project_Mouse.UI
                 roleInfo.TodayShopRefreshTimes = res.RefreshTimes;
 
             ApplyShopList(res.Shop);
-            PromptMessage.Instance.ShowUpPrompt("刷新成功");
+            PromptManager.ShowUpPrompt(PromptId.ShopRefreshSuccess);
         }
 
         private void ApplyShopList(IEnumerable<UserShop> shops)
@@ -154,7 +188,7 @@ namespace CLIP.Project_Mouse.UI
 
         private void OnBuyGoodsRes(BuyGoodsRes res)
         {
-            PromptMessage.Instance.ShowUpPrompt("购买成功");
+            PromptManager.ShowUpPrompt(PromptId.PurchaseSuccess);
             RequestShopData();
         }
 

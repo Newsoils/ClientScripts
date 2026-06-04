@@ -4,6 +4,7 @@ using CLIP.Project_Mouse.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using CLIP.Project_Mouse.Kernel;
 
 public class FriendPanel : MonoBehaviour
 {
@@ -149,7 +150,7 @@ public class FriendPanel : MonoBehaviour
         var results = SM._temp_search_result;
         if (results.Count == 0 || results[0].RoleId == 0)
         {
-            PromptMessage.Instance.ShowUpPrompt("未找到该玩家");
+            PromptManager.ShowUpPrompt(PromptId.PlayerNotFound);
             return;
         }
 

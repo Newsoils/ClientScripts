@@ -18,6 +18,7 @@ public class PlantPanel : UIPanelBase
     public Transform secondCategoryParent;
 
     public TMP_Dropdown dropdown_SortType;
+    private List<string> _baseSortOptions = new List<string> { "稀有度", "获取时间", "持有数量" };
     public GameObject PanelSecondLevelMenuPanel;
 
     public Button btn_Search;
@@ -226,27 +227,133 @@ public class PlantPanel : UIPanelBase
     private void InitDropdown()
     {
         dropdown_SortType.ClearOptions();
+        dropdown_SortType.AddOptions(_baseSortOptions);
 
-        // 只添加前三个：Rarity, ObtainDate, Count
-        List<string> options = new List<string> { "稀有度", "获取时间", "持有数量" };
-        dropdown_SortType.AddOptions(options);
-
-        // 注册监听
         dropdown_SortType.onValueChanged.RemoveAllListeners();
         dropdown_SortType.onValueChanged.AddListener(OnSortDropdownChanged);
 
-        // 设置初始值
         dropdown_SortType.value = (int)_currentSort;
+
+        SetupDropdownClickDetection();
+
+        RefreshSortDropdownVisual();
+    }
+
+    private int _valueBeforeOpen = -1;
+    private bool _waitingForCloseToggle = false;
+
+    private void SetupDropdownClickDetection()
+    {
+        var arrow = dropdown_SortType.transform.Find("Arrow");
+        GameObject target = arrow != null ? arrow.gameObject : dropdown_SortType.gameObject;
+
+        var trigger = target.GetComponent<UnityEngine.EventSystems.EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = target.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+        }
+
+        var entry = new UnityEngine.EventSystems.EventTrigger.Entry
+        {
+            eventID = UnityEngine.EventSystems.EventTriggerType.PointerClick
+        };
+        entry.callback.AddListener((data) =>
+        {
+            _valueBeforeOpen = dropdown_SortType.value;
+            _waitingForCloseToggle = true;
+        });
+        trigger.triggers.Clear();
+        trigger.triggers.Add(entry);
     }
 
     private void OnSortDropdownChanged(int index)
     {
-        // index 刚好对应枚举：0:Rarity, 1:ObtainDate, 2:Count
-        _currentSort = (InventorySortType)index;
+        if (index == (int)_currentSort)
+        {
+            _isAscending = !_isAscending;
+            RefreshSortDropdownVisual();
+            mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+            _waitingForCloseToggle = false;
+            return;
+        }
 
-        // 刷新面板，保留当前的一、二级分类
-        // 假设你还需要一个变量记录当前的二级分类
+        _currentSort = (InventorySortType)index;
+        _isAscending = false;
+        _waitingForCloseToggle = false;
+        RefreshSortDropdownVisual();
         mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+    }
+
+    private void LateUpdate()
+    {
+        var template = dropdown_SortType.transform.Find("Template");
+        if (template == null) return;
+
+        if (_waitingForCloseToggle)
+        {
+            if (!template.gameObject.activeSelf)
+            {
+                _waitingForCloseToggle = false;
+
+                if (dropdown_SortType.value == _valueBeforeOpen && _valueBeforeOpen >= 0)
+                {
+                    _isAscending = !_isAscending;
+                    RefreshSortDropdownVisual();
+                    mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+                }
+            }
+        }
+    }
+
+    private void RefreshSortDropdownVisual()
+    {
+        UpdateDropdownOptionsText();
+        UpdateDropdownArrowRotation();
+    }
+
+    private void UpdateDropdownOptionsText()
+    {
+        var options = dropdown_SortType.options;
+        for (int i = 0; i < options.Count; i++)
+        {
+            string arrow = i == (int)_currentSort 
+                ? (_isAscending ? " <size=120%><b>↑</b></size>" : " <size=120%><b>↓</b></size>") 
+                : "";
+            options[i].text = _baseSortOptions[i] + arrow;
+        }
+        dropdown_SortType.options = options;
+    }
+
+    private void UpdateDropdownArrowRotation()
+    {
+        var arrow = dropdown_SortType.transform.Find("Arrow");
+        if (arrow != null)
+        {
+            var rect = arrow.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                float targetAngle = _isAscending ? 180f : 0f;
+                rect.localRotation = Quaternion.Euler(0, 0, targetAngle);
+            }
+        }
+
+        var blocker = dropdown_SortType.transform.Find("Blocker");
+        if (blocker != null)
+        {
+            var templateParent = blocker.parent;
+            if (templateParent != null)
+            {
+                var templateArrow = templateParent.Find("Arrow");
+                if (templateArrow != null)
+                {
+                    var rect = templateArrow.GetComponent<RectTransform>();
+                    if (rect != null)
+                    {
+                        rect.localRotation = Quaternion.Euler(0, 0, _isAscending ? 180f : 0f);
+                    }
+                }
+            }
+        }
     }
 
     public void ConfirmModify()

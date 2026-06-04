@@ -21,6 +21,7 @@ public class Placement_Panel : UIPanelBase
     public Transform secondCategoryParent;
 
     public TMP_Dropdown dropdown_SortType;
+    private List<string> _baseSortOptions = new List<string> { "稀有度", "获取时间", "持有数量" };
     public GameObject PanelSecondLevelMenuPanel;
 
     public Button btn_Search;
@@ -100,6 +101,7 @@ public class Placement_Panel : UIPanelBase
 
         EvtDsp.AddEvt(EvtNames.ReloadPlacementData, RefreshUI);
         EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshUI);
+        ClosePanel();
     }
 
     public override void OnDestroy()
@@ -329,21 +331,138 @@ public class Placement_Panel : UIPanelBase
     private void InitDropdown()
     {
         dropdown_SortType.ClearOptions();
-
-        List<string> options = new List<string> { "稀有度", "获取时间", "持有数量" };
-        dropdown_SortType.AddOptions(options);
+        dropdown_SortType.AddOptions(_baseSortOptions);
 
         dropdown_SortType.onValueChanged.RemoveAllListeners();
         dropdown_SortType.onValueChanged.AddListener(OnSortDropdownChanged);
 
         dropdown_SortType.value = (int)_currentSort;
+
+        SetupDropdownClickDetection();
+
+        RefreshSortDropdownVisual();
+    }
+
+    private int _valueBeforeOpen = -1;
+    private bool _waitingForCloseToggle = false;
+
+    private void SetupDropdownClickDetection()
+    {
+        var arrow = dropdown_SortType.transform.Find("Arrow");
+        GameObject target = arrow != null ? arrow.gameObject : dropdown_SortType.gameObject;
+
+        var trigger = target.GetComponent<UnityEngine.EventSystems.EventTrigger>();
+        if (trigger == null)
+        {
+            trigger = target.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+        }
+
+        var entry = new UnityEngine.EventSystems.EventTrigger.Entry
+        {
+            eventID = UnityEngine.EventSystems.EventTriggerType.PointerClick
+        };
+        entry.callback.AddListener((data) =>
+        {
+            _valueBeforeOpen = dropdown_SortType.value;
+            _waitingForCloseToggle = true;
+        });
+        trigger.triggers.Clear();
+        trigger.triggers.Add(entry);
     }
 
     private void OnSortDropdownChanged(int index)
     {
+        if (index == (int)_currentSort)
+        {
+            _isAscending = !_isAscending;
+            RefreshSortDropdownVisual();
+            mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _currentIsFavorite, _isAscending);
+            _waitingForCloseToggle = false;
+            return;
+        }
+
         _currentSort = (InventorySortType)index;
+        _isAscending = false;
+        _waitingForCloseToggle = false;
+        RefreshSortDropdownVisual();
         mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _currentIsFavorite, _isAscending);
     }
+
+    private void LateUpdate()
+    {
+        var template = dropdown_SortType.transform.Find("Template");
+        if (template == null) return;
+
+        if (_waitingForCloseToggle)
+        {
+            if (!template.gameObject.activeSelf)
+            {
+                _waitingForCloseToggle = false;
+
+                if (dropdown_SortType.value == _valueBeforeOpen && _valueBeforeOpen >= 0)
+                {
+                    _isAscending = !_isAscending;
+                    RefreshSortDropdownVisual();
+                    mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _currentIsFavorite, _isAscending);
+                }
+            }
+        }
+
+    }
+
+    private void RefreshSortDropdownVisual()
+    {
+        UpdateDropdownOptionsText();
+        UpdateDropdownArrowRotation();
+    }
+
+    private void UpdateDropdownOptionsText()
+    {
+        var options = dropdown_SortType.options;
+        for (int i = 0; i < options.Count; i++)
+        {
+            string arrow = i == (int)_currentSort 
+                ? (_isAscending ? " <size=150%><b>↑</b></size>" : " <size=150%><b>↓</b></size>") 
+                : "";
+            options[i].text = _baseSortOptions[i] + arrow;
+        }
+        dropdown_SortType.options = options;
+    }
+
+
+
+    private void UpdateDropdownArrowRotation()
+    {
+        var arrow = dropdown_SortType.transform.Find("Arrow");
+        if (arrow != null)
+        {
+            var rect = arrow.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                float targetAngle = _isAscending ? 180f : 0f;
+                rect.localRotation = Quaternion.Euler(0, 0, targetAngle);
+            }
+        }
+
+        var blocker = dropdown_SortType.transform.Find("Blocker");
+        if (blocker != null)
+        {
+            var template = blocker.parent;
+            if (template != null)
+            {
+                var templateArrow = template.Find("Arrow");
+                if (templateArrow != null)
+                {
+                    var rect = templateArrow.GetComponent<RectTransform>();
+                    if (rect != null)
+                    {
+                        rect.localRotation = Quaternion.Euler(0, 0, _isAscending ? 180f : 0f);
+                    }
+                }
+            }
+        }
+    }
+
 
     public void ConfirmModify()
     {
@@ -364,8 +483,7 @@ public class Placement_Panel : UIPanelBase
         var data = Save_Load_Tools.Load<RoomSaveData>("Room.json");
         if (data == null || data.rooms == null)
         {
-            EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel,
-                "无法读取进入布置前的房间备份。请先打开一次布置界面再取消，或检查存储权限。");
+            PromptManager.ShowWarning(PromptId.PlacementCancelNoBackup);
             return;
         }
 

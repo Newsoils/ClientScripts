@@ -6,60 +6,56 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace CLIP
+namespace CLIP.Project_Mouse.UI
 {
-    namespace Project_Mouse
+
+    public class TopPanel : MonoBehaviour
     {
-        namespace UI
+        public Button levelButton;
+        public Button coinButton;
+        public Button diamondButton;
+        public TMP_Text level;
+        public TMP_Text coinNum;
+        public TMP_Text diamondNum;
+        private void Awake()
         {
-            public class TopPanel : MonoBehaviour
-            {
-                public Button levelButton;
-                public Button coinButton;
-                public Button diamondButton;
-                public TMP_Text level;
-                public TMP_Text coinNum;
-                public TMP_Text diamondNum;
-                private void Awake()
-                {
-                    EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshUI);
-                    EvtDsp.AddEvt(EvtNames.OnGetCoin, RefreshUI);
-                    EvtDsp.AddEvt(EvtNames.OnGetDiamond, RefreshUI);
-                    EvtDsp.AddEvt(EvtNames.On_Get_Exp, RefreshUI);
-                    levelButton.onClick.AddListener(BtnLevel);
-                    coinButton.onClick.AddListener(BtnCoin);
-                    diamondButton.onClick.AddListener(BtnDiamond);
-                }
-                private void OnDestroy()
-                {
-                    EvtDsp.RemoveEvt(EvtNames.RefreshUI,RefreshUI);
-                    EvtDsp.RemoveEvt(EvtNames.OnGetCoin, RefreshUI);
-                    EvtDsp.RemoveEvt(EvtNames.OnGetDiamond, RefreshUI);
-                    EvtDsp.RemoveEvt(EvtNames.On_Get_Exp, RefreshUI);
-                }
-                private void Start()
-                {
-                    RefreshUI();
-                }
-                private void RefreshUI()
-                {
-                    level.text = ExpManager.instance.curLevel.ToString();
-                    coinNum.text = Global_Inventory_Manager.GetCoinNum().ToString();
-                    diamondNum.text = Global_Inventory_Manager.GetDiamondNum().ToString();
-                }
-                private void BtnLevel()
-                {
-                    UIManager.Instance.OpenPanel<LevelPanel>();
-                }
-                private void BtnCoin()
-                {
-                    PayPanel.Instance.OpenPanel();
-                }
-                private void BtnDiamond()
-                {
-                    PayPanel.Instance.OpenPanel();
-                }
-            }
+            EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshUI);
+            EvtDsp.AddEvt(EvtNames.OnGetCoin, RefreshUI);
+            EvtDsp.AddEvt(EvtNames.OnGetDiamond, RefreshUI);
+            EvtDsp.AddEvt(EvtNames.On_Get_Exp, RefreshUI);
+            levelButton.onClick.AddListener(BtnLevel);
+            coinButton.onClick.AddListener(BtnCoin);
+            diamondButton.onClick.AddListener(BtnDiamond);
+        }
+        private void OnDestroy()
+        {
+            EvtDsp.RemoveEvt(EvtNames.RefreshUI, RefreshUI);
+            EvtDsp.RemoveEvt(EvtNames.OnGetCoin, RefreshUI);
+            EvtDsp.RemoveEvt(EvtNames.OnGetDiamond, RefreshUI);
+            EvtDsp.RemoveEvt(EvtNames.On_Get_Exp, RefreshUI);
+        }
+        private void Start()
+        {
+            RefreshUI();
+        }
+        private void RefreshUI()
+        {
+            level.text = ExpManager.instance.curLevel.ToString();
+            coinNum.text = Global_Inventory_Manager.GetCoinNum().ToString();
+            diamondNum.text = Global_Inventory_Manager.GetDiamondNum().ToString();
+        }
+        private void BtnLevel()
+        {
+            UIManager.Instance.OpenPanel<LevelPanel>();
+        }
+        private void BtnCoin()
+        {
+            UIManager.Instance.OpenPanel<PayPanel>();
+        }
+        private void BtnDiamond()
+        {
+            UIManager.Instance.OpenPanel<PayPanel>();
         }
     }
+
 }

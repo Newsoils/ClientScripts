@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
+using System.IO;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Kernel.Dispatch;
+using Cmd;
 using UnityEngine;
 
 namespace CLIP.Project_Mouse.Game_Play_System
@@ -12,16 +14,34 @@ namespace CLIP.Project_Mouse.Game_Play_System
     /// <summary>
     /// 拍照具体流程
     /// </summary>
-    public sealed class DispatchPhotoCaptureController
+    public sealed class PhotoCaptureController : MonoBehaviour
     {
-        private readonly Global_Photo_Manager _photoManager;
 
-        public string LastDispatchPhotoPath { get; private set; } = string.Empty;
+        public RenderTexture roomPhotoRT;
+        public RenderTexture dispatchPhotoRT;
+        public RenderTexture defaultPhotoRT;
 
-        public DispatchPhotoCaptureController(Global_Photo_Manager photoManager)
+
+        private void Start()
         {
-            _photoManager = photoManager;
+
+            roomPhotoRT = RenderTextureCompatUtility.EnsureCompatible(roomPhotoRT, "DefaultPhotoRT");
+            dispatchPhotoRT = RenderTextureCompatUtility.EnsureCompatible(dispatchPhotoRT, "DispatchPhotoRT");
+            defaultPhotoRT = RenderTextureCompatUtility.EnsureCompatible(defaultPhotoRT, "DefaultPhotoRT");
+
+            if (dispatchPhotoRT == null)
+            {
+                Log.Error("PhotoManager: DispatchRT Misssing!");
+            }
+
+            DontDestroyOnLoad(this);
         }
+
+        private void OnDestroy()
+        {
+
+        }
+
 
 
         public void CaptureFromServerIds(PhotoRecordInfo photoRecord, string wearsSnapshotJson, Action onFlowComplete = null)
@@ -32,7 +52,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 return;
             }
 
-            if (_photoManager.dispatchPhotoRT == null)
+            if (dispatchPhotoRT == null)
             {
                 Log.Error("CaptureDispatchPhotoCo: dispatchPhotoRT is null.");
                 return;
@@ -66,40 +86,16 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 return;
             }
 
-            EvtDsp.TriggerEvt(EvtNames.OnTakePhotoPanelOpen);
             SceneLoadingHelper.Instance.LoadScene(mapInfo.map_Scene_Name, () =>
             {
-                var photoManager = Global_Photo_Manager.Instance;
-                if (photoManager == null)
-                {
-                    Debug.LogError("CaptureFromServerIds: Global_Photo_Manager was destroyed before dispatch photo capture started.");
-                    BackToMainScene(onFlowComplete);
-                    return;
-                }
-
                 var loadedCharacter = GameAssets.Instance.mainCharacter_Dispatch;
-                photoManager.StartCoroutine(CaptureThenInvoke(photoRecord, photoInfo, loadedCharacter, wearsSnapshotJson, onFlowComplete));
+                StartCoroutine(CaptureThenInvoke(photoRecord, photoInfo, loadedCharacter, wearsSnapshotJson, onFlowComplete));
             });
 
-            //SceneLoadHelper.LoadSceneAsync(mapInfo.map_Scene_Name,(_)=>
-            //{
-            //    var loadedCharacter = GameAssets.Instance.mainCharacter_Dispatch;
-            //    _photoManager.StartCoroutine(CaptureThenInvoke(photoRecord, photoInfo, loadedCharacter, wearsSnapshotJson, onFlowComplete));
-            //});
-                
         }
 
-        private IEnumerator CaptureThenInvoke(PhotoRecordInfo photoRecord, Photo_Info photoInfo, GameObject loadedCharacter,string wearsSnapshotJson, Action onFlowComplete)
+        private IEnumerator CaptureThenInvoke(PhotoRecordInfo photoRecord, Photo_Info photoInfo, GameObject loadedCharacter, string wearsSnapshotJson, Action onFlowComplete)
         {
-            var photoManager = Global_Photo_Manager.Instance;
-            if (photoManager == null)
-            {
-                Debug.LogError("CaptureDispatchPhotoCo: Global_Photo_Manager is null.");
-                BackToMainScene(onFlowComplete);
-                yield break;
-            }
-
-            EvtDsp.TriggerEvt(EvtNames.SceneLoading_Open);
             ApplyRainImageState();
 
             if (loadedCharacter == null)
@@ -143,34 +139,26 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             yield return new WaitForSeconds(0.2f);
 
-            camera.targetTexture = photoManager.dispatchPhotoRT;
+            camera.targetTexture = dispatchPhotoRT;
             camera.gameObject.SetActive(true);
             BindWeatherCanvas(camera);
 
             yield return null;
 
+            EvtDsp.TriggerEvt(EvtNames.SceneLoading_Close);
+
             string fileName = string.IsNullOrEmpty(photoRecord.FileName)
                 ? LocalSaveManager.BuildDispatchPhotoFileName(photoRecord.photoUId, photoRecord.photoName, photoInfo.camera_id)
                 : photoRecord.FileName;
-            PhotoRecordInfo savedPhoto = null;
-            photoManager.CaptureAndSavePhoto(PhotoType.Dispatch, fileName, false, photoRecord.photoConfigName, null, photoRecord, info => savedPhoto = info);
-            float deadline = Time.realtimeSinceStartup + 10f;
-            yield return new WaitUntil(() => savedPhoto != null || Time.realtimeSinceStartup >= deadline);
+            CaptureAndSavePhoto(PhotoType.Dispatch, fileName, false, photoRecord.photoConfigName, null, photoRecord);
 
-            if (savedPhoto == null)
-            {
-                Debug.LogError($"CaptureDispatchPhotoCo: save timeout, return to main scene. fileName={fileName}");
-            }
-            else
-            {
-                LastDispatchPhotoPath = savedPhoto.localPath;
-                Debug.Log($"Photo saved to: {LastDispatchPhotoPath}");
-            }
+            BackToMainScene();
+            Debug.Log($"Photo saved to: {Global_Photo_Manager.Instance.GetPhotoSavePath(PhotoType.Dispatch, fileName)}");
 
-            BackToMainScene(onFlowComplete);
+            onFlowComplete?.Invoke();
         }
 
-  
+
         private static void ApplyRainImageState()
         {
             GameObject rainImage = GameObject.Find("Rain_Image");
@@ -213,7 +201,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             return selected != null;
         }
 
-        private static void SpawnCharacter(GameObject loadedCharacter, Model_Placeholder characterPoint,string wearsSnapshotJson, string animationName)
+        private static void SpawnCharacter(GameObject loadedCharacter, Model_Placeholder characterPoint, string wearsSnapshotJson, string animationName)
         {
             Unity_Tools.ClearAllChildren(characterPoint.transform);
 
@@ -265,13 +253,110 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 Debug.LogWarning("WeatherCanvas not found in the scene.");
         }
 
-        public void BackToMainScene(Action onLoaded = null)
+
+        /// <summary>
+        /// 拍摄并保存照片到本地。
+        /// </summary>
+        /// <param name="mode"></param>
+        /// <param name="name"></param>
+        /// <param name="isScreen"></param>
+        /// <param name="photoConfigName"></param>
+        /// <param name="saveDirectoryOverride"></param>
+        public void CaptureAndSavePhoto(PhotoType mode, string name = "", bool isScreen = false, string photoConfigName = "", string saveDirectoryOverride = null, PhotoRecordInfo recordInfo = null, Action<PhotoRecordInfo> onSaved = null)
         {
-            SceneLoadingHelper.Load_MainScene(() =>
+            string fileName = name;
+
+            if (string.IsNullOrEmpty(name))
             {
-                EvtDsp.TriggerEvt(EvtNames.OnTakePhotoPanelClose);
-                onLoaded?.Invoke();
-            });
+                fileName = mode.ToString() + DateTime.Now.ToString("yyyyMMddHHmmss") + ".png";
+            }
+
+            if (isScreen == true)
+            {
+                StartCoroutine(CaptureScreen((tex) =>
+                {
+                    string path = SaveTexture(tex, fileName, mode, saveDirectoryOverride);
+                    PhotoRecordInfo info = Global_Photo_Manager.Instance. AddPhotoInfo(path, fileName, mode, photoConfigName, recordInfo);
+                    Destroy(tex);
+                    onSaved?.Invoke(info);
+                }));
+            }
+            else
+            {
+                StartCoroutine(CaptureRT(mode, (tex) =>
+                {
+                    string path = SaveTexture(tex, fileName, mode, saveDirectoryOverride);
+                    PhotoRecordInfo info = Global_Photo_Manager.Instance.AddPhotoInfo(path, fileName, mode, photoConfigName, recordInfo);
+                    Destroy(tex);
+                    onSaved?.Invoke(info);
+                }));
+            }
+        }
+
+        private IEnumerator CaptureRT(PhotoType mode, Action<Texture2D> onFinish = null)
+        {
+            yield return new WaitForEndOfFrame();
+
+            RenderTexture rt = GetRenderTexture(mode);
+            RenderTexture.active = rt;
+
+            Texture2D tex = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+            tex.Apply();
+
+            RenderTexture.active = null;
+            onFinish?.Invoke(tex);
+        }
+
+        private IEnumerator CaptureScreen(Action<Texture2D> onFinish = null)
+        {
+            yield return new WaitForEndOfFrame();
+
+            Texture2D tex = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
+
+            tex.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
+            tex.Apply();
+
+            onFinish?.Invoke(tex);
+        }
+
+        private RenderTexture GetRenderTexture(PhotoType mode)
+        {
+            switch (mode)
+            {
+                case PhotoType.Dispatch:
+                    return dispatchPhotoRT;
+                case PhotoType.Room:
+                    return roomPhotoRT;
+                default:
+                    return defaultPhotoRT;
+            }
+        }
+
+        public string SaveTexture(Texture2D tex, string fileName, PhotoType type, string folderOverride = null)
+        {
+            if (tex == null)
+            {
+                Debug.LogError("LocalSaveManager.SaveTexture: texture is null.");
+                return string.Empty;
+            }
+
+            string photoLocalPath = LocalSaveManager.GetPhotoPath(type, fileName, folderOverride);
+            string folder = Path.GetDirectoryName(photoLocalPath);
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
+
+            File.WriteAllBytes(photoLocalPath, tex.EncodeToPNG());
+            Debug.Log("Screenshot saved to: " + photoLocalPath);
+
+            return photoLocalPath;
+        }
+
+        public void BackToMainScene()
+        {
+            SceneLoadHelper.LoadSceneAsync(
+                SceneLoadHelper.MainSceneName,
+                (_) => EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active));
         }
     }
 }

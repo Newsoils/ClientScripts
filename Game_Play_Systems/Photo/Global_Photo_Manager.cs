@@ -21,6 +21,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
 {
     public class Global_Photo_Manager : SingletonMono<Global_Photo_Manager>
     {
+        protected override bool PersistAcrossScenes => true;
+
         /// <summary>
         /// 本地相册照片记录。
         /// </summary>
@@ -66,9 +68,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             photoInfos = JsonDataManager.LoadPhotoInfo();
             mapInfos = JsonDataManager.LoadMapInfo();
 
-            DontDestroyOnLoad(this.gameObject);
             LoadtInfoLocal();
-            RegisterGetPhotosResponse();
             RequestDispatchPhotosFromServer();
         }
 
@@ -318,7 +318,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             var last = imageList[^1];
             SaveToGallery(last.localPath, last.FileName);
-            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "相片已保存到本地！");
+            PromptManager.ShowUpPrompt(PromptId.PhotoSaved);
         }
 
         public void SaveToGallery(string path, string fileName)
@@ -396,10 +396,17 @@ namespace CLIP.Project_Mouse.Game_Play_System
         }
         public void LoadtInfoLocal()
         {
-            LocalSaveManager.LoadPhotoRecords(out imageList, out _);
+            LocalSaveManager.LoadPhotoRecords(out imageList, out dispatchList);
             imageList ??= new List<PhotoRecordInfo>();
+            dispatchList ??= new List<PhotoRecordInfo>();
+
             imageList.RemoveAll(p => p != null && p.photoType == PhotoType.Dispatch);
-            dispatchList = new List<PhotoRecordInfo>();
+            dispatchList.RemoveAll(p => p == null);
+            foreach (var info in dispatchList)
+            {
+                info.photoType = PhotoType.Dispatch;
+                imageList.Add(info);
+            }
         }
 
         #endregion
@@ -438,14 +445,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         #endregion
 
-        private void RegisterGetPhotosResponse()
-        {
-            if (!RegisterMap.IsLoaded)
-                RegisterMap.TryRegisterDefault();
-
-            if (RegisterMap.IsLoaded)
-                RegisterMap.RegisterHandler(typeof(GetPhotosRes), new Action<GetPhotosRes>(ReceiveGetPhotosRes));
-        }
 
         private void RequestDispatchPhotosFromServer()
         {
@@ -458,7 +457,18 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 return;
 
             dispatchList ??= new List<PhotoRecordInfo>();
-            var refreshedDispatchList = new List<PhotoRecordInfo>();
+            var mergedDispatchList = new List<PhotoRecordInfo>();
+            foreach (var info in dispatchList)
+            {
+                if (info == null || HasSamePhotoConfig(mergedDispatchList, info))
+                    continue;
+
+                if (LocalSaveManager.TryFindLocalPhotoFile(info, out string localPath))
+                {
+                    info.localPath = localPath;
+                    mergedDispatchList.Add(info);
+                }
+            }
 
             foreach (var data in res.Photos)
             {
@@ -466,14 +476,19 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 if (photoRecordInfo == null)
                     continue;
 
-                if (LocalSaveManager.TryFindLocalPhotoFile(photoRecordInfo, out string localPath))
-                    photoRecordInfo.localPath = localPath;
+                if (HasSamePhotoConfig(mergedDispatchList, photoRecordInfo))
+                    continue;
 
-                refreshedDispatchList.Add(photoRecordInfo);
+                if (LocalSaveManager.TryFindLocalPhotoFile(photoRecordInfo, out string localPath))
+                {
+                    photoRecordInfo.localPath = localPath;
+                    UpsertPhotoRecord(mergedDispatchList, photoRecordInfo);
+                }
+
             }
 
             dispatchList.Clear();
-            dispatchList.AddRange(refreshedDispatchList);
+            dispatchList.AddRange(mergedDispatchList);
 
             imageList.RemoveAll(p => p != null && p.photoType == PhotoType.Dispatch);
             imageList.AddRange(dispatchList);
@@ -517,6 +532,36 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 return a.photoUId == b.photoUId;
 
             return !string.IsNullOrEmpty(a.localPath) && a.localPath == b.localPath;
+        }
+
+        private void UpsertPhotoRecord(List<PhotoRecordInfo> list, PhotoRecordInfo info)
+        {
+            if (list == null || info == null)
+                return;
+
+            int index = list.FindIndex(p => IsSamePhotoRecord(p, info));
+            if (index < 0)
+            {
+                list.Add(info);
+                return;
+            }
+
+            PhotoRecordInfo existing = list[index];
+            if (string.IsNullOrEmpty(info.localPath) && existing != null)
+                info.localPath = existing.localPath;
+
+            if (info.captureTime == default && existing != null)
+                info.captureTime = existing.captureTime;
+
+            list[index] = info;
+        }
+
+        private bool HasSamePhotoConfig(List<PhotoRecordInfo> list, PhotoRecordInfo info)
+        {
+            if (list == null || info == null || info.photoConfigId == 0)
+                return false;
+
+            return list.Exists(p => p != null && p.photoConfigId == info.photoConfigId);
         }
     }
 }

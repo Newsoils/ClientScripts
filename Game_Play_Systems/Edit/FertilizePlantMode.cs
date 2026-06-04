@@ -1,6 +1,7 @@
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
+using CLIP.Project_Mouse.Kernel;
 
 public class FertilizePlantMode : IEditMode
 {
@@ -77,7 +78,7 @@ public class FertilizePlantMode : IEditMode
                 int fertCount = fertItem != null ? fertItem._item_count : 0;
                 if (fertCount <= 0)
                 {
-                    EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "肥料数量不足！");
+                    PromptManager.ShowUpPrompt(PromptId.FertilizerNotEnough);
                     EditManager.Instance.ExitCurrentMode();
                     return;
                 }

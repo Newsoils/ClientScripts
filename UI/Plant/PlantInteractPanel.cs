@@ -4,6 +4,7 @@ using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
 using UnityEngine.UI;
+using CLIP.Project_Mouse.Kernel;
 
 public class PlantInteractPanel : UIPanelBase
 {
@@ -42,7 +43,7 @@ public class PlantInteractPanel : UIPanelBase
         BtnWater.onClick.AddListener(() =>
         {
             EditManager.Instance.SetMode(new WaterPlantMode());
-            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "现在手指可以在屏幕上划动，给植物浇水！");
+            PromptManager.ShowUpPrompt(PromptId.WaterGuide);
         });
         BtnEdit.onClick.AddListener(() => UIManager.Instance.OpenPanel<PlantPanel>());
         BtnShop.onClick.AddListener(() => EvtDsp.TriggerEvt(EvtNames.OpenShoppingPanel));

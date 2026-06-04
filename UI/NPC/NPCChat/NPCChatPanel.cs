@@ -156,7 +156,7 @@ namespace CLIP.Project_Mouse.UI
                 {
                     chatViewController?.OpenChat(sprite, info, () =>
                     {
-                        PromptMessage.Instance.ShowPrompt($"{info._npc_Base.npc_name}目前没有新的对话", null);
+                        PromptManager.ShowPrompt(PromptId.NPCNoNewDialogue, null, info._npc_Base.npc_name);
                     });
                 });
 

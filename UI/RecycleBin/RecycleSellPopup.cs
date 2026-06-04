@@ -194,8 +194,7 @@ public class RecycleSellPopup : MonoBehaviour
         }
 
         int coins = _unitPrice * _currentQuantity;
-        string message = $"是否回收 {itemName} x{_currentQuantity}，获得 {coins} 鱼币？";
-        PromptMessage.Instance.ShowPrompt(message, () => DoRecycle(itemName, _currentQuantity, coins));
+        PromptManager.ShowPrompt(PromptId.RecycleConfirm, () => DoRecycle(itemName, _currentQuantity, coins), _currentQuantity, itemName, coins);
     }
 
     /// <summary>
@@ -213,7 +212,7 @@ public class RecycleSellPopup : MonoBehaviour
 
         if (latest == null || latest.item_id <= 0)
         {
-            PromptMessage.Instance.ShowUpPrompt("物品数据异常，无法回收");
+            PromptManager.ShowUpPrompt(PromptId.RecycleItemError);
             return;
         }
 
@@ -222,7 +221,7 @@ public class RecycleSellPopup : MonoBehaviour
 
         if (!NetWork_Center_WSS.IsConnectedToPlayerServer)
         {
-            PromptMessage.Instance.ShowUpPrompt("网络未连接");
+            PromptManager.ShowUpPrompt(PromptId.NetworkDisconnected);
             return;
         }
 

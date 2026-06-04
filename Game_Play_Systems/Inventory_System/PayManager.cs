@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
+using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Network;
 using Cmd;
 using TapSDK.Compliance;
@@ -69,13 +71,13 @@ namespace CLIP.Project_Mouse.Game_Play_System
             int index = GetDiamondPurchaseIndex(money);
             if (index < 0)
             {
-                onResult?.Invoke("无效的充值选项");
+                onResult?.Invoke(PromptManager.Instance.GetText(PromptId.RechargeOptionInvalid));
                 return;
             }
 
             if (GetBuyDiamondTimes(index) >= 30)
             {
-                onResult?.Invoke("今日已充值该金额达到30次，请明日再来充值吧！");
+                onResult?.Invoke(PromptManager.Instance.GetText(PromptId.RechargeDailyLimit));
                 return;
             }
 
@@ -88,7 +90,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             int index = GetCoinExchangeIndex(price);
             if (index < 0)
             {
-                onResult?.Invoke("无效的购买选项");
+                onResult?.Invoke(PromptManager.Instance.GetText(PromptId.PurchaseOptionInvalid));
                 return;
             }
 
@@ -101,7 +103,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             if (!NetWork_Center_WSS.IsConnectedToPlayerServer)
             {
                 _pendingPayResultCallback = null;
-                onResult?.Invoke("网络未连接");
+                onResult?.Invoke(PromptManager.Instance.GetText(PromptId.NetworkDisconnected));
                 return;
             }
 
@@ -128,7 +130,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 },
                 handleCheckPayLimitException: _ =>
                 {
-                    onResult?.Invoke("充值检查失败");
+                    onResult?.Invoke(PromptManager.Instance.GetText(PromptId.RechargeCheckFailed));
                 });
         }
 
@@ -143,8 +145,31 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 },
                 handleSubmitPayResultException: _ =>
                 {
-                    onResult?.Invoke("提交支付失败");
+                    onResult?.Invoke(PromptManager.Instance.GetText(PromptId.RechargeSubmitFailed));
                 });
+        }
+
+        public void PayDiamondToGetCoin(int amount, int price)
+        {
+            EnsureInstance().PayDiamondToGetCoin(price, HandlePayResult);
+        }
+
+
+        public void PayToGetDiamond(int amount, float money)
+        {
+            EnsureInstance().PayToGetDiamond(amount, money, HandlePayResult);
+        }
+        public void HandlePayResult(string result)
+        {
+            if (result == "success")
+            {
+                PromptManager.ShowUpPrompt(PromptId.RechargeSuccess);
+                AudioManager.Instance.PlayAudioByRefKey("paySuccess");
+            }
+            else
+            {
+                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, result);
+            }
         }
     }
 }

@@ -24,6 +24,7 @@ public class MainPanel : UIPanelBase
     {
         TryAttachEnterDebugPopup();
         TryAttachTabNpcDebugPopup();
+        TryAttachBackslashRewardPopup();
 
         editRoom.onClick.AddListener(OpenPlacementInventory);
         dispatchButton.onClick.AddListener(Dispatch);
@@ -82,6 +83,18 @@ public class MainPanel : UIPanelBase
         gameObject.AddComponent(t);
     }
 
+    private void TryAttachBackslashRewardPopup()
+    {
+        const string typeName = "CLIP.Project_Mouse.UI.BackslashTestRewardPopup";
+        var t = AppDomain.CurrentDomain.GetAssemblies()
+            .Select(a => a.GetType(typeName))
+            .FirstOrDefault(x => x != null);
+
+        if (t == null) return;
+        if (GetComponent(t) != null) return;
+        gameObject.AddComponent(t);
+    }
+
     public override void OnDestroy()
     {
         base.OnDestroy();
@@ -110,7 +123,7 @@ public class MainPanel : UIPanelBase
         EvtDsp.RemoveEvt(EvtNames.OnPhonePanelClose, ShowAll);
         EvtDsp.RemoveEvt(EvtNames.OnPerseonBriefOpen, ShowTopPanelOnly);
         EvtDsp.RemoveEvt(EvtNames.OnPerseonBriefClose, ShowAll);
-        EvtDsp.RemoveEvt(EvtNames.OnTakePhotoPanelOpen, ShowTopPanelOnly);
+        EvtDsp.RemoveEvt(EvtNames.OnTakePhotoPanelOpen, CloseAllUI);
         EvtDsp.RemoveEvt(EvtNames.OnTakePhotoPanelClose, ShowAll);
         EvtDsp.RemoveEvt(EvtNames.RefreshUI, RefreshDispatchWarningVisibility);
         EvtDsp.RemoveEvt(EvtNames.Guide_Skip_Current, CloseTicketBack);

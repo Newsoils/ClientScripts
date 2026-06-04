@@ -31,6 +31,7 @@ namespace CLIP.Project_Mouse.UI
         private bool _isFadingOut = false;
 
         private Coroutine _fadeInRoutine;
+        private Coroutine _fadeOutRoutine;
 
         private Action _onOpenHandler;
         private Action _onCloseHandler;
@@ -109,6 +110,11 @@ namespace CLIP.Project_Mouse.UI
                 StopCoroutine(_fadeInRoutine);
                 _fadeInRoutine = null;
             }
+            if (_fadeOutRoutine != null)
+            {
+                StopCoroutine(_fadeOutRoutine);
+                _fadeOutRoutine = null;
+            }
 
             if (canvasGroup == null)
             {
@@ -128,7 +134,7 @@ namespace CLIP.Project_Mouse.UI
         {
             if (_isFadingOut) return;
             _isFadingOut = true;
-            StartCoroutine(FadeOutCoroutine());
+            _fadeOutRoutine = StartCoroutine(FadeOutCoroutine());
         }
 
         // ================================================================
@@ -167,6 +173,8 @@ namespace CLIP.Project_Mouse.UI
             if (canvasGroup == null)
             {
                 obj.SetActive(false);
+                _isFadingOut = false;
+                _fadeOutRoutine = null;
                 yield break;
             }
 
@@ -181,6 +189,7 @@ namespace CLIP.Project_Mouse.UI
             canvasGroup.alpha = 0f;
             obj.SetActive(false);
             _isFadingOut = false;
+            _fadeOutRoutine = null;
         }
     }
 }

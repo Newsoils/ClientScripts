@@ -127,8 +127,39 @@ public class CharacterClothesManager : SingletonMono<CharacterClothesManager>
 
     private void ApplyDataToController(CharacterType type)
     {
-        if (controllers.TryGetValue(type, out var controller))
+        if (TryGetController(type, out var controller))
             controller.ApplyClothes(CopyClothesData(GetClothesData(type)));
+    }
+
+    private bool TryGetController(CharacterType type, out CharacterClothesController controller)
+    {
+        if (controllers.TryGetValue(type, out controller) && controller != null)
+            return true;
+
+        foreach (var sceneController in Object.FindObjectsByType<CharacterClothesController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (sceneController == null || sceneController.type != type)
+                continue;
+
+            controller = sceneController;
+            controllers[type] = sceneController;
+            return true;
+        }
+
+        controller = null;
+        return false;
+    }
+
+    /// <summary>
+    /// 设置指定角色是否启用 wood 身体材质预览，并立即刷新表现。
+    /// </summary>
+    public void SetWoodBodyPreview(CharacterType type, bool enabled)
+    {
+        if (TryGetController(type, out var controller))
+        {
+            //controller.useWoodBodyPreview = enabled;
+            ApplyDataToController(type);
+        }
     }
     #endregion
 

@@ -18,11 +18,12 @@ using CLIP.Framework_Core.Network;
 using CLIP.Framework_Core.Event;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using CLIP.Project_Mouse.Kernel;
+using CLIP.Project_Mouse.Game_Play_System;
 
 
 namespace CLIP.Project_Mouse.Network
 {
-
     public class NetWork_Center_WSS : SingletonMono<NetWork_Center_WSS>
     {
         protected override bool PersistAcrossScenes => true;
@@ -170,7 +171,7 @@ namespace CLIP.Project_Mouse.Network
             }
             else
             {
-                EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "已与服务器断开连接！", null);
+                PromptManager.ShowPrompt(PromptId.ServerDisconnected, null);
             }
         }
 
@@ -340,7 +341,7 @@ namespace CLIP.Project_Mouse.Network
         private void TriggerOriginalServerConnectionFailed()
         {
             Debug.LogError("[WSS] 服务器连接失败（未进入游戏服登录态）。请查看上一条 WSS OnError/OnClose 日志中的 detail；检查网关 ws 地址、本机网络与防火墙。");
-            EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "服务器连接失败，请检查网络设置！", null);
+            PromptManager.ShowPrompt(PromptId.ServerConnectFailed, null);
         }
 
         private void OnDisconnected()
@@ -374,11 +375,7 @@ namespace CLIP.Project_Mouse.Network
             StopReconnectAttempts();
             _reconnect_coroutine = StartCoroutine(AttemptReconnectLoop(_max_reconnect_attempts, showSuccessPrompt: true, onFinalFail: () =>
             {
-                EvtDsp.TriggerEvt<string, Action>(
-                    EvtNames.ShowPrompt,
-                    $"连接失败（已重试{_max_reconnect_attempts}次），请检查网络后重试！",
-                    () => TryReconnectCoroutine()
-                );
+                PromptManager.ShowPrompt(PromptId.ReconnectFailed, () => TryReconnectCoroutine(), _max_reconnect_attempts);
             }));
         }
 
@@ -415,10 +412,7 @@ namespace CLIP.Project_Mouse.Network
 
                     if (showSuccessPrompt)
                     {
-                        EvtDsp.TriggerEvt<string, Action>(
-                            EvtNames.ShowPrompt,
-                            "重连成功，请尝试登录", null
-                        );
+                        PromptManager.ShowPrompt(PromptId.ReconnectSuccess, null);
                     }
 
                     Debug.Log("Connected!");

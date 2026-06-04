@@ -32,8 +32,9 @@ public class Quest_And_Achievement_Receiver : SingletonMono<Quest_And_Achievemen
         Debug.Log($"Quest_And_Achievement_Receiver initialized on {_manager.gameObject.name}");
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
+        base.OnDestroy();
         UnbindUnityEvents();
     }
 

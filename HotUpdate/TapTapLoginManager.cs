@@ -83,6 +83,7 @@ public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
         {
             clientId = "bzepc2nhpyue2sqkav",
             clientToken = "7168crDoO06GgIvgxg9CBcZ4CtbXJzhWfPb2mPeX",
+            screenOrientation = GetTapSdkScreenOrientation(),
         };
         TapTapComplianceOption complianceOption = new TapTapComplianceOption
         {
@@ -93,6 +94,11 @@ public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
         TapTapSDK.Init(coreOptions, otherOptions);
         TapTapCompliance.RegisterComplianceCallback(OnComplianceSdkCallback);
         TapTapLogin.Instance.Logout();
+    }
+
+    private static int GetTapSdkScreenOrientation()
+    {
+        return Screen.width > Screen.height ? 1 : 0;
     }
 
     public void Login()
@@ -124,14 +130,14 @@ public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
         error = null;
         if (string.IsNullOrWhiteSpace(account))
         {
-            error = "请输入账号";
+            error = "请输入账号。";
             return false;
         }
 
         var trimmed = account.Trim();
         if (!SelfAccountNameRegex.IsMatch(trimmed))
         {
-            error = "账号需至少3位，且只能包含数字或英文字母";
+            error = "账号需至少3位，且只能包含数字或英文字母。";
             return false;
         }
 

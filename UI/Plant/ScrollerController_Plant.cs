@@ -200,7 +200,7 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
             int fertCount = fertItem != null ? fertItem._item_count : 0;
             if (fertCount <= 0)
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "肥料数量不足！");
+                PromptManager.ShowUpPrompt(PromptId.FertilizerNotEnough);
                 return;
             }
             EditManager.Instance.SetMode(new FertilizePlantMode(data.name));
@@ -211,7 +211,7 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
             int seedCount = seedItem != null ? seedItem._item_count : 0;
             if (seedCount <= 0)
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "种子数量不足！");
+                PromptManager.ShowUpPrompt(PromptId.SeedNotEnough);
                 return;
             }
             EditManager.Instance.SetMode(new PlantPlantMode(data.name));

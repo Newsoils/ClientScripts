@@ -9,6 +9,7 @@ using Cmd;
 using Common;
 using UnityEngine;
 using UnityEngine.UI;
+using CLIP.Project_Mouse.Kernel;
 
 namespace CLIP.Project_Mouse.UI
 {
@@ -160,6 +161,7 @@ namespace CLIP.Project_Mouse.UI
 
         public void OnSelectClothingItem(ShoppingItemUnit shoppingItemUnit)
         {
+            shoppingPanel.EnsureRenderTextureBindings();
             rawImage.gameObject.SetActive(true);
             if (rawImage != null && shoppingPanel.characterRT != null)
             {
@@ -180,6 +182,7 @@ namespace CLIP.Project_Mouse.UI
             if (isLoadingModel) return;
             isLoadingModel = true;
 
+            shoppingPanel.EnsureRenderTextureBindings();
             rawImage.gameObject.SetActive(true);
             rawImage.texture = shoppingPanel.furnitureRT;
 
@@ -405,22 +408,18 @@ namespace CLIP.Project_Mouse.UI
         {
             if (serverShop == null || serverShop.ShopUID == 0UL)
             {
-                PromptMessage.Instance.ShowUpPrompt("商店数据未同步，请重新打开商店");
+                PromptManager.ShowUpPrompt(PromptId.ShopDataOutOfSync);
                 return;
             }
 
             int freeRefreshTimesLeft = GetFreeRefreshTimesLeft();
             if (freeRefreshTimesLeft > 0)
             {
-                PromptMessage.Instance.ShowPrompt(
-                    $"是否花费一次免费刷新次数刷新商店？还剩{freeRefreshTimesLeft}次",
-                    SendManualRefreshShopReq);
+                PromptManager.ShowPrompt(PromptId.ShopFreeRefreshConfirm, SendManualRefreshShopReq, freeRefreshTimesLeft);
                 return;
             }
 
-            PromptMessage.Instance.ShowPrompt(
-                $"是否花费{ManualRefreshCostFishCoin}鱼币刷新商店？",
-                SendManualRefreshShopReq);
+            PromptManager.ShowPrompt(PromptId.ShopCoinRefreshConfirm, SendManualRefreshShopReq, ManualRefreshCostFishCoin);
         }
 
         private int GetFreeRefreshTimesLeft()

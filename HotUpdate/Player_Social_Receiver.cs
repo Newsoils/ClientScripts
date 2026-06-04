@@ -9,6 +9,7 @@ using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
 using CS_Resource_Manager = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Network;
+using CLIP.Project_Mouse.Kernel;
 
 /// <summary>
 /// 玩家好友：好友列表 (1013/1014)、搜索 (1141/1142)、申请/处理申请 (1133–1136)。
@@ -139,7 +140,7 @@ public class Player_Social_Receiver : MonoBehaviour, IMsg_Receiver
         var receiver = Instance;
         if (receiver != null && receiver._pendingOp == PendingFriendOp.SendApplication)
         {
-            ShowPrompt("已发送好友请求！");
+            PromptManager.ShowUpPrompt(PromptId.FriendRequestSent);
             receiver._pendingOp = PendingFriendOp.None;
             RequestFriendsListStatic();
         }
@@ -158,11 +159,11 @@ public class Player_Social_Receiver : MonoBehaviour, IMsg_Receiver
         switch (receiver._pendingOp)
         {
             case PendingFriendOp.AcceptApplication:
-                ShowPrompt("已同意好友请求");
+                PromptManager.ShowUpPrompt(PromptId.FriendRequestAccepted);
                 RequestFriendsListStatic();
                 break;
             case PendingFriendOp.RefuseApplication:
-                ShowPrompt("已拒绝好友请求");
+                PromptManager.ShowUpPrompt(PromptId.FriendRequestRejected);
                 RequestFriendsListStatic();
                 break;
         }
@@ -232,7 +233,7 @@ public class Player_Social_Receiver : MonoBehaviour, IMsg_Receiver
         if (_socialManager == null || !CanSend()) return;
         if (!TryParseRoleId(_socialManager._temp_cache_input_str, out var roleId))
         {
-            ShowPrompt("玩家 ID 无效");
+            PromptManager.ShowUpPrompt(PromptId.PlayerIdInvalid);
             return;
         }
 
@@ -249,7 +250,7 @@ public class Player_Social_Receiver : MonoBehaviour, IMsg_Receiver
         if (_socialManager == null || !CanSend()) return;
         if (!TryParseRoleId(friendId, out var roleId))
         {
-            ShowPrompt("玩家 ID 无效");
+            PromptManager.ShowUpPrompt(PromptId.PlayerIdInvalid);
             return;
         }
 
@@ -266,7 +267,7 @@ public class Player_Social_Receiver : MonoBehaviour, IMsg_Receiver
         if (_socialManager == null || !CanSend()) return;
         if (!TryParseRoleId(_socialManager._temp_cache_input_str, out var roleId))
         {
-            ShowPrompt("玩家 ID 无效");
+            PromptManager.ShowUpPrompt(PromptId.PlayerIdInvalid);
             return;
         }
 
@@ -283,7 +284,7 @@ public class Player_Social_Receiver : MonoBehaviour, IMsg_Receiver
         if (_socialManager == null || !CanSend()) return;
         if (!TryParseRoleId(_socialManager._temp_cache_input_str, out var roleId))
         {
-            ShowPrompt("玩家 ID 无效");
+            PromptManager.ShowUpPrompt(PromptId.PlayerIdInvalid);
             return;
         }
 
@@ -327,7 +328,7 @@ public class Player_Social_Receiver : MonoBehaviour, IMsg_Receiver
             roleId = _socialManager.ResolveFriendRoleId(_socialManager._current_chat_friend_name);
         if (roleId == 0)
         {
-            ShowPrompt("无法发送：未找到好友");
+            PromptManager.ShowUpPrompt(PromptId.FriendNotFound);
             return;
         }
 
@@ -335,7 +336,7 @@ public class Player_Social_Receiver : MonoBehaviour, IMsg_Receiver
             ?.Find(f => f.RoleId == roleId);
         if (friend?.Info == null)
         {
-            ShowPrompt("无法发送：好友信息无效");
+            PromptManager.ShowUpPrompt(PromptId.FriendInfoInvalid);
             return;
         }
 
@@ -345,7 +346,7 @@ public class Player_Social_Receiver : MonoBehaviour, IMsg_Receiver
             : chatMsg?.msg_symbol;
         if (string.IsNullOrEmpty(text))
         {
-            ShowPrompt("无法发送：消息内容为空");
+            PromptManager.ShowUpPrompt(PromptId.MessageEmpty);
             return;
         }
 

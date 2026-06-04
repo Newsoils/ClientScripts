@@ -434,13 +434,13 @@ namespace CLIP.Project_Mouse.UI
 
                 if (hasInvalid)
                 {
-                    EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "格式错误,删除错误内容", null);
+                    PromptManager.ShowPrompt(PromptId.DebugFormatError, null);
                     _commandInput.text = cleaned;
                     return;
                 }
                 if (!valid || parsed.Count == 0)
                 {
-                    EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "格式错误,删除错误内容", null);
+                    PromptManager.ShowPrompt(PromptId.DebugFormatError, null);
                     _commandInput.text = string.Empty;
                     return;
                 }

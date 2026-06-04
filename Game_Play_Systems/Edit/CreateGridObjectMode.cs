@@ -160,7 +160,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             // 禁止将家具放置到其他房间
             if (RoomSystem.currentRoom == null || _curGridTag.roomName != RoomSystem.currentRoom.RoomName)
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "不能将家具放置到其他房间！");
+                PromptManager.ShowWarning(PromptId.FurnitureCrossRoom);
                 GameObject.Destroy(_selected.gameObject);
                 _selected = null;
                 EvtDsp.TriggerEvt(EvtNames.Close_Edit_Placement_Panel);
@@ -172,7 +172,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             _lastPreviewGirdViews.Clear();
             if (!GridObjectSystem.TryAddGridObject(_selected, RoomSystem.currentRoom, _curGridTag.LayerUID, _curGPosition))
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不够，无法放置！");
+                PromptManager.ShowWarning(PromptId.FurnitureNoSpace);
                 GameObject.Destroy(_selected.gameObject);
             }
             else
@@ -219,7 +219,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             else
             {
                 RoomSystem.currentRoom.GridState.SetOccupied(_selected.data.gridLayerUID, rawOccupiedPositions, true);
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不足，无法旋转!");
+                PromptManager.ShowWarning(PromptId.FurnitureRotateNoSpace);
             }
         }
 

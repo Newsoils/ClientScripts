@@ -4,6 +4,7 @@ using CLIP.Project_Mouse.Network;
 using Cmd;
 using UnityEngine;
 using UnityEngine.UI;
+using CLIP.Project_Mouse.Kernel;
 
 namespace CLIP.Project_Mouse.UI
 {
@@ -31,10 +32,10 @@ namespace CLIP.Project_Mouse.UI
         {
             if (itemInShop == null)
             {
-                PromptMessage.Instance.ShowUpPrompt("爱心车票配置不存在");
+                PromptManager.ShowUpPrompt(PromptId.LoveTicketConfigMissing);
                 return;
             }
-            PromptMessage.Instance.ShowPrompt("是否要花费" + itemInShop.sell_price + itemInShop.currency_unit + "购买" + itemInShop.name + "?", OnConfirm);
+            PromptManager.ShowPrompt(PromptId.BuyTicketConfirm, OnConfirm, itemInShop.sell_price, itemInShop.currency_unit, itemInShop.name);
         }
 
         private void OnConfirm()
@@ -53,7 +54,7 @@ namespace CLIP.Project_Mouse.UI
                 return;
 
             pendingPurchase = false;
-            PromptMessage.Instance.ShowUpPrompt("购买成功");
+            PromptManager.ShowUpPrompt(PromptId.PurchaseSuccess);
             EvtDsp.TriggerEvt(EvtNames.RefreshUI);
         }
     }

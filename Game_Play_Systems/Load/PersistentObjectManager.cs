@@ -92,7 +92,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
             Debug.Log($"[PersistentObjectManager] Loaded {_persistentObjects.Count} persistent objects.");
         }
 
-        private async void LoadObjectInternal(PersistentObjectConfig config)
+
+        private void LoadObjectInternal(PersistentObjectConfig config)
         {
             if (config == null || string.IsNullOrEmpty(config.prefabPath))
                 return;

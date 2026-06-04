@@ -1,5 +1,4 @@
 using CLIP.Framework_Core.Event;
-using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Scene_View_Control;
 using UnityEngine;
 
@@ -7,7 +6,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
 {
     public class Door_In_Level : MonoBehaviour, IClick
     {
-        public Room_Door_Info _door_info;
         public Renderer _renderer;
         public string doorTargetRoomName;
 
@@ -20,7 +18,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         void Start()
         {
-            _door_info._door_name = this.gameObject.name;
             _renderer = this.GetComponent<Renderer>();
             _ownerRoom = GetComponentInParent<Room>();
             _parentWall = GetComponentInParent<Hide_Wall>();

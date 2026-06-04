@@ -86,7 +86,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 return;
             }
 
-            ChangeCurrency(currencyName, amount, source, onTaskComplete);
+            _ = ChangeCurrency(currencyName, amount, source, onTaskComplete);
         }
 
         public async Task ChangeCurrencyMulti(List<(string, int)> change, string source, Action<string> onTaskComplete = null)

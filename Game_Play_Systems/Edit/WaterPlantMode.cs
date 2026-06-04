@@ -3,6 +3,7 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
+using CLIP.Project_Mouse.Kernel;
 
 public class WaterPlantMode : IEditMode
 {
@@ -45,7 +46,7 @@ public class WaterPlantMode : IEditMode
             PlantManager.Instance.WaterPlant();
             waterTimer = -9999;
             EditManager.Instance.ExitCurrentMode();
-            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "已浇水！");
+            PromptManager.ShowUpPrompt(PromptId.Watered);
             waterObj.GetComponent<ParticleSystem>().Stop();
         }
     }

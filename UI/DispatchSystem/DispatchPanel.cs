@@ -11,6 +11,7 @@ using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using CLIP.Project_Mouse.Kernel;
 
 public class DispatchPanel : UIPanelBase
 {
@@ -627,7 +628,7 @@ public class DispatchPanel : UIPanelBase
             return;
         }
 
-        ShowPopUp("打包完毕，小苔随时可能出门哦！");
+        PromptManager.ShowUpPrompt(PromptId.DispatchPacked);
         Dispatch_Manager._instance.SendPackageBagRequest(curBagIndex, curBagInfo);
 
         if (CountFilledDispatchSlots(curBagInfo) >= 3)

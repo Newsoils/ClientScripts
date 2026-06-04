@@ -32,10 +32,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
     /// <summary>非 MainScene 时收到的回家奖励推送，回到 MainScene 后再执行拍照与弹窗。</summary>
     private Cmd.BackToHomeRewardS2C _pendingBackToHomeReward;
 
-    private bool _inventoryInitialSyncCompleted = false;
-
-
-    private const string ReceiverName = "Global_Game_Manager";
 
     #region Unity Life Cycle
 
@@ -257,10 +253,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
     #endregion
 
     #region Client -> Server
-    // private void SaveDataToServer(string action, string data)
-    // {
-    //     SendMsg(action, data);
-    // }
 
     private void SendReqToServer(IMessage data)
     {
@@ -319,7 +311,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
     }
     private async Task ExcuteServerTasksAsync(List<ServerTask> tasks, Action<string> onTasksComplete)
     {
-        string result = "success";
         List<IMessage> datas = tasks.Select(task => task.data).ToList();
         if (datas.Count == 0)
         {
@@ -327,37 +318,10 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         }
         var msg_id = RegisterMap.GetMsgIdForType(datas[0].GetType());
         string receive = await GetDataFromServerAsync(msg_id, datas[0], null);
-        // List<(bool,string)> receives = JsonConvert.DeserializeObject<List<(bool, string)>>(receive);
-        //检查是否执行失败，执行失败时只执行最终失败的任务
-        // for (int i = 0; i < receives.Count; i++)
-        // {
-        //     if (receives[i].Item1 == false)
-        //     {
+  
         tasks[0].onReceiveMsg.Invoke(receive, tasks[0]);
         onTasksComplete?.Invoke(tasks[0].result);
         return;
-        //     }
-        // }
-        // //逐个执行任务
-        // for (int i = 0; i < receives.Count; i++)
-        // {
-        //     if (!tasks[i].isSendToServer)
-        //     {
-        //         tasks[i].onReceiveMsg.Invoke("", tasks[i]);
-        //     }
-        //     else
-        //     {
-        //         tasks[i].onReceiveMsg.Invoke(receives[i].Item2, tasks[i]);
-        //     }
-        //     if (tasks[i].isBreak)
-        //     {
-        //         result = tasks[i].result;
-        //         onTasksComplete?.Invoke(result);
-        //         return;
-        //     }
-        // }
-
-        // onTasksComplete?.Invoke(result);
 
     }
     private void UpdateInventoryFromServer()
@@ -368,14 +332,7 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
             NetWork_Center_WSS.SendMsg(req);
     }
 
-    // private void SendInventoryToServer()
-    // {
-    //     if (_inventorySO == null) return;
 
-    //     // string dataJson = Global_Inventory_Manager.Inventory_Serialization();
-    //     // string lastJson = GF_SP.SerializeObject(new List<string>() { "Game_Inventory", dataJson });
-    //     SendMsg(1321,new Cmd.EmptyReq()) ;
-    // }
     private void UpdateWeatherStateFromServer()
     {
         // SendMsg("Get_Data", "Weather_State");
@@ -817,6 +774,10 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         Global_Game_Manager.Instance.update_player_info_from_s2c(res);
     }
 
+    private void HandleGetPhotosRes(GetPhotosRes res)
+    {
+        Global_Photo_Manager.Instance.ReceiveGetPhotosRes(res);
+    }
     private void HandleSetRoleInfoRes(SetRoleInfoRes res)
     {
         if (res?.RoleInfo == null || Global_Game_Manager.Instance == null)
@@ -1273,6 +1234,7 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         RegisterMap.RegisterHandler(typeof(SyncChatChannelMsgS2C), new Action<SyncChatChannelMsgS2C>(HandleSyncChatChannelMsgS2C));
         RegisterMap.RegisterHandler(typeof(ChatSendRes), new Action<ChatSendRes>(HandleChatSendRes));
         RegisterMap.RegisterHandler(typeof(GiveGiftToNpcRes), new Action<GiveGiftToNpcRes>(HandleGiveGiftToNpcRes));
+        RegisterMap.RegisterHandler(typeof(GetPhotosRes), new Action<GetPhotosRes>(HandleGetPhotosRes));
     }
 
     private void HandleFriendsListRes(FriendsListRes res) => Player_Social_Receiver.HandleFriendsListRes(res);

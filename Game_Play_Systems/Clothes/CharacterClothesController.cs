@@ -42,6 +42,8 @@ public class CharacterClothesController : MonoBehaviour
         }
     }
 
+    public bool useWoodBodyPreview;
+
     public void ApplyClothes(Dictionary<string, ClothInfo> infos)
     {
         var lib = CharacterClothesResourceLibrary.Instance;
@@ -58,6 +60,14 @@ public class CharacterClothesController : MonoBehaviour
                 clothes.ChangePart(info.Key, skmList);
         }
         ApplyDefaultSlots(lib, infos);
+
+        // 换装场景：对所有已应用部件中材质id为 01 的身体部位覆盖 wood 材质
+        if (useWoodBodyPreview && lib.TryGetMaterialData("wood", "default", out var woodMats))
+        {
+            var woodMat = woodMats.Find(x => x.Item1 == 1).Item2;
+            if (woodMat != null)
+                clothes.ApplyMaterialByPartIndex(1, woodMat);
+        }
     }
 
     private void ApplyDefaultSlots(CharacterClothesResourceLibrary lib, Dictionary<string, ClothInfo> infos)

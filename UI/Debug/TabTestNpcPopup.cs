@@ -6,6 +6,8 @@ using Cmd;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.UI;
+using CLIP.Project_Mouse.Kernel;
+using CLIP.Project_Mouse.Game_Play_System;
 
 namespace CLIP.Project_Mouse.UI
 {
@@ -179,7 +181,7 @@ namespace CLIP.Project_Mouse.UI
         {
             if (!NetWork_Center_WSS.IsConnectedToPlayerServer)
             {
-                EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "未连接玩家服务器", null);
+                PromptManager.ShowPrompt(PromptId.DebugNotConnected, null);
                 return;
             }
 
@@ -191,14 +193,14 @@ namespace CLIP.Project_Mouse.UI
         {
             if (!NetWork_Center_WSS.IsConnectedToPlayerServer)
             {
-                EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "未连接玩家服务器", null);
+                PromptManager.ShowPrompt(PromptId.DebugNotConnected, null);
                 return;
             }
 
             string raw = expInput != null ? expInput.text : string.Empty;
             if (!TryParsePositiveInt(raw, out long addExp))
             {
-                EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "请输入大于 0 的整数", null);
+                PromptManager.ShowPrompt(PromptId.DebugInputInteger, null);
                 return;
             }
 
@@ -214,7 +216,7 @@ namespace CLIP.Project_Mouse.UI
         {
             if (!NetWork_Center_WSS.IsConnectedToPlayerServer)
             {
-                EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, "未连接玩家服务器", null);
+                PromptManager.ShowPrompt(PromptId.DebugNotConnected, null);
                 return;
             }
 

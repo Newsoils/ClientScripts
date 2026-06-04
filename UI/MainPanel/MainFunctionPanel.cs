@@ -6,6 +6,7 @@ using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using CLIP.Framework_Core.Event;
 using TMPro;
+using CLIP.Project_Mouse.Kernel;
 
 public class MainFunctionPanel : MonoBehaviour
 {
@@ -78,7 +79,7 @@ public class MainFunctionPanel : MonoBehaviour
             }
             else
             {
-                EvtDsp.TriggerEvt(EvtNames.Show_Warning_Panel, "小苔没有外出!");
+                PromptManager.ShowWarning(PromptId.CatNotAway);
             }
         });
         RefreshTicketNum();

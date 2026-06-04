@@ -13,7 +13,6 @@ using Newtonsoft.Json.Linq;
 public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcement_Receiver>
 {
     public Email_And_Announcement_Manager  _manager;
-    private int receiver_msg_id = 60000;
 
     #region Unity Life Cycle
 
@@ -31,8 +30,9 @@ public class Email_And_Announcement_Receiver : SingletonMono<Email_And_Announcem
         Log.Info($"Email_And_Announcement_Receiver initialized on {_manager.gameObject.name}");
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
+        base.OnDestroy();
         UnbindUnityEvents();
     }
 

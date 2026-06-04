@@ -1,0 +1,1704 @@
+{
+  "cmd": [
+    {
+      "id": 1,
+      "name": "Cmd.QueryDeviceLoginInfoReq"
+    },
+    {
+      "id": 2,
+      "name": "Cmd.QueryDeviceLoginInfoRes"
+    },
+    {
+      "id": 3,
+      "name": "Cmd.AccountLoginReq"
+    },
+    {
+      "id": 4,
+      "name": "Cmd.AccountLoginRes"
+    },
+    {
+      "id": 5,
+      "name": "Cmd.GetNoticesReq"
+    },
+    {
+      "id": 6,
+      "name": "Cmd.GetNoticesRes"
+    },
+    {
+      "id": 7,
+      "name": "Cmd.QueryServerListReq"
+    },
+    {
+      "id": 8,
+      "name": "Cmd.QueryServerListRes"
+    },
+    {
+      "id": 9,
+      "name": "Cmd.GameNoticeRefreshReq"
+    },
+    {
+      "id": 10,
+      "name": "Cmd.GameNoticeRefreshRes"
+    },
+    {
+      "id": 11,
+      "name": "Cmd.GenThirdpartOrderReq"
+    },
+    {
+      "id": 12,
+      "name": "Cmd.GenThirdpartOrderRes"
+    },
+    {
+      "id": 13,
+      "name": "Cmd.VerifyThirdpartTicketsReq"
+    },
+    {
+      "id": 14,
+      "name": "Cmd.VerifyThirdpartTicketsRes"
+    },
+    {
+      "id": 15,
+      "name": "Cmd.GenPayOrderReq"
+    },
+    {
+      "id": 16,
+      "name": "Cmd.GenPayOrderRes"
+    },
+    {
+      "id": 17,
+      "name": "Cmd.QueryUnsendOrdersReq"
+    },
+    {
+      "id": 18,
+      "name": "Cmd.QueryUnsendOrdersRes"
+    },
+    {
+      "id": 20,
+      "name": "Cmd.NotifyOrderSendS2S"
+    },
+    {
+      "id": 21,
+      "name": "Cmd.GetClientVersionInfoReq"
+    },
+    {
+      "id": 22,
+      "name": "Cmd.GetClientVersionInfoRes"
+    },
+    {
+      "id": 23,
+      "name": "Cmd.SetClientVersionInfoReq"
+    },
+    {
+      "id": 25,
+      "name": "Cmd.TestSendOrderReq"
+    },
+    {
+      "id": 27,
+      "name": "Cmd.GetWeiXinAccessTokenReq"
+    },
+    {
+      "id": 28,
+      "name": "Cmd.GetWeiXinAccessTokenRes"
+    },
+    {
+      "id": 1001,
+      "name": "Cmd.UserVerifyVerReq"
+    },
+    {
+      "id": 1002,
+      "name": "Cmd.UserVerifyVerRes"
+    },
+    {
+      "id": 1003,
+      "name": "Cmd.UserVerifyLoginReq"
+    },
+    {
+      "id": 1004,
+      "name": "Cmd.UserVerifyLoginRes"
+    },
+    {
+      "id": 1005,
+      "name": "Cmd.HeartBeatReq"
+    },
+    {
+      "id": 1006,
+      "name": "Cmd.HeartBeatRes"
+    },
+    {
+      "id": 1008,
+      "name": "Cmd.HeartBeatS2C"
+    },
+    {
+      "id": 1009,
+      "name": "Cmd.ServerRoleLoginReq"
+    },
+    {
+      "id": 1010,
+      "name": "Cmd.ServerRoleLoginRes"
+    },
+    {
+      "id": 1011,
+      "name": "Cmd.GetItemBagReq"
+    },
+    {
+      "id": 1012,
+      "name": "Cmd.GetItemBagRes"
+    },
+    {
+      "id": 1013,
+      "name": "Cmd.FriendsListReq"
+    },
+    {
+      "id": 1014,
+      "name": "Cmd.FriendsListRes"
+    },
+    {
+      "id": 1015,
+      "name": "Cmd.VipInfoReq"
+    },
+    {
+      "id": 1016,
+      "name": "Cmd.VipInfoRes"
+    },
+    {
+      "id": 1017,
+      "name": "Cmd.SignInReq"
+    },
+    {
+      "id": 1018,
+      "name": "Cmd.SignInRes"
+    },
+    {
+      "id": 1019,
+      "name": "Cmd.SignInTaskReq"
+    },
+    {
+      "id": 1020,
+      "name": "Cmd.SignInTaskRes"
+    },
+    {
+      "id": 1021,
+      "name": "Cmd.TestAddItemReq"
+    },
+    {
+      "id": 1022,
+      "name": "Cmd.TestAddItemRes"
+    },
+    {
+      "id": 1023,
+      "name": "Cmd.SignInFormReq"
+    },
+    {
+      "id": 1024,
+      "name": "Cmd.SignInFormRes"
+    },
+    {
+      "id": 1025,
+      "name": "Cmd.MailListReq"
+    },
+    {
+      "id": 1026,
+      "name": "Cmd.MailListRes"
+    },
+    {
+      "id": 1027,
+      "name": "Cmd.MailRewardReq"
+    },
+    {
+      "id": 1028,
+      "name": "Cmd.MailRewardRes"
+    },
+    {
+      "id": 1029,
+      "name": "Cmd.MailDeleteReq"
+    },
+    {
+      "id": 1030,
+      "name": "Cmd.MailDeleteRes"
+    },
+    {
+      "id": 1031,
+      "name": "Cmd.GachaListReq"
+    },
+    {
+      "id": 1032,
+      "name": "Cmd.GachaListRes"
+    },
+    {
+      "id": 1033,
+      "name": "Cmd.GachaTakeReq"
+    },
+    {
+      "id": 1034,
+      "name": "Cmd.GachaTakeRes"
+    },
+    {
+      "id": 1035,
+      "name": "Cmd.UseItemReq"
+    },
+    {
+      "id": 1036,
+      "name": "Cmd.UseItemRes"
+    },
+    {
+      "id": 1037,
+      "name": "Cmd.GachaCostBuyReq"
+    },
+    {
+      "id": 1038,
+      "name": "Cmd.GachaCostBuyRes"
+    },
+    {
+      "id": 1039,
+      "name": "Cmd.UseFragmentReq"
+    },
+    {
+      "id": 1040,
+      "name": "Cmd.UseFragmentRes"
+    },
+    {
+      "id": 1041,
+      "name": "Cmd.MailReadReq"
+    },
+    {
+      "id": 1042,
+      "name": "Cmd.MailReadRes"
+    },
+    {
+      "id": 1043,
+      "name": "Cmd.GetRankInfoReq"
+    },
+    {
+      "id": 1044,
+      "name": "Cmd.GetRankInfoRes"
+    },
+    {
+      "id": 1045,
+      "name": "Cmd.GetRankSimpleInfoReq"
+    },
+    {
+      "id": 1046,
+      "name": "Cmd.GetRankSimpleInfoRes"
+    },
+    {
+      "id": 1047,
+      "name": "Cmd.RankThumbsUpReq"
+    },
+    {
+      "id": 1048,
+      "name": "Cmd.RankThumbsUpRes"
+    },
+    {
+      "id": 1049,
+      "name": "Cmd.GetAllRedPointInfoReq"
+    },
+    {
+      "id": 1050,
+      "name": "Cmd.GetAllRedPointInfoRes"
+    },
+    {
+      "id": 1051,
+      "name": "Cmd.VipPackagePurchaseReq"
+    },
+    {
+      "id": 1052,
+      "name": "Cmd.VipPackagePurchaseRes"
+    },
+    {
+      "id": 1053,
+      "name": "Cmd.VipCumulativeLoginReq"
+    },
+    {
+      "id": 1054,
+      "name": "Cmd.VipCumulativeLoginRes"
+    },
+    {
+      "id": 1055,
+      "name": "Cmd.MissionListReq"
+    },
+    {
+      "id": 1056,
+      "name": "Cmd.MissionListRes"
+    },
+    {
+      "id": 1057,
+      "name": "Cmd.MissionRewardsReq"
+    },
+    {
+      "id": 1058,
+      "name": "Cmd.MissionRewardsRes"
+    },
+    {
+      "id": 1059,
+      "name": "Cmd.MissionPointRewardsReq"
+    },
+    {
+      "id": 1060,
+      "name": "Cmd.MissionPointRewardsRes"
+    },
+    {
+      "id": 1061,
+      "name": "Cmd.RankMissionAwardTakeReq"
+    },
+    {
+      "id": 1062,
+      "name": "Cmd.RankMissionAwardTakeRes"
+    },
+    {
+      "id": 1063,
+      "name": "Cmd.GetAllShopInfoReq"
+    },
+    {
+      "id": 1064,
+      "name": "Cmd.GetAllShopInfoRes"
+    },
+    {
+      "id": 1065,
+      "name": "Cmd.ManualRefreshShopReq"
+    },
+    {
+      "id": 1066,
+      "name": "Cmd.ManualRefreshShopRes"
+    },
+    {
+      "id": 1067,
+      "name": "Cmd.BuyGoodsReq"
+    },
+    {
+      "id": 1068,
+      "name": "Cmd.BuyGoodsRes"
+    },
+    {
+      "id": 1069,
+      "name": "Cmd.OpenCloseAutoBuyReq"
+    },
+    {
+      "id": 1070,
+      "name": "Cmd.OpenCloseAutoBuyRes"
+    },
+    {
+      "id": 1071,
+      "name": "Cmd.ChooseAutoBuyGoodsReq"
+    },
+    {
+      "id": 1072,
+      "name": "Cmd.ChooseAutoBuyGoodsRes"
+    },
+    {
+      "id": 1073,
+      "name": "Cmd.CommonSaleReq"
+    },
+    {
+      "id": 1074,
+      "name": "Cmd.CommonSaleRes"
+    },
+    {
+      "id": 1075,
+      "name": "Cmd.MissionSingleRewardsReq"
+    },
+    {
+      "id": 1076,
+      "name": "Cmd.MissionSingleRewardsRes"
+    },
+    {
+      "id": 1077,
+      "name": "Cmd.SetLockStatusReq"
+    },
+    {
+      "id": 1078,
+      "name": "Cmd.SetLockStatusRes"
+    },
+    {
+      "id": 1079,
+      "name": "Cmd.GetAllPassportReq"
+    },
+    {
+      "id": 1080,
+      "name": "Cmd.GetAllPassportRes"
+    },
+    {
+      "id": 1081,
+      "name": "Cmd.ReceivePassportRewardReq"
+    },
+    {
+      "id": 1082,
+      "name": "Cmd.ReceivePassportRewardRes"
+    },
+    {
+      "id": 1083,
+      "name": "Cmd.BuyAdvancePassportReq"
+    },
+    {
+      "id": 1084,
+      "name": "Cmd.BuyAdvancePassportRes"
+    },
+    {
+      "id": 1085,
+      "name": "Cmd.BuyPassportScoreReq"
+    },
+    {
+      "id": 1086,
+      "name": "Cmd.BuyPassportScoreRes"
+    },
+    {
+      "id": 1087,
+      "name": "Cmd.GMCmdReq"
+    },
+    {
+      "id": 1088,
+      "name": "Cmd.GMCmdRes"
+    },
+    {
+      "id": 1089,
+      "name": "Cmd.OfficialInfoReq"
+    },
+    {
+      "id": 1090,
+      "name": "Cmd.OfficialInfoRes"
+    },
+    {
+      "id": 1091,
+      "name": "Cmd.DispatchEventGetSetReq"
+    },
+    {
+      "id": 1092,
+      "name": "Cmd.DispatchEventGetSetRes"
+    },
+    {
+      "id": 1093,
+      "name": "Cmd.DispatchEventSetSetReq"
+    },
+    {
+      "id": 1094,
+      "name": "Cmd.DispatchEventSetSetRes"
+    },
+    {
+      "id": 1095,
+      "name": "Cmd.OfficialMissionTakeReq"
+    },
+    {
+      "id": 1096,
+      "name": "Cmd.OfficialMissionTakeRes"
+    },
+    {
+      "id": 1097,
+      "name": "Cmd.OfficialSimpleBarReq"
+    },
+    {
+      "id": 1098,
+      "name": "Cmd.OfficialSimpleBarRes"
+    },
+    {
+      "id": 1099,
+      "name": "Cmd.GetGiftInfoReq"
+    },
+    {
+      "id": 1100,
+      "name": "Cmd.GetGiftInfoRes"
+    },
+    {
+      "id": 1101,
+      "name": "Cmd.GiftPurchaseReq"
+    },
+    {
+      "id": 1102,
+      "name": "Cmd.GiftPurchaseRes"
+    },
+    {
+      "id": 1103,
+      "name": "Cmd.SetWishListReq"
+    },
+    {
+      "id": 1104,
+      "name": "Cmd.SetWishListRes"
+    },
+    {
+      "id": 1105,
+      "name": "Cmd.GetCornucopiaInfoReq"
+    },
+    {
+      "id": 1106,
+      "name": "Cmd.GetCornucopiaInfoRes"
+    },
+    {
+      "id": 1107,
+      "name": "Cmd.GetTimesRewardReq"
+    },
+    {
+      "id": 1108,
+      "name": "Cmd.GetTimesRewardRes"
+    },
+    {
+      "id": 1109,
+      "name": "Cmd.ChivalrousPointReq"
+    },
+    {
+      "id": 1110,
+      "name": "Cmd.ChivalrousPointRes"
+    },
+    {
+      "id": 1111,
+      "name": "Cmd.GetMarqueeReq"
+    },
+    {
+      "id": 1112,
+      "name": "Cmd.GetMarqueeRes"
+    },
+    {
+      "id": 1113,
+      "name": "Cmd.GetActivityListReq"
+    },
+    {
+      "id": 1114,
+      "name": "Cmd.GetActivityListRes"
+    },
+    {
+      "id": 1115,
+      "name": "Cmd.GetActivityInfoReq"
+    },
+    {
+      "id": 1116,
+      "name": "Cmd.GetActivityInfoRes"
+    },
+    {
+      "id": 1117,
+      "name": "Cmd.GetActivityRewardReq"
+    },
+    {
+      "id": 1118,
+      "name": "Cmd.GetActivityRewardRes"
+    },
+    {
+      "id": 1119,
+      "name": "Cmd.GetCornucopiaItemsReq"
+    },
+    {
+      "id": 1120,
+      "name": "Cmd.GetCornucopiaItemsRes"
+    },
+    {
+      "id": 1121,
+      "name": "Cmd.RoleGuideRecordReq"
+    },
+    {
+      "id": 1122,
+      "name": "Cmd.RoleGuideRecordRes"
+    },
+    {
+      "id": 1123,
+      "name": "Cmd.TravelEventListReq"
+    },
+    {
+      "id": 1124,
+      "name": "Cmd.TravelEventListRes"
+    },
+    {
+      "id": 1125,
+      "name": "Cmd.OpenBackPushReq"
+    },
+    {
+      "id": 1126,
+      "name": "Cmd.OpenBackPushRes"
+    },
+    {
+      "id": 1127,
+      "name": "Cmd.GetPlayerReq"
+    },
+    {
+      "id": 1128,
+      "name": "Cmd.GetPlayerRes"
+    },
+    {
+      "id": 1129,
+      "name": "Cmd.FirstChargeGiftBuyReq"
+    },
+    {
+      "id": 1130,
+      "name": "Cmd.FirstChargeGiftBuyRes"
+    },
+    {
+      "id": 1131,
+      "name": "Cmd.EditBlacklistReq"
+    },
+    {
+      "id": 1132,
+      "name": "Cmd.EditBlacklistRes"
+    },
+    {
+      "id": 1133,
+      "name": "Cmd.EditFriendsListReq"
+    },
+    {
+      "id": 1134,
+      "name": "Cmd.EditFriendsListRes"
+    },
+    {
+      "id": 1135,
+      "name": "Cmd.EditApplicationListReq"
+    },
+    {
+      "id": 1136,
+      "name": "Cmd.EditApplicationListRes"
+    },
+    {
+      "id": 1137,
+      "name": "Cmd.BatchDeleteFriendsReq"
+    },
+    {
+      "id": 1138,
+      "name": "Cmd.BatchDeleteFriendsRes"
+    },
+    {
+      "id": 1139,
+      "name": "Cmd.RecommendFriendsReq"
+    },
+    {
+      "id": 1140,
+      "name": "Cmd.RecommendFriendsRes"
+    },
+    {
+      "id": 1141,
+      "name": "Cmd.SearchPlayerReq"
+    },
+    {
+      "id": 1142,
+      "name": "Cmd.SearchPlayerRes"
+    },
+    {
+      "id": 1143,
+      "name": "Cmd.ApplyAllReq"
+    },
+    {
+      "id": 1144,
+      "name": "Cmd.ApplyAllRes"
+    },
+    {
+      "id": 1145,
+      "name": "Cmd.CreateLeagueReq"
+    },
+    {
+      "id": 1146,
+      "name": "Cmd.CreateLeagueRes"
+    },
+    {
+      "id": 1147,
+      "name": "Cmd.LeagueRecommendReq"
+    },
+    {
+      "id": 1148,
+      "name": "Cmd.LeagueRecommendRes"
+    },
+    {
+      "id": 1149,
+      "name": "Cmd.LeagueApplyReq"
+    },
+    {
+      "id": 1150,
+      "name": "Cmd.LeagueApplyRes"
+    },
+    {
+      "id": 1151,
+      "name": "Cmd.LeagueSearchReq"
+    },
+    {
+      "id": 1152,
+      "name": "Cmd.LeagueSearchRes"
+    },
+    {
+      "id": 1153,
+      "name": "Cmd.GetLeagueDetailInfoReq"
+    },
+    {
+      "id": 1154,
+      "name": "Cmd.GetLeagueDetailInfoRes"
+    },
+    {
+      "id": 1155,
+      "name": "Cmd.GetLeagueInnerDetailInfoReq"
+    },
+    {
+      "id": 1156,
+      "name": "Cmd.GetLeagueInnerDetailInfoRes"
+    },
+    {
+      "id": 1157,
+      "name": "Cmd.QuickJoinLeagueReq"
+    },
+    {
+      "id": 1158,
+      "name": "Cmd.QuickJoinLeagueRes"
+    },
+    {
+      "id": 1159,
+      "name": "Cmd.QueryLeagueMallInfoReq"
+    },
+    {
+      "id": 1160,
+      "name": "Cmd.QueryLeagueMallInfoRes"
+    },
+    {
+      "id": 1161,
+      "name": "Cmd.ChangeLeagueInfoReq"
+    },
+    {
+      "id": 1162,
+      "name": "Cmd.ChangeLeagueInfoRes"
+    },
+    {
+      "id": 1163,
+      "name": "Cmd.LeagueApplyHandleReq"
+    },
+    {
+      "id": 1164,
+      "name": "Cmd.LeagueApplyHandleRes"
+    },
+    {
+      "id": 1165,
+      "name": "Cmd.ChangeLeagueAnnouncementReq"
+    },
+    {
+      "id": 1166,
+      "name": "Cmd.ChangeLeagueAnnouncementRes"
+    },
+    {
+      "id": 1167,
+      "name": "Cmd.LeaveLeagueReq"
+    },
+    {
+      "id": 1168,
+      "name": "Cmd.LeaveLeagueRes"
+    },
+    {
+      "id": 1169,
+      "name": "Cmd.LeagueMemberKickOutReq"
+    },
+    {
+      "id": 1170,
+      "name": "Cmd.LeagueMemberKickOutRes"
+    },
+    {
+      "id": 1171,
+      "name": "Cmd.ChangeLeagueTitleChangeReq"
+    },
+    {
+      "id": 1172,
+      "name": "Cmd.ChangeLeagueTitleChangeRes"
+    },
+    {
+      "id": 1173,
+      "name": "Cmd.LeagueInviteReq"
+    },
+    {
+      "id": 1174,
+      "name": "Cmd.LeagueInviteRes"
+    },
+    {
+      "id": 1175,
+      "name": "Cmd.JoinLeagueByInviteReq"
+    },
+    {
+      "id": 1176,
+      "name": "Cmd.JoinLeagueByInviteRes"
+    },
+    {
+      "id": 1177,
+      "name": "Cmd.ReceiveLeagueTaskAwardReq"
+    },
+    {
+      "id": 1178,
+      "name": "Cmd.ReceiveLeagueTaskAwardRes"
+    },
+    {
+      "id": 1179,
+      "name": "Cmd.GetDiamondRechargeListReq"
+    },
+    {
+      "id": 1180,
+      "name": "Cmd.GetDiamondRechargeListRes"
+    },
+    {
+      "id": 1181,
+      "name": "Cmd.DiamondRechargeReq"
+    },
+    {
+      "id": 1182,
+      "name": "Cmd.DiamondRechargeRes"
+    },
+    {
+      "id": 1183,
+      "name": "Cmd.VerifyOrderReq"
+    },
+    {
+      "id": 1184,
+      "name": "Cmd.VerifyOrderRes"
+    },
+    {
+      "id": 1185,
+      "name": "Cmd.MonthlyCardAwardReceiveReq"
+    },
+    {
+      "id": 1186,
+      "name": "Cmd.MonthlyCardAwardReceiveRes"
+    },
+    {
+      "id": 1187,
+      "name": "Cmd.GetMissionInfoByUIDReq"
+    },
+    {
+      "id": 1188,
+      "name": "Cmd.GetMissionInfoByUIDRes"
+    },
+    {
+      "id": 1189,
+      "name": "Cmd.GetGiftInfoByUIDReq"
+    },
+    {
+      "id": 1190,
+      "name": "Cmd.GetGiftInfoByUIDRes"
+    },
+    {
+      "id": 1191,
+      "name": "Cmd.GetRedbagListReq"
+    },
+    {
+      "id": 1192,
+      "name": "Cmd.GetRedbagListRes"
+    },
+    {
+      "id": 1193,
+      "name": "Cmd.SendRedbagToLeagueReq"
+    },
+    {
+      "id": 1194,
+      "name": "Cmd.SendRedbagToLeagueRes"
+    },
+    {
+      "id": 1195,
+      "name": "Cmd.GetRedbagReq"
+    },
+    {
+      "id": 1196,
+      "name": "Cmd.GetRedbagRes"
+    },
+    {
+      "id": 1197,
+      "name": "Cmd.ActivityPurchaseReq"
+    },
+    {
+      "id": 1198,
+      "name": "Cmd.ActivityPurchaseRes"
+    },
+    {
+      "id": 1199,
+      "name": "Cmd.RisingStarChooseHeroReq"
+    },
+    {
+      "id": 1200,
+      "name": "Cmd.RisingStarChooseHeroRes"
+    },
+    {
+      "id": 1201,
+      "name": "Cmd.ThousandGachaReq"
+    },
+    {
+      "id": 1202,
+      "name": "Cmd.ThousandGachaRes"
+    },
+    {
+      "id": 1203,
+      "name": "Cmd.ThousandGachaReplaceReq"
+    },
+    {
+      "id": 1204,
+      "name": "Cmd.ThousandGachaReplaceRes"
+    },
+    {
+      "id": 1205,
+      "name": "Cmd.SetRechargeRankAnonymousReq"
+    },
+    {
+      "id": 1206,
+      "name": "Cmd.SetRechargeRankAnonymousRes"
+    },
+    {
+      "id": 1207,
+      "name": "Cmd.CarnivalRankSendReq"
+    },
+    {
+      "id": 1208,
+      "name": "Cmd.CarnivalRankSendRes"
+    },
+    {
+      "id": 1209,
+      "name": "Cmd.GiftGoldIngotPurchaseReq"
+    },
+    {
+      "id": 1210,
+      "name": "Cmd.GiftGoldIngotPurchaseRes"
+    },
+    {
+      "id": 1211,
+      "name": "Cmd.GetFunctionPreviewInfoReq"
+    },
+    {
+      "id": 1212,
+      "name": "Cmd.GetFunctionPreviewInfoRes"
+    },
+    {
+      "id": 1213,
+      "name": "Cmd.GetFunctionPreviewRewardReq"
+    },
+    {
+      "id": 1214,
+      "name": "Cmd.GetFunctionPreviewRewardRes"
+    },
+    {
+      "id": 1215,
+      "name": "Cmd.BeastGachaTimesRewardReq"
+    },
+    {
+      "id": 1216,
+      "name": "Cmd.BeastGachaTimesRewardRes"
+    },
+    {
+      "id": 1218,
+      "name": "Cmd.PushVerifyOrdersS2C"
+    },
+    {
+      "id": 1219,
+      "name": "Cmd.SetRoleInfoReq"
+    },
+    {
+      "id": 1220,
+      "name": "Cmd.SetRoleInfoRes"
+    },
+    {
+      "id": 1221,
+      "name": "Cmd.GetRoleSelfInfoReq"
+    },
+    {
+      "id": 1222,
+      "name": "Cmd.GetRoleSelfInfoRes"
+    },
+    {
+      "id": 1223,
+      "name": "Cmd.ChangeHeroChooseReq"
+    },
+    {
+      "id": 1224,
+      "name": "Cmd.ChangeHeroChooseRes"
+    },
+    {
+      "id": 1225,
+      "name": "Cmd.GetAllAdornmentReq"
+    },
+    {
+      "id": 1226,
+      "name": "Cmd.GetAllAdornmentRes"
+    },
+    {
+      "id": 1227,
+      "name": "Cmd.SetGachaRankAnonymousReq"
+    },
+    {
+      "id": 1228,
+      "name": "Cmd.SetGachaRankAnonymousRes"
+    },
+    {
+      "id": 1229,
+      "name": "Cmd.SetClientRecordReq"
+    },
+    {
+      "id": 1230,
+      "name": "Cmd.SetClientRecordRes"
+    },
+    {
+      "id": 1231,
+      "name": "Cmd.GetClientRecordReq"
+    },
+    {
+      "id": 1232,
+      "name": "Cmd.GetClientRecordRes"
+    },
+    {
+      "id": 1233,
+      "name": "Cmd.GetBraveBingoReq"
+    },
+    {
+      "id": 1234,
+      "name": "Cmd.GetBraveBingoRes"
+    },
+    {
+      "id": 1235,
+      "name": "Cmd.HeroGemGachaChooseReq"
+    },
+    {
+      "id": 1236,
+      "name": "Cmd.HeroGemGachaChooseRes"
+    },
+    {
+      "id": 1237,
+      "name": "Cmd.ActivityMissionRewardGetReq"
+    },
+    {
+      "id": 1238,
+      "name": "Cmd.ActivityMissionRewardGetRes"
+    },
+    {
+      "id": 1239,
+      "name": "Cmd.SuperSigninBuyReq"
+    },
+    {
+      "id": 1240,
+      "name": "Cmd.SuperSigninBuyRes"
+    },
+    {
+      "id": 1241,
+      "name": "Cmd.SuperSigninFreeGetReq"
+    },
+    {
+      "id": 1242,
+      "name": "Cmd.SuperSigninFreeGetRes"
+    },
+    {
+      "id": 1243,
+      "name": "Cmd.GrownBoxPrayReq"
+    },
+    {
+      "id": 1244,
+      "name": "Cmd.GrownBoxPrayRes"
+    },
+    {
+      "id": 1245,
+      "name": "Cmd.GrownBoxOpenReq"
+    },
+    {
+      "id": 1246,
+      "name": "Cmd.GrownBoxOpenRes"
+    },
+    {
+      "id": 1248,
+      "name": "Cmd.NotifyServerDayPassS2C"
+    },
+    {
+      "id": 1249,
+      "name": "Cmd.ShowActivityRewardTakeReq"
+    },
+    {
+      "id": 1250,
+      "name": "Cmd.ShowActivityRewardTakeRes"
+    },
+    {
+      "id": 1251,
+      "name": "Cmd.HeroGiftActivityChooseReq"
+    },
+    {
+      "id": 1252,
+      "name": "Cmd.HeroGiftActivityChooseRes"
+    },
+    {
+      "id": 1253,
+      "name": "Cmd.ExchangeItemsReq"
+    },
+    {
+      "id": 1254,
+      "name": "Cmd.ExchangeItemsRes"
+    },
+    {
+      "id": 1255,
+      "name": "Cmd.GetPrayersReq"
+    },
+    {
+      "id": 1256,
+      "name": "Cmd.GetPrayersRes"
+    },
+    {
+      "id": 1257,
+      "name": "Cmd.GetRedeemCodeRewardReq"
+    },
+    {
+      "id": 1258,
+      "name": "Cmd.GetRedeemCodeRewardRes"
+    },
+    {
+      "id": 1259,
+      "name": "Cmd.GetCrossServerListReq"
+    },
+    {
+      "id": 1260,
+      "name": "Cmd.GetCrossServerListRes"
+    },
+    {
+      "id": 1261,
+      "name": "Cmd.UseMissionCompleteCardReq"
+    },
+    {
+      "id": 1262,
+      "name": "Cmd.UseMissionCompleteCardRes"
+    },
+    {
+      "id": 1263,
+      "name": "Cmd.ChooseFlipCardReq"
+    },
+    {
+      "id": 1264,
+      "name": "Cmd.ChooseFlipCardRes"
+    },
+    {
+      "id": 1265,
+      "name": "Cmd.FlipCardReq"
+    },
+    {
+      "id": 1266,
+      "name": "Cmd.FlipCardRes"
+    },
+    {
+      "id": 1267,
+      "name": "Cmd.FlipCardIntoNextReq"
+    },
+    {
+      "id": 1268,
+      "name": "Cmd.FlipCardIntoNextRes"
+    },
+    {
+      "id": 1269,
+      "name": "Cmd.ActivityTurntableChooseReq"
+    },
+    {
+      "id": 1270,
+      "name": "Cmd.ActivityTurntableChooseRes"
+    },
+    {
+      "id": 1271,
+      "name": "Cmd.ActivityTurntableGachaReq"
+    },
+    {
+      "id": 1272,
+      "name": "Cmd.ActivityTurntableGachaRes"
+    },
+    {
+      "id": 1273,
+      "name": "Cmd.SetTurntableGachaRankAnonymousReq"
+    },
+    {
+      "id": 1274,
+      "name": "Cmd.SetTurntableGachaRankAnonymousRes"
+    },
+    {
+      "id": 1275,
+      "name": "Cmd.ActivityTurntable2GachaReq"
+    },
+    {
+      "id": 1276,
+      "name": "Cmd.ActivityTurntable2GachaRes"
+    },
+    {
+      "id": 1277,
+      "name": "Cmd.MonthlyCard2AwardReceiveReq"
+    },
+    {
+      "id": 1278,
+      "name": "Cmd.MonthlyCard2AwardReceiveRes"
+    },
+    {
+      "id": 1279,
+      "name": "Cmd.MonthlyCard2BuyReq"
+    },
+    {
+      "id": 1280,
+      "name": "Cmd.MonthlyCard2BuyRes"
+    },
+    {
+      "id": 1281,
+      "name": "Cmd.BuyMiddlePassportReq"
+    },
+    {
+      "id": 1282,
+      "name": "Cmd.BuyMiddlePassportRes"
+    },
+    {
+      "id": 1283,
+      "name": "Cmd.ActivityAdChainGiftPackClaimReq"
+    },
+    {
+      "id": 1284,
+      "name": "Cmd.ActivityAdChainGiftPackClaimRes"
+    },
+    {
+      "id": 1285,
+      "name": "Cmd.ActivityAdFreeSupplyClaimReq"
+    },
+    {
+      "id": 1286,
+      "name": "Cmd.ActivityAdFreeSupplyClaimRes"
+    },
+    {
+      "id": 1287,
+      "name": "Cmd.GetCarnivalInfoReq"
+    },
+    {
+      "id": 1288,
+      "name": "Cmd.GetCarnivalInfoRes"
+    },
+    {
+      "id": 1289,
+      "name": "Cmd.PassCarnivalDungeonReq"
+    },
+    {
+      "id": 1290,
+      "name": "Cmd.PassCarnivalDungeonRes"
+    },
+    {
+      "id": 1291,
+      "name": "Cmd.OneClickGetRedbagReq"
+    },
+    {
+      "id": 1292,
+      "name": "Cmd.OneClickGetRedbagRes"
+    },
+    {
+      "id": 1293,
+      "name": "Cmd.LuckyCatActivityReq"
+    },
+    {
+      "id": 1294,
+      "name": "Cmd.LuckyCatActivityRes"
+    },
+    {
+      "id": 1295,
+      "name": "Cmd.FlopCardActivityFlopReq"
+    },
+    {
+      "id": 1296,
+      "name": "Cmd.FlopCardActivityFlopRes"
+    },
+    {
+      "id": 1297,
+      "name": "Cmd.FlopCardActivitySetTargetNumReq"
+    },
+    {
+      "id": 1298,
+      "name": "Cmd.FlopCardActivitySetTargetNumRes"
+    },
+    {
+      "id": 1299,
+      "name": "Cmd.SoldItemReq"
+    },
+    {
+      "id": 1300,
+      "name": "Cmd.SoldItemRes"
+    },
+    {
+      "id": 1301,
+      "name": "Cmd.LuckyGiftBagPurchaseReq"
+    },
+    {
+      "id": 1302,
+      "name": "Cmd.LuckyGiftBagPurchaseRes"
+    },
+    {
+      "id": 1303,
+      "name": "Cmd.SuperSignin2FreeGetReq"
+    },
+    {
+      "id": 1304,
+      "name": "Cmd.SuperSignin2FreeGetRes"
+    },
+    {
+      "id": 1305,
+      "name": "Cmd.SuperSignin2BuyReq"
+    },
+    {
+      "id": 1306,
+      "name": "Cmd.SuperSignin2BuyRes"
+    },
+    {
+      "id": 1307,
+      "name": "Cmd.GetRoomDataReq"
+    },
+    {
+      "id": 1308,
+      "name": "Cmd.GetRoomDataRes"
+    },
+    {
+      "id": 1309,
+      "name": "Cmd.ChangeRoomDataReq"
+    },
+    {
+      "id": 1310,
+      "name": "Cmd.ChangeRoomDataRes"
+    },
+    {
+      "id": 1311,
+      "name": "Cmd.GetAllClothesReq"
+    },
+    {
+      "id": 1312,
+      "name": "Cmd.GetAllClothesRes"
+    },
+    {
+      "id": 1313,
+      "name": "Cmd.SaveClothesReq"
+    },
+    {
+      "id": 1314,
+      "name": "Cmd.SaveClothesRes"
+    },
+    {
+      "id": 1315,
+      "name": "Cmd.GetAllNpcInfoReq"
+    },
+    {
+      "id": 1316,
+      "name": "Cmd.GetAllNpcInfoRes"
+    },
+    {
+      "id": 1317,
+      "name": "Cmd.GetFirstLoginRewardReq"
+    },
+    {
+      "id": 1318,
+      "name": "Cmd.GetFirstLoginRewardRes"
+    },
+    {
+      "id": 1319,
+      "name": "Cmd.GetServerCurrentTimeReq"
+    },
+    {
+      "id": 1320,
+      "name": "Cmd.GetServerCurrentTimeRes"
+    },
+    {
+      "id": 1321,
+      "name": "Cmd.EmptyReq"
+    },
+    {
+      "id": 1322,
+      "name": "Cmd.EmptyRes"
+    },
+    {
+      "id": 1323,
+      "name": "Cmd.ClaimFirstLoginRewardReq"
+    },
+    {
+      "id": 1324,
+      "name": "Cmd.ClaimFirstLoginRewardRes"
+    },
+    {
+      "id": 1326,
+      "name": "Cmd.RoleInfoChangeS2C"
+    },
+    {
+      "id": 1328,
+      "name": "Cmd.ItemChangeS2C"
+    },
+    {
+      "id": 1329,
+      "name": "Cmd.GetNextLevelRewardReq"
+    },
+    {
+      "id": 1330,
+      "name": "Cmd.GetNextLevelRewardRes"
+    },
+    {
+      "id": 1331,
+      "name": "Cmd.GetCatInfoReq"
+    },
+    {
+      "id": 1332,
+      "name": "Cmd.GetCatInfoRes"
+    },
+    {
+      "id": 1334,
+      "name": "Cmd.CatInfoChangeS2C"
+    },
+    {
+      "id": 1335,
+      "name": "Cmd.PackageBagReq"
+    },
+    {
+      "id": 1336,
+      "name": "Cmd.PackageBagRes"
+    },
+    {
+      "id": 1337,
+      "name": "Cmd.CatBackImmediatelyReq"
+    },
+    {
+      "id": 1338,
+      "name": "Cmd.CatBackImmediatelyRes"
+    },
+    {
+      "id": 1340,
+      "name": "Cmd.BackToHomeRewardS2C"
+    },
+    {
+      "id": 1342,
+      "name": "Cmd.NpcChangeS2C"
+    },
+    {
+      "id": 1344,
+      "name": "Cmd.MissionChangeS2C"
+    },
+    {
+      "id": 1345,
+      "name": "Cmd.OpenPhotoBookReq"
+    },
+    {
+      "id": 1346,
+      "name": "Cmd.OpenPhotoBookRes"
+    },
+    {
+      "id": 1347,
+      "name": "Cmd.PlantReq"
+    },
+    {
+      "id": 1348,
+      "name": "Cmd.PlantRes"
+    },
+    {
+      "id": 1349,
+      "name": "Cmd.PlantOpReq"
+    },
+    {
+      "id": 1350,
+      "name": "Cmd.PlantOpRes"
+    },
+    {
+      "id": 1351,
+      "name": "Cmd.GetAllPlantReq"
+    },
+    {
+      "id": 1352,
+      "name": "Cmd.GetAllPlantRes"
+    },
+    {
+      "id": 1354,
+      "name": "Cmd.PlantChangeS2C"
+    },
+    {
+      "id": 1355,
+      "name": "Cmd.GiveGiftToNpcReq"
+    },
+    {
+      "id": 1356,
+      "name": "Cmd.GiveGiftToNpcRes"
+    },
+    {
+      "id": 1358,
+      "name": "Cmd.NpcGiftToPlayerS2C"
+    },
+    {
+      "id": 1359,
+      "name": "Cmd.NPCChatHistroyUpdateReq"
+    },
+    {
+      "id": 1361,
+      "name": "Cmd.GetGuideReq"
+    },
+    {
+      "id": 1362,
+      "name": "Cmd.GetGuideRes"
+    },
+    {
+      "id": 1363,
+      "name": "Cmd.SaveGuideReq"
+    },
+    {
+      "id": 1364,
+      "name": "Cmd.SaveGuideRes"
+    },
+    {
+      "id": 1365,
+      "name": "Cmd.GetPhotosReq"
+    },
+    {
+      "id": 1366,
+      "name": "Cmd.GetPhotosRes"
+    },
+    {
+      "id": 1367,
+      "name": "Cmd.BuyTicketsReq"
+    },
+    {
+      "id": 1368,
+      "name": "Cmd.BuyTicketsRes"
+    },
+    {
+      "id": 1369,
+      "name": "Cmd.DelPhotosReq"
+    },
+    {
+      "id": 1370,
+      "name": "Cmd.DelPhotosRes"
+    },
+    {
+      "id": 1371,
+      "name": "Cmd.OpenNpcReq"
+    },
+    {
+      "id": 1372,
+      "name": "Cmd.OpenNpcRes"
+    },
+    {
+      "id": 1373,
+      "name": "Cmd.AddNpcExpReq"
+    },
+    {
+      "id": 1374,
+      "name": "Cmd.AddNpcExpRes"
+    },
+    {
+      "id": 1375,
+      "name": "Cmd.BuyDiamondTimesReq"
+    },
+    {
+      "id": 1376,
+      "name": "Cmd.BuyDiamondTimesRes"
+    },
+    {
+      "id": 1377,
+      "name": "Cmd.ReportFirstLoginVideoFinishReq"
+    },
+    {
+      "id": 1378,
+      "name": "Cmd.ReportFirstLoginVideoFinishRes"
+    },
+    {
+      "id": 1380,
+      "name": "Cmd.FriendChangeS2C"
+    },
+    {
+      "id": 5003,
+      "name": "Cmd.GetRoleInfoReq"
+    },
+    {
+      "id": 5004,
+      "name": "Cmd.GetRoleInfoRes"
+    },
+    {
+      "id": 5005,
+      "name": "Cmd.ChatSendReq"
+    },
+    {
+      "id": 5006,
+      "name": "Cmd.ChatSendRes"
+    },
+    {
+      "id": 5008,
+      "name": "Cmd.SyncChatChannelInfoS2C"
+    },
+    {
+      "id": 5010,
+      "name": "Cmd.SyncChatChannelMsgS2C"
+    },
+    {
+      "id": 5012,
+      "name": "Cmd.OpenOrCloseChatChannelS2C"
+    },
+    {
+      "id": 5013,
+      "name": "Cmd.QueryChatHistoryReq"
+    },
+    {
+      "id": 5014,
+      "name": "Cmd.QueryChatHistoryRes"
+    },
+    {
+      "id": 5015,
+      "name": "Cmd.ReadPrivateChatReq"
+    },
+    {
+      "id": 5016,
+      "name": "Cmd.ReadPrivateChatRes"
+    },
+    {
+      "id": 5018,
+      "name": "Cmd.MarqueeS2C"
+    },
+    {
+      "id": 5020,
+      "name": "Cmd.NotifyNewFunctionOpenS2C"
+    }
+  ],
+  "cross": [
+    {
+      "id": 64003,
+      "name": "Cross.RegisterModuleReq"
+    },
+    {
+      "id": 64004,
+      "name": "Cross.RegisterModuleRes"
+    },
+    {
+      "id": 64006,
+      "name": "Cross.SyncRankScoreDataToCrossS2S"
+    },
+    {
+      "id": 64008,
+      "name": "Cross.SyncRankDataToCrossS2S"
+    },
+    {
+      "id": 64010,
+      "name": "Cross.CrossCommonRankActivityInfoSyncS2S"
+    }
+  ],
+  "gm": [
+    {
+      "id": 63003,
+      "name": "Gm.RegisterModuleReq"
+    },
+    {
+      "id": 63004,
+      "name": "Gm.RegisterModuleRes"
+    },
+    {
+      "id": 63005,
+      "name": "Gm.GameNoticeGetReq"
+    },
+    {
+      "id": 63006,
+      "name": "Gm.GameNoticeGetRes"
+    },
+    {
+      "id": 63007,
+      "name": "Gm.GameNoticeChangeReq"
+    },
+    {
+      "id": 63008,
+      "name": "Gm.GameNoticeChangeRes"
+    },
+    {
+      "id": 63010,
+      "name": "Gm.SysMarqueeS2S"
+    },
+    {
+      "id": 63012,
+      "name": "Gm.SystemMailS2S"
+    },
+    {
+      "id": 63014,
+      "name": "Gm.GetRoleAllInfoS2S"
+    },
+    {
+      "id": 63016,
+      "name": "Gm.DelChatChannelMsgsS2S"
+    },
+    {
+      "id": 63018,
+      "name": "Gm.AddRedeemCodeS2S"
+    },
+    {
+      "id": 63020,
+      "name": "Gm.RetryPlayerOrderS2S"
+    },
+    {
+      "id": 63022,
+      "name": "Gm.GetDevelopmentRecordS2S"
+    },
+    {
+      "id": 63024,
+      "name": "Gm.SetDevelopmentRecordS2S"
+    }
+  ]
+}

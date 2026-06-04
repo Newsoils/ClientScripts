@@ -2,6 +2,7 @@ using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using UnityEngine;
+using CLIP.Project_Mouse.Kernel;
 
 public class PlantPlantMode : IEditMode
 {
@@ -79,7 +80,7 @@ public class PlantPlantMode : IEditMode
                 int seedCount = seedItem != null ? seedItem._item_count : 0;
                 if (seedCount <= 0)
                 {
-                    EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "种子数量不足！");
+                    PromptManager.ShowUpPrompt(PromptId.SeedNotEnough);
                     EditManager.Instance.ExitCurrentMode();
                     return;
                 }
@@ -110,7 +111,7 @@ public class PlantPlantMode : IEditMode
                         result = "吊顶花盆";
                         break;
                 }
-                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "该植物只能种在" + result);
+                PromptManager.ShowUpPrompt(PromptId.PlantTypeLimit, result);
             }
         }
         canInteract = true;

@@ -127,6 +127,31 @@ public class CharacterSkinnedMesh : MonoBehaviour
             TryRebindAnimator();
     }
 
+    /// <summary>
+    /// 对所有已应用部件中 partIndex 等于 targetIndex 的 SMR 替换材质。
+    /// 用于换装场景中对"身体部位"（材质id=01）做特殊材质覆盖。
+    /// </summary>
+    public void ApplyMaterialByPartIndex(int targetIndex, Material mat)
+    {
+        if (mat == null || characterRenderers == null)
+            return;
+        foreach (var kvp in characterRenderers)
+        {
+            foreach (var skm in kvp.Value)
+            {
+                if (skm == null)
+                    continue;
+                string[] names = skm.name.Split('_');
+                if (names.Length < 4)
+                    continue;
+                if (!int.TryParse(names[3], out int partIndex))
+                    continue;
+                if (partIndex == targetIndex)
+                    skm.material = mat;
+            }
+        }
+    }
+
     public void RemovePart(string partName)
     {
         if (characterRenderers != null && characterRenderers.TryGetValue(partName, out var list) && list != null)

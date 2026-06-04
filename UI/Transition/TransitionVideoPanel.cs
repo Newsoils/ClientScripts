@@ -26,6 +26,8 @@ public class TransitionVideoPanel : UIPanelBase
     private bool _isSkipped;
     private bool _isPlaying;
 
+    public  bool IsPlaying => _isPlaying;
+
     private void Start()
     {
         if (canvasGroup == null)

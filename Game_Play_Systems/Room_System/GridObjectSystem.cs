@@ -291,7 +291,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
             if (obj is Pot potBlocked && PlantManager.Instance != null && PlantManager.Instance.GetPlantByPot(potBlocked) != null)
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "花盆里有植物时不能删除花盆，请先收获或铲除植物！");
+                PromptManager.ShowUpPrompt(PromptId.PotHasPlant);
                 return false;
             }
             HashSet<Int2> occupiedPositions = CalculateOccpiedPos(obj, pos);

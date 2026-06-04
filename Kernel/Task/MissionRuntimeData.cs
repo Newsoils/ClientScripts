@@ -47,47 +47,10 @@ namespace CLIP.Project_Mouse.Kernel
         /// </summary>
         public bool CanGetReward => status == 1;
 
-        public event Action<float> OnProgressChange;
-        public event Action OnTaskFinished;
-        public event Action OnTaskDestroy;
-
         public void AcceptTask()
         {
             isAccept = true;
         }
 
-        //public void FinishTask()
-        //{
-        //    OnTaskFinished?.Invoke();
-        //    IsFinish = true;
-        //}
-
-        //public void AddOperationTimes(int count)
-        //{
-        //    if (!isAccept || IsFinish)
-        //        return;
-
-        //    current += count;
-        //    OnProgressChange?.Invoke(Progress);
-
-        //    if (current >= target)
-        //    {
-        //        CanGetReward = true;
-        //        //Debug.Log("达到完成任务的条件");
-        //    }
-        //}
-
-
-
-        //public void RestoreState(bool isAccept, bool canGetReward, bool isFinish,
-        //    int currentCount, int targetCount)
-        //{
-        //    this.isAccept = isAccept;
-        //    CanGetReward = canGetReward;
-        //    IsFinish = isFinish;
-        //    current = currentCount;
-        //    target = targetCount;
-        //    OnProgressChange?.Invoke(Progress);
-        //}
     }
 }

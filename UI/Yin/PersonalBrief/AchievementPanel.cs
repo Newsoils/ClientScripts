@@ -13,7 +13,6 @@ namespace CLIP.Project_Mouse.UI
         public GameObject obj;
 
         public Achievement_Design_Info_DB_SO achievementSO;
-        //public PersonalBriefPanel personalBriefCanvasInteractManager;
 
         [Header("Achievement Panel")]
         public List<achievement_design_info> displayedAchievementInfo = new List<achievement_design_info>();
@@ -43,8 +42,9 @@ namespace CLIP.Project_Mouse.UI
         public Transform allAchievementRoot;
         public GameObject achievementUnitPrefab;
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
+            base.OnEnable();
             InitAchievementPanel();
         }
 

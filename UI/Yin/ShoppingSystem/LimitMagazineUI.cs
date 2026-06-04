@@ -8,6 +8,7 @@ using Newtonsoft.Json;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using CLIP.Project_Mouse.Kernel;
 
 namespace CLIP.Project_Mouse.UI
 {
@@ -164,7 +165,7 @@ namespace CLIP.Project_Mouse.UI
         private void OnBuyColorMintClicked()
         {
             int price = GetColorMintPriceInCans();
-            PromptMessage.Instance.ShowPrompt($"是否花费{price}罐罐购买1枚许愿薄荷？", BuyOneColorMintWithTicketsReq);
+            PromptManager.ShowPrompt(PromptId.BuyColorMintConfirm, BuyOneColorMintWithTicketsReq, price);
         }
 
         private void BuyOneColorMintWithTicketsReq()
@@ -186,7 +187,7 @@ namespace CLIP.Project_Mouse.UI
             if (info == null)
             {
                 itemId = 0;
-                PromptMessage.Instance.ShowUpPrompt("许愿薄荷配置不存在");
+                PromptManager.ShowUpPrompt(PromptId.ColorMintConfigMissing);
                 return false;
             }
 
@@ -199,7 +200,7 @@ namespace CLIP.Project_Mouse.UI
             if (pendingSingleMintPurchase)
             {
                 pendingSingleMintPurchase = false;
-                PromptMessage.Instance.ShowUpPrompt("购买成功");
+                PromptManager.ShowUpPrompt(PromptId.PurchaseSuccess);
                 RefreshColorMintCountDisplay();
                 return;
             }
@@ -219,13 +220,13 @@ namespace CLIP.Project_Mouse.UI
             ulong shopUID = GetCurrentShopUID();
             if (shopUID == 0UL)
             {
-                PromptMessage.Instance.ShowUpPrompt("商店数据未同步，请重新打开商店");
+                PromptManager.ShowUpPrompt(PromptId.ShopDataOutOfSync);
                 return;
             }
 
             int price = currentSuitGoods.CostCount;
             string currencyName = string.IsNullOrEmpty(currentSuitGoods.CurrencyName) ? "鱼币" : currentSuitGoods.CurrencyName;
-            PromptMessage.Instance.ShowPrompt($"是否花费{price}{currencyName}购买整套？", () =>
+            PromptManager.ShowPrompt(PromptId.BuySuitConfirm, () =>
             {
                 NetWork_Center_WSS.SendMsg(new BuyGoodsReq
                 {
@@ -233,7 +234,7 @@ namespace CLIP.Project_Mouse.UI
                     GoodsID = currentSuitGoods.GoodsID,
                     BuyAmount = 1
                 });
-            });
+            }, price, currencyName);
         }
         private ulong GetCurrentShopUID()
         {
@@ -333,7 +334,7 @@ namespace CLIP.Project_Mouse.UI
         {
             if (GachaManager.Instance == null || !GachaManager.Instance.TryGetRecordUIDByPoolID(currentPool, out ulong recordUID))
             {
-                PromptMessage.Instance.ShowUpPrompt("奖池数据未同步，请稍后再试");
+                PromptManager.ShowUpPrompt(PromptId.GachaPoolOutOfSync);
                 return;
             }
 
@@ -353,7 +354,7 @@ namespace CLIP.Project_Mouse.UI
 
             if (haveMint >= mintCost)
             {
-                PromptMessage.Instance.ShowPrompt($"是否花费{mintCost}枚许愿薄荷进行{pullLabel}次许愿？", () => SendGachaRequestToServer(pullCount));
+                PromptManager.ShowPrompt(PromptId.GachaConfirm, () => SendGachaRequestToServer(pullCount), mintCost, pullLabel);
                 return;
             }
 
@@ -361,9 +362,10 @@ namespace CLIP.Project_Mouse.UI
             int cansPerMint = GetColorMintPriceInCans();
             int cansNeeded = shortfall * cansPerMint;
 
-            PromptMessage.Instance.ShowPrompt(
-                $"许愿薄荷不足，是否花费{cansNeeded}罐罐购买{shortfall}枚许愿薄荷并进行{pullLabel}次许愿？",
-                () => BuyMintWithTicketsThenGacha(pullCount, shortfall));
+            PromptManager.ShowPrompt(
+                PromptId.GachaMintShortage,
+                () => BuyMintWithTicketsThenGacha(pullCount, shortfall),
+                cansNeeded, shortfall, pullLabel);
         }
 
         private void BuyMintWithTicketsThenGacha(int pullCount, int shortfall)

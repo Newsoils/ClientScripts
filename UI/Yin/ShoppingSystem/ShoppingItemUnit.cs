@@ -192,7 +192,7 @@ namespace CLIP
                         return;
                     if (shopUID == 0UL || goodsID == 0L)
                     {
-                        PromptMessage.Instance.ShowUpPrompt("商店数据未同步，请重新打开商店");
+                        PromptManager.ShowUpPrompt(PromptId.ShopDataOutOfSync);
                         return;
                     }
 
@@ -200,9 +200,7 @@ namespace CLIP
                     string currencyName = shopGoodsData != null && !string.IsNullOrEmpty(shopGoodsData.CurrencyName)
                         ? shopGoodsData.CurrencyName
                         : itemInShop.currency_unit;
-                    string message = $"是否要花费{price}{currencyName}购买{itemInShop.name}?";
-
-                    PromptMessage.Instance.ShowPrompt(message, () =>
+                    PromptManager.ShowPrompt(PromptId.BuyItemConfirm, () =>
                     {
                         var req = new BuyGoodsReq
                         {
@@ -211,7 +209,7 @@ namespace CLIP
                             BuyAmount = 1
                         };
                         NetWork_Center_WSS.SendMsg(req);
-                    });
+                    }, price, currencyName, itemInShop.name);
                 }
                 public void SetPriceIcon()
                 {

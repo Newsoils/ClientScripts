@@ -249,7 +249,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 RestoreToOriginalPosition();
                 _selected.transform.DOKill();
                 _selected.transform.DOMove(_originalWorldPosition, LIFT_DURATION);
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "不能将家具移动到其他房间！");
+                PromptManager.ShowWarning(PromptId.FurnitureMoveCrossRoom);
                 EvtDsp.TriggerEvt(EvtNames.Close_Edit_Placement_Panel);
                 _selected = null;
                 EditManager.Instance.SetMode(new DefaultGridObjectMode());
@@ -285,7 +285,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
             else
             {
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "空间不足，无法放置！");
+                PromptManager.ShowWarning(PromptId.FurnitureMoveNoSpace);
                 RestoreToOriginalPosition();
                 _selected.transform.DOKill();
                 _selected.transform.DOMove(_originalWorldPosition, LIFT_DURATION);
@@ -365,7 +365,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             else
             {
                 RoomSystem.currentRoom.GridState.SetOccupied(_selected.data.gridLayerUID, rawOccupiedPositions, true);
-                EvtDsp.TriggerEvt<string>(EvtNames.Show_Warning_Panel, "旋转后位置不合法，无法旋转!");
+                PromptManager.ShowWarning(PromptId.FurnitureRotateInvalid);
             }
         }
 

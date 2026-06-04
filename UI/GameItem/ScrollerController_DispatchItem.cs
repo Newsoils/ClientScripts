@@ -8,6 +8,7 @@ using CLIP.Project_Mouse.UI;
 using EnhancedUI.EnhancedScroller;
 using UnityEngine;
 using UnityEngine.UI;
+using CLIP.Project_Mouse.Kernel;
 
 public class ScrollerController_DispatchItem : MonoBehaviour, IEnhancedScrollerDelegate
 {
@@ -147,7 +148,7 @@ public class ScrollerController_DispatchItem : MonoBehaviour, IEnhancedScrollerD
         }
         else if (state == DispatchWarehouseCellState.InUseElsewhere)
         {
-            EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, "库存不足，该物品已在其他背包中使用！");
+            PromptManager.ShowUpPrompt(PromptId.DispatchItemNotEnough);
             return;
         }
         else

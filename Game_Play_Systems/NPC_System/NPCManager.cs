@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using CLIP.Framework_Core.Event;
-using CLIP.Framework_Core.Network;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Kernel;
 using Google.Protobuf;
-using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
@@ -41,38 +38,30 @@ namespace CLIP.Project_Mouse.Game_Play_System
             JsonDataManager.LoadNPCData(out NPC_Info_Dic, out NPC_Base_Dic, out NPCFavor_LevelUp_neededExp);
             NPCChatManager.Instance.Initialize();
 
-            //EvtDsp.AddEvt<int>(EvtNames.Meet_NPC, Meet_NPC);
             EvtDsp.AddEvt<int, long>(EvtNames.Give_Gift_TO_NPC, Give_Gift_To_NPC);
+        }
 
-            // StartCoroutine(waitForAskNPCData());
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            EvtDsp.RemoveEvt<int, long>(EvtNames.Give_Gift_TO_NPC, Give_Gift_To_NPC);
         }
 
         void Update()
         {
             //测试代码
 
-            var keyboard = Keyboard.current;
-            if (keyboard == null) return;
+            //var keyboard = Keyboard.current;
+            //if (keyboard == null) return;
 
-            //if (keyboard.mKey.wasPressedThisFrame)
+            //if (keyboard.gKey.wasPressedThisFrame)
             //{
-            //    int randomNPCId = UnityEngine.Random.Range(1, NPC_Info_Dic.Count + 1);
-            //    EvtDsp.TriggerEvt<int>(EvtNames.Meet_NPC, randomNPCId);
+            //    var item = Global_Inventory_Manager.Items.FirstOrDefault();
+            //    Give_Gift_To_NPC(1, item.item_id);
             //}
-
-            if (keyboard.gKey.wasPressedThisFrame)
-            {
-                var item = Global_Inventory_Manager.Items.FirstOrDefault();
-                Give_Gift_To_NPC(1, item.item_id);
-            }
-            if(keyboard.f10Key.wasPressedThisFrame)
-            {
-
-            }
-
-            //if (keyboard.aKey.wasPressedThisFrame)
+            //if(keyboard.f10Key.wasPressedThisFrame)
             //{
-            //    Ask_For_All_NPC_Data();
+
             //}
         }
 
@@ -80,68 +69,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             return NPC_Info_Dic.TryGetValue(npcId, out  info);
         }
-
-
-        // public IEnumerator waitForAskNPCData()
-        // {
-        //     yield return new WaitForSeconds(1f);
-        //     Ask_For_All_NPC_Data();
-        // }
-
-
-        //public void Meet_NPC(int npc_id)
-        //{
-        //    Debug.Log("遇见NPC：" + npc_id + "\t" + NPC_Base_Dic[npc_id].npc_name);
-        //    //序列化
-        //    var json = GF_SP.SerializeObject(npc_id);
-        //    //传给TS层
-        //    on_Meet_NPC?.Invoke(json);
-        //}
-
-        //public void Give_Gift_To_NPC(int npc_id, Item_Type item_type)
-        //{
-        //    Debug.Log("给NPC送礼物：" + npc_id + "\t" + NPC_Base_Dic[npc_id].npc_name + "\t" + "礼物类型：" + item_type.ToString());
-        //    //序列化
-
-        //    var data = new Gift_To_NPC_Msg(npc_id, item_type);
-        //    var json = GF_SP.SerializeObject(data);
-
-        //    //传给TS层
-        //    on_Give_Gift_ToNPC?.Invoke(json);
-        //}
-
-        //public void Ask_For_Single_NPC_Data(int npc_ID)
-        //{
-        //    var data = GF_SP.SerializeObject(npc_ID);
-        //    ask_Single_NPC_Data?.Invoke(data);
-        //}
-
-        // public void Ask_For_All_NPC_Data()
-        // {
-        //     ask_All_NPC_Data?.Invoke();
-        // }
-
-
-        //public string get_receiver_name()
-        //{
-        //    return "NPC_Manager";
-        //}
-
-        //public void Receive_NPC_Data(string json)
-        //{
-        //    var newData = JsonConvert.DeserializeObject<NPC_RuntimeData>(json);
-
-        //    //更新数据
-        //    var npc_Info = NPC_Info_Dic[newData.npc_id];
-
-        //    npc_Info._npc_RuntimeData = newData;
-        //    npc_Info.npc_Next_Favor_Level = Next_Level_Favor_Exp_Needed(npc_Info._npc_RuntimeData.favor_level);
-
-        //    EvtDsp.TriggerEvt<NPC_RuntimeData>(EvtNames.On_Single_NPC_Data_Updated, newData);
-        //    EvtDsp.TriggerEvt(EvtNames.On_NPC_Data_Update);
-        //    Debug.Log("收到NPC数据：" + newData.npc_id + "\t" + NPC_Info_Dic[newData.npc_id]._npc_Base.npc_name
-        //        + "\t" + "好感度等级：" + newData.favor_level + "\t" + "好感度：" + newData.favor_Value);
-        //}
 
 
         public void ReceiveNpcDataChange(Cmd.NpcChangeS2C npcChangeS2C)

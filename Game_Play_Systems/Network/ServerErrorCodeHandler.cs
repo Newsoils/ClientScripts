@@ -4,6 +4,7 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Game_Play_System;
 using Common;
+using CLIP.Project_Mouse.Kernel;
 
 namespace CLIP.Project_Mouse.Network
 {
@@ -71,7 +72,7 @@ namespace CLIP.Project_Mouse.Network
         private static void OnCurrencyNotEnough(string[] args)
         {
             Log.Warn("[ServerErrorCodeHandler] Currency not enough.");
-            string message = FormatMessage("货币不足，是否前往充值界面？", args);
+            string message = PromptManager.Instance.GetText(PromptId.CurrencyNotEnough, args);
             EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, message, OpenPayPanel);
         }
 
@@ -92,7 +93,7 @@ namespace CLIP.Project_Mouse.Network
         private static void OnPlantPotNotInRoom(string[] args)
         {
             Log.Warn("[ServerErrorCodeHandler] Plant pot not in room.");
-            string message = FormatMessage("先点击完成种植保存花盆摆放再种植哦！", args);
+            string message = PromptManager.Instance.GetText(PromptId.PotPlacementHint, args);
             EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, message);
         }
 
@@ -108,7 +109,7 @@ namespace CLIP.Project_Mouse.Network
         private static void OnLoveTicketNotEnough(string[] args)
         {
             Log.Warn("[ServerErrorCodeHandler] Love ticket not enough.");
-            string message = FormatMessage("爱心车票不足，是否前往商店购买？", args);
+            string message = PromptManager.Instance.GetText(PromptId.LoveTicketNotEnough, args);
             EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, message, OpenShoppingPanel);
         }
 
@@ -130,14 +131,14 @@ namespace CLIP.Project_Mouse.Network
         private static void OnGachaTimesNotEnoughToday(string[] args)
         {
             Log.Warn("[ServerErrorCodeHandler] Gacha times not enough today.");
-            string message = FormatMessage("今日抽卡次数已用完", args);
+            string message = PromptManager.Instance.GetText(PromptId.GachaTimesExhausted, args);
             EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, message);
         }
 
         private static void OnGachaTimesLeftFewToday(string[] args)
         {
             Log.Warn("[ServerErrorCodeHandler] Gacha times left few today.");
-            string message = FormatMessage("今日抽卡次数不足，还剩{0}次", args);
+            string message = PromptManager.Instance.GetText(PromptId.GachaTimesLow, args);
             EvtDsp.TriggerEvt<string>(EvtNames.ShowUpPrompt, message);
         }
 

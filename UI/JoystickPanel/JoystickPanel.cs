@@ -27,6 +27,8 @@ namespace CLIP.Project_Mouse.UI
             EvtDsp.AddEvt(EvtNames.OnDispatchPanelClose, OpenPanel);
             EvtDsp.AddEvt(EvtNames.OnShoppingPanelOpen, ClosePanel);
             EvtDsp.AddEvt(EvtNames.OnShoppingPanelClose, OpenPanel);
+            EvtDsp.AddEvt(EvtNames.OnTakePhotoPanelOpen, ClosePanel);
+            EvtDsp.AddEvt(EvtNames.OnTakePhotoPanelClose, OpenPanel);
         }
         public override void OnDestroy()
         {
@@ -41,6 +43,8 @@ namespace CLIP.Project_Mouse.UI
             EvtDsp.RemoveEvt(EvtNames.OnDispatchPanelClose, OpenPanel);
             EvtDsp.RemoveEvt(EvtNames.OnShoppingPanelOpen, ClosePanel);
             EvtDsp.RemoveEvt(EvtNames.OnShoppingPanelClose, OpenPanel);
+            EvtDsp.RemoveEvt(EvtNames.OnTakePhotoPanelOpen, ClosePanel);
+            EvtDsp.RemoveEvt(EvtNames.OnTakePhotoPanelClose, OpenPanel);
         }
         public void SetInputValue(Vector2 input)
         {

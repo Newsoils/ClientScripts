@@ -210,17 +210,6 @@ namespace CLIP
                     /// </summary>
                     public void on_scene_loaded()
                     {
-                        // 判断当前是否是派遣场景
-                        bool _is_dispatch = false;
-                        string currentSceneName = SceneManager.GetActiveScene().name;
-                        if (currentSceneName.Contains("Dispatch") || currentSceneName.Contains("dispatch"))
-                            _is_dispatch = true;
-
-                        _dispatch_configuration_so._dispatch_config.map_info_list.ForEach((x) =>
-                        {
-                            if (currentSceneName == x.map_name)
-                                _is_dispatch = true;
-                        });
 
                         // 开启协程处理，不要直接调用
                         StartCoroutine(DelayedTriggerReward());
@@ -299,18 +288,7 @@ namespace CLIP
                     /// </summary>
                     public void force_dispatch_start()
                     {
-                        //if (!_player_dispatch_state.Try_Finish_Preparation())
-                        //{
-                        //    Log.Error("DispatchManager：出发失败！");
-                        //    return;
-                        //}
-                        //if (string.IsNullOrEmpty(_player_dispatch_state._current_dispatch_info.carried_food_name) ||
-                        //      string.IsNullOrEmpty(_player_dispatch_state._current_dispatch_info.carried_snack_name) ||
-                        //      string.IsNullOrEmpty(_player_dispatch_state._current_dispatch_info.carried_tape_name))
-                        //{
-                        //    Notice_To_UI("未完成准备，无法开始派遣！");
-                        //    return;
-                        //}
+
                         if (Global_Game_Manager.Instance?._current_cat_info != null
                             && Global_Game_Manager.Instance.IsCatCurrentlyTraveling())
                         {
@@ -320,7 +298,6 @@ namespace CLIP
 
                         On_Start_Dispatch();
 
-                        //clear_text_displpay();
                     }
 
 
@@ -663,16 +640,6 @@ namespace CLIP
                         EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, req);
                     }
 
-                    // -------------------- 各类事件回调 --------------------
-
-                    ///// <summary>
-                    ///// 准备派遣完成
-                    ///// </summary>
-                    //public void _on_finishing_preparation()
-                    //{
-                    //    Debug.Log("准备完成，开始派遣");
-                    //    _warehouse_UI_event_hub_so._invoke_on_refresh_warehouse_UI();
-                    //}
 
                     /// <summary>
                     /// 获取中途照片事件触发

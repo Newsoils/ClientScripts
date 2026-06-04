@@ -190,7 +190,7 @@ public class UI_Login : UIBase
 
         if (!TapTapLoginManager.ValidateSelfAccountName(account, out string error))
         {
-            ShowPrompt(error);
+            EvtDsp.TriggerEvt(EvtNames.ShowUpPrompt, error);
             return;
         }
 

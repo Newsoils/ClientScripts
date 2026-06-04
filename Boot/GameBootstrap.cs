@@ -110,6 +110,7 @@ namespace CLIP.NewSoil
             CreateOrFindSystem<PlantManager>(root);
             CreateOrFindSystem<GuideManager>(root);
             CreateOrFindSystem<PayManager>(root);
+            CreateOrFindSystem<PromptManager>(root);
             //CreateOrFindSystem<PersistentObjectManager>(root);
 
             // 初始化 AssetManager
