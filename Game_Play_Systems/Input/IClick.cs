@@ -6,3 +6,8 @@ public interface IClick
 {
     public bool OnClick( Vector3 position);
 }
+
+public interface IPrioritizedClick
+{
+    public int ClickPriority { get; }
+}

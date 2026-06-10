@@ -1,6 +1,6 @@
 namespace CLIP.Project_Mouse
 {
-    public enum Enum_RarityType
+    public enum RarityType
     {
         // 普通
         Common = 1,

@@ -222,6 +222,41 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
         }
 
+        public Hide_Wall FindClosestFacingWall(Camera camera = null)
+        {
+            if (camera == null)
+            {
+                camera = Camera.main;
+            }
+            if (camera == null || wallsMap == null) return null;
+
+            Vector3 camDir = camera.transform.forward;
+            camDir.y = 0f;
+            if (camDir.sqrMagnitude < 1e-6f) return null;
+            camDir.Normalize();
+
+            Hide_Wall best = null;
+            float minDot = float.PositiveInfinity;
+            foreach (var wall in wallsMap.Values)
+            {
+                if (wall == null) continue;
+
+                Vector3 front = wall._wall_front;
+                front.y = 0f;
+                if (front.sqrMagnitude < 1e-6f) continue;
+                front.Normalize();
+
+                float dot = Vector3.Dot(front, camDir);
+                if (dot < minDot)
+                {
+                    minDot = dot;
+                    best = wall;
+                }
+            }
+
+            return best;
+        }
+
         public void ClearAllPlacements()
         {
             foreach (var placement in placementsDic.Values)
@@ -442,7 +477,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void RestoreSpecialDecoration(Placement_Second_Category category, int placementId, string resUrl)
         {
-            _ = GameAssets.LoadAsyncByPath<Material>(resUrl, (mat) =>
+            _ = GameAssets.LoadAsync<Material>(resUrl, (mat) =>
              {
                  if (mat != null)
                  {

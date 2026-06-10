@@ -70,11 +70,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 case Placement_Second_Category.Door:
                 case Placement_Second_Category.Floor:
                 case Placement_Second_Category.Wallpaper:
-                    var mat = await GameAssets.LoadAsyncByPath<Material>(info.res_url);
+                    var mat = await GameAssets.LoadAsync<Material>(info.res_url);
                     RoomSystem.currentRoom.SetSpecialDecoration(info.second_Category, mat, info.room_placement_id);
                     break;
                 default:
-                    var prefab = await GameAssets.LoadAsyncByPath<GameObject>(info.res_url);
+                    var prefab = await GameAssets.LoadAsync<GameObject>(info.res_url);
                     var model = Instantiate(prefab, Instance.transform);
                     var placement = model.GetComponent<PlacementRuntime>();
                     if (placement != null)
@@ -89,7 +89,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         }
         private static async Task<Pot> CreatePotInternal(PotData data)
         {
-            var prefab = await GameAssets.LoadAsyncByPath<GameObject>(data.resUrl);
+            var prefab = await GameAssets.LoadAsync<GameObject>(data.resUrl);
             var model = Instantiate(prefab, Instance.transform);
             var pot = model.GetComponent<Pot>();
             if (pot != null)

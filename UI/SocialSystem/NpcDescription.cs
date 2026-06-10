@@ -43,7 +43,7 @@ namespace CLIP
 
                 private async void LoadImage(string name)
                 {
-                    Sprite s = await GameAssets.Instance.LoadAsycByKey<Sprite>(name);
+                    Sprite s = await GameAssets.Instance.LoadAsyncByKey<Sprite>(name);
                     icon.sprite = s;
                 }
 

@@ -23,6 +23,7 @@ namespace CLIP.Project_Mouse.UI
         private Canvas _popupCanvas;
         private GameObject _root;
         private Button _closeButton;
+        private InputField _roleIdsInput;
         private Button _btnLow;
         private Button _btnMiddle;
         private Button _btnHigh;
@@ -42,7 +43,14 @@ namespace CLIP.Project_Mouse.UI
             if (_root == null)
                 BuildUI();
 
+            ClearRoleIdsInput();
             _root.SetActive(!_root.activeSelf);
+        }
+
+        private void ClearRoleIdsInput()
+        {
+            if (_roleIdsInput != null)
+                _roleIdsInput.text = string.Empty;
         }
 
         private async void SendTier(string tierField)
@@ -56,11 +64,21 @@ namespace CLIP.Project_Mouse.UI
                 return;
             }
 
+            string roleIdsRaw = _roleIdsInput != null ? _roleIdsInput.text : string.Empty;
+            if (!TryParseRoleIds(roleIdsRaw, out var roleIds, out string roleError))
+            {
+                EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, roleError ?? "RoleID 格式错误", null);
+                return;
+            }
+
             if (!TryBuildTestAddItemReq(tierField, out var req, out string error))
             {
                 EvtDsp.TriggerEvt<string, Action>(EvtNames.ShowPrompt, error ?? "配置解析失败", null);
                 return;
             }
+
+            foreach (var roleId in roleIds)
+                req.RoleIDs.Add(roleId);
 
             _sending = true;
             SetButtonsInteractable(false);
@@ -68,7 +86,8 @@ namespace CLIP.Project_Mouse.UI
             {
                 var task = new ServerTask(req, (receive, t) =>
                 {
-                    Debug.Log($"[BackslashTestRewardPopup] TestAddItemRes tier={tierField} receive={receive}");
+                    Debug.Log(
+                        $"[BackslashTestRewardPopup] TestAddItemRes tier={tierField} items={req.Items.Count} roleIds={req.RoleIDs.Count} receive={receive}");
                 });
 
                 await EvtDsp.ReturnEvt<ServerTask, Action<string>, Task>(
@@ -80,7 +99,38 @@ namespace CLIP.Project_Mouse.UI
             {
                 _sending = false;
                 SetButtonsInteractable(true);
+                ClearRoleIdsInput();
             }
+        }
+
+        /// <summary>解析以逗号分隔的 RoleID；空表示不填 RoleIDs（发给自己）。</summary>
+        private static bool TryParseRoleIds(string raw, out List<ulong> roleIds, out string error)
+        {
+            roleIds = new List<ulong>();
+            error = null;
+
+            if (string.IsNullOrWhiteSpace(raw))
+                return true;
+
+            var seen = new HashSet<ulong>();
+            var parts = raw.Split(new[] { ',', '，', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                var trimmed = part.Trim();
+                if (string.IsNullOrEmpty(trimmed))
+                    continue;
+
+                if (!ulong.TryParse(trimmed, out ulong roleId) || roleId == 0)
+                {
+                    error = $"RoleID 格式错误: {trimmed}";
+                    return false;
+                }
+
+                if (seen.Add(roleId))
+                    roleIds.Add(roleId);
+            }
+
+            return true;
         }
 
         private static bool TryBuildTestAddItemReq(string tierField, out TestAddItemReq req, out string error)
@@ -226,6 +276,12 @@ namespace CLIP.Project_Mouse.UI
             title.alignment = TextAnchor.MiddleCenter;
             titleGo.AddComponent<LayoutElement>().preferredHeight = 56;
 
+            _roleIdsInput = CreateInputField("RoleIdsInput", panel.transform, "RoleID，多个用英文逗号分隔，留空则发给自己");
+            var roleInputLe = _roleIdsInput.gameObject.AddComponent<LayoutElement>();
+            roleInputLe.preferredHeight = 88;
+            roleInputLe.minHeight = 88;
+            roleInputLe.flexibleWidth = 1;
+
             _btnLow = CreateActionButton(panel.transform, "发送初级道具", () => SendTier("low"));
             _btnMiddle = CreateActionButton(panel.transform, "发送中级道具", () => SendTier("middle"));
             _btnHigh = CreateActionButton(panel.transform, "发送高级道具", () => SendTier("high"));
@@ -245,7 +301,11 @@ namespace CLIP.Project_Mouse.UI
             closeRt.pivot = new Vector2(1, 1);
             closeRt.anchoredPosition = Vector2.zero;
             closeRt.sizeDelta = new Vector2(88, 88);
-            _closeButton.onClick.AddListener(() => _root.SetActive(false));
+            _closeButton.onClick.AddListener(() =>
+            {
+                ClearRoleIdsInput();
+                _root.SetActive(false);
+            });
             overlayRt.SetAsLastSibling();
 
             _root.SetActive(false);
@@ -277,6 +337,47 @@ namespace CLIP.Project_Mouse.UI
             scaler.referenceResolution = new Vector2(1080, 1920);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 0.5f;
+        }
+
+        private static InputField CreateInputField(string name, Transform parent, string placeholder)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(InputField));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<Image>().color = Color.white;
+
+            var textGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
+            textGo.transform.SetParent(go.transform, false);
+            var text = textGo.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = 28;
+            text.color = Color.black;
+            text.alignment = TextAnchor.MiddleLeft;
+            var textRt = (RectTransform)textGo.transform;
+            textRt.anchorMin = Vector2.zero;
+            textRt.anchorMax = Vector2.one;
+            textRt.offsetMin = new Vector2(16, 8);
+            textRt.offsetMax = new Vector2(-16, -8);
+
+            var phGo = new GameObject("Placeholder", typeof(RectTransform), typeof(Text));
+            phGo.transform.SetParent(go.transform, false);
+            var ph = phGo.GetComponent<Text>();
+            ph.text = placeholder;
+            ph.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            ph.fontSize = 24;
+            ph.color = new Color(0, 0, 0, 0.35f);
+            ph.alignment = TextAnchor.MiddleLeft;
+            var phRt = (RectTransform)phGo.transform;
+            phRt.anchorMin = Vector2.zero;
+            phRt.anchorMax = Vector2.one;
+            phRt.offsetMin = new Vector2(16, 8);
+            phRt.offsetMax = new Vector2(-16, -8);
+
+            var input = go.GetComponent<InputField>();
+            input.textComponent = text;
+            input.placeholder = ph;
+            input.lineType = InputField.LineType.SingleLine;
+            input.contentType = InputField.ContentType.Standard;
+            return input;
         }
 
         private static Button CreateButton(string name, Transform parent, string label)

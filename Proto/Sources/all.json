@@ -1569,6 +1569,22 @@
       "name": "Cmd.FriendChangeS2C"
     },
     {
+      "id": 1381,
+      "name": "Cmd.PhotoOpReq"
+    },
+    {
+      "id": 1382,
+      "name": "Cmd.PhotoOpRes"
+    },
+    {
+      "id": 1383,
+      "name": "Cmd.ReadItemBagReq"
+    },
+    {
+      "id": 1384,
+      "name": "Cmd.ReadItemBagRes"
+    },
+    {
       "id": 5003,
       "name": "Cmd.GetRoleInfoReq"
     },

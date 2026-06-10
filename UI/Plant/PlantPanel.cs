@@ -4,6 +4,9 @@ using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.UI;
+using Cmd;
+using DG.Tweening;
+using Google.Protobuf;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,7 +28,13 @@ public class PlantPanel : UIPanelBase
     public Button BtnCloseSearch;
     public GameObject searchPanel;
 
-    public Button btn_Close;
+    public Button btn_filter;
+
+    public Button btn_DrawUp;
+    public RectTransform invenArea;
+    public Sprite up;
+    public Sprite down;
+
     public Button btn_Exit;
     public Button ConfirmModification;
 
@@ -35,14 +44,27 @@ public class PlantPanel : UIPanelBase
 
     public TMP_InputField searchInputField;
 
+    public FilterPanel filterPanel;
+
+
     // 记录当前的一级菜单状态
     private Plant_First_Category _currentFirst = Plant_First_Category.None;
     private Plant_Second_Category _currentSecond = Plant_Second_Category.None;
     private InventorySortType _currentSort = InventorySortType.Rarity;
     private bool _isAscending = false;
     private string filterString = "";
+    private PlantType _currentSeedPlantTypeFilter = PlantType.None;
+    private ObtainSource _currentSeedObtainSourceFilter = ObtainSource.Unknown;
+    // 新增：记录当前是否为只显示收藏项
+    private bool _currentIsFavorite = false;
+
     public float debounceTime = 0.25f;
     Coroutine currentCoroutine;
+
+    // 新增：控制展开/收起状态与 Tween
+    private bool _isInvenExpanded = false;
+    private Tween _invenTween = null;
+    public float invenToggleDuration = 0.25f;
 
     private void Start()
     {
@@ -51,7 +73,8 @@ public class PlantPanel : UIPanelBase
         InitDropdown();
 
         btn_Search.onClick.AddListener(() => OpenSearchPanel());
-        btn_Close.onClick.AddListener(ClosePanel);
+        // 改为切换展开/收起
+        btn_DrawUp.onClick.AddListener(ToggleInvenArea);
         btn_Exit.onClick.AddListener(ClosePanel);
         BtnCloseSearch.onClick.AddListener(CloseSearchPanel);
         ConfirmModification.onClick.AddListener(ConfirmModify);
@@ -80,8 +103,25 @@ public class PlantPanel : UIPanelBase
             //RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
         });
 
+        btn_filter.onClick.AddListener(() =>
+        {
+            filterPanel.OpenPanel();
+        });
+
+
         EvtDsp.AddEvt(EvtNames.ReloadPlantData, RefreshUI);
         EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshUI);
+
+        // 初始化为收起状态 (1,0.5) 且按钮图为 up
+        _isInvenExpanded = false;
+        if (invenArea != null)
+        {
+            invenArea.anchorMax = new Vector2(1f, 0.5f);
+        }
+        if (btn_DrawUp != null && btn_DrawUp.image != null)
+        {
+            btn_DrawUp.image.sprite = up;
+        }
     }
     IEnumerator DebouncedValidate(string text)
     {
@@ -91,7 +131,7 @@ public class PlantPanel : UIPanelBase
         searchInputField.text = filterString;
 
 
-        RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+        RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _currentIsFavorite, _isAscending);
 
         Debug.Log($"Validating: {text}");
     }
@@ -99,10 +139,14 @@ public class PlantPanel : UIPanelBase
     public override void OnDestroy()
     {
         base.OnDestroy();
+        // 结束可能存在的 tween
+        _invenTween?.Kill();
+
         btn_Search.onClick.RemoveAllListeners();
-        btn_Close.onClick.RemoveAllListeners();
+        btn_DrawUp.onClick.RemoveAllListeners();
         ConfirmModification.onClick.RemoveAllListeners();
 
+        btn_filter.onClick.RemoveAllListeners();
         searchInputField.onSubmit.RemoveAllListeners();
 
         EvtDsp.RemoveEvt(EvtNames.ReloadPlantData, RefreshUI);
@@ -125,19 +169,112 @@ public class PlantPanel : UIPanelBase
         ResetAllLabels();
         RefreshByFirstCategory(Plant_First_Category.None);
         EvtDsp.TriggerEvt(EvtNames.OnPlantPanelOpen);
+
+        ///发送看过消息，清除红点
+        ReadItemBagReq req = new ReadItemBagReq() { BagTag = 4 };
+        EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, req);
+
+        ReadItemBagReq req1 = new ReadItemBagReq() { BagTag = 5 };
+        EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, req1);
+
+        ReadItemBagReq req2 = new ReadItemBagReq() { BagTag = 6 };
+        EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, req2);
     }
 
 
     // 刷新逻辑：由内部统一调度状态
-    public void RefreshByFirstCategory(Plant_First_Category first)
+    public void RefreshByFirstCategory(Plant_First_Category first, bool isFavorite = false)
     {
         _currentFirst = first;
+        _currentSecond = Plant_Second_Category.None;
+        _currentIsFavorite = isFavorite;
+        if (first != Plant_First_Category.Seed)
+        {
+            ClearSeedExtraFilters();
+        }
 
-        // 1. 刷新列表（二级菜单默认为 None）
-        mScroller.RefreshPanel(_currentFirst, Plant_Second_Category.None, filterString, _currentSort, _isAscending);
+        // 将 isFavorite 传给 scroller（scroller 会根据 isFavorite 只显示收藏项）
+        RefreshCurrentPanel();
 
-        // 2. 核心：由面板负责更新二级菜单栏的显示
+        // 由面板负责更新二级菜单栏的显示
         UpdateSecondCategoryUI();
+    }
+
+    public void RefreshBySecondCategory(Plant_Second_Category second)
+    {
+        // 点击二级菜单时，直接带上记录好的 _currentFirst 和收藏过滤状态
+        _currentSecond = second;
+        RefreshCurrentPanel();
+    }
+
+    public void ApplySeedFilter(PlantType plantType, ObtainSource obtainSource)
+    {
+        _currentFirst = Plant_First_Category.Seed;
+        _currentSecond = Plant_Second_Category.None;
+        _currentSeedPlantTypeFilter = plantType;
+        _currentSeedObtainSourceFilter = obtainSource;
+        ResetAllLabels();
+        UpdateSecondCategoryUI();
+        RefreshCurrentPanel();
+    }
+
+    public void SetSeedPlantTypeFilter(PlantType plantType)
+    {
+        ApplySeedFilter(plantType, _currentSeedObtainSourceFilter);
+    }
+
+    public void SetSeedObtainSourceFilter(ObtainSource obtainSource)
+    {
+        ApplySeedFilter(_currentSeedPlantTypeFilter, obtainSource);
+    }
+
+    public PlantType CurrentSeedPlantTypeFilter => _currentSeedPlantTypeFilter;
+    public ObtainSource CurrentSeedObtainSourceFilter => _currentSeedObtainSourceFilter;
+
+    public void RefreshPanel(Plant_First_Category first_Category = Plant_First_Category.None,
+        Plant_Second_Category second_Category = Plant_Second_Category.None, string filterStr = "",
+        InventorySortType sortType = InventorySortType.Rarity, bool isFavorite = false, bool isAscending = false)
+    {
+        _currentFirst = first_Category;
+        _currentSecond = second_Category;
+        _currentSort = sortType;
+        _isAscending = isAscending;
+        _currentIsFavorite = isFavorite;
+        filterString = filterStr;
+
+        if (first_Category != Plant_First_Category.Seed)
+        {
+            ClearSeedExtraFilters();
+        }
+
+        RefreshCurrentPanel();
+    }
+
+    // 新增：切换 invenArea 展开/收起（使用 DOTween 动画）
+    public void ToggleInvenArea()
+    {
+        if (invenArea == null || btn_DrawUp == null) return;
+
+        // 目标值
+        Vector2 target = _isInvenExpanded ? new Vector2(1f, 0.5f) : new Vector2(1f, 0.65f);
+        Sprite targetSprite = _isInvenExpanded ? up : down;
+
+        // 结束已有 tween
+        if (_invenTween != null && _invenTween.IsActive()) _invenTween.Kill();
+
+        // 立刻替换按钮图片（如需在动画完成后替换可改为 OnComplete）
+        if (btn_DrawUp.image != null)
+        {
+            btn_DrawUp.image.sprite = targetSprite;
+        }
+
+        // 使用 DOTween 对 anchorMax 做插值
+        _invenTween = DOTween.To(() => invenArea.anchorMax, x => invenArea.anchorMax = x, target, invenToggleDuration)
+            .SetEase(Ease.OutCubic)
+            .SetTarget(invenArea);
+
+        // 切换状态标志
+        _isInvenExpanded = !_isInvenExpanded;
     }
 
     private void UpdateSecondCategoryUI()
@@ -163,23 +300,10 @@ public class PlantPanel : UIPanelBase
         }
     }
 
-    public void RefreshBySecondCategory(Plant_Second_Category second)
-    {
-        // 点击二级菜单时，直接带上记录好的 _currentFirst
-        mScroller.RefreshPanel(_currentFirst, second, filterString, _currentSort, _isAscending);
-    }
-
-
-    public void RefreshPanel(Plant_First_Category first_Category = Plant_First_Category.None,
-        Plant_Second_Category second_Category = Plant_Second_Category.None, string filterStr = "",
-        InventorySortType sortType = InventorySortType.Rarity, bool isAscending = false)
-    {
-        mScroller.RefreshPanel(first_Category, second_Category, filterStr, sortType, isAscending);
-    }
-
     public void RefreshUI()
     {
-        RefreshByFirstCategory(_currentFirst);
+        RefreshCurrentPanel();
+        UpdateSecondCategoryUI();
     }
     /// <summary>
     /// 重置其他一级标签的选中状态
@@ -222,7 +346,6 @@ public class PlantPanel : UIPanelBase
             label.SetSelectFalse();
         }
     }
-
 
     private void InitDropdown()
     {
@@ -272,7 +395,7 @@ public class PlantPanel : UIPanelBase
         {
             _isAscending = !_isAscending;
             RefreshSortDropdownVisual();
-            mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+            RefreshCurrentPanel();
             _waitingForCloseToggle = false;
             return;
         }
@@ -281,7 +404,7 @@ public class PlantPanel : UIPanelBase
         _isAscending = false;
         _waitingForCloseToggle = false;
         RefreshSortDropdownVisual();
-        mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+        RefreshCurrentPanel();
     }
 
     private void LateUpdate()
@@ -299,7 +422,7 @@ public class PlantPanel : UIPanelBase
                 {
                     _isAscending = !_isAscending;
                     RefreshSortDropdownVisual();
-                    mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+                    RefreshCurrentPanel();
                 }
             }
         }
@@ -371,14 +494,31 @@ public class PlantPanel : UIPanelBase
         PanelSecondLevelMenuPanel.SetActive(false);
     }
 
-
-
     public void CloseSearchPanel()
     {
         PanelSecondLevelMenuPanel.SetActive(true);
         dropdown_SortType.gameObject.SetActive(true);
         btn_Search.gameObject.SetActive(true);
         searchPanel.gameObject.SetActive(false);
-        RefreshPanel(_currentFirst, _currentSecond, "", _currentSort, _isAscending);
+        RefreshPanel(_currentFirst, _currentSecond, "", _currentSort, _currentIsFavorite, _isAscending);
+    }
+
+    private void RefreshCurrentPanel()
+    {
+        mScroller.RefreshPanel(
+            _currentFirst,
+            _currentSecond,
+            filterString,
+            _currentSort,
+            _currentIsFavorite,
+            _isAscending,
+            _currentSeedPlantTypeFilter,
+            _currentSeedObtainSourceFilter);
+    }
+
+    private void ClearSeedExtraFilters()
+    {
+        _currentSeedPlantTypeFilter = PlantType.None;
+        _currentSeedObtainSourceFilter = ObtainSource.Unknown;
     }
 }

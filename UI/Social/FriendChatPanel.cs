@@ -277,7 +277,7 @@ public class FriendChatPanel : MonoBehaviour
             if (parts.Length < 2)
                 return;
 
-            Project_Mouse_Resource_Management.load_sub_sprite(parts[0], parts[1], sprite =>
+            GameAssets.LoadSubSprite(parts[0], parts[1], sprite =>
             {
                 if (msgComp != null && sprite != null)
                     msgComp.message.sprite = sprite;
@@ -285,7 +285,7 @@ public class FriendChatPanel : MonoBehaviour
             return;
         }
 
-        Project_Mouse_Resource_Management.load_sprite_async(resUrl, sprite =>
+        GameAssets.LoadSpriteAsync(resUrl, sprite =>
         {
             if (msgComp != null && sprite != null)
                 msgComp.message.sprite = sprite;

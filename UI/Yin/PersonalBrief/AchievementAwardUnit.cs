@@ -20,7 +20,7 @@ namespace CLIP
                 {
                     if (isMystery)
                     {
-                        // 加载空图标
+                        // 加载空图�?
                         quantityText.text = "";
                         return;
                     }
@@ -28,7 +28,7 @@ namespace CLIP
                     this.iconPath = iconPath;
 
                     string[] parts = iconPath.Split('#');
-                    Project_Mouse_Resource_Management.load_sub_sprite(parts[0], parts[1], (sprite) =>
+                    GameAssets.LoadSubSprite(parts[0], parts[1], (sprite) =>
                     {
                         icon.sprite = sprite;
                     });

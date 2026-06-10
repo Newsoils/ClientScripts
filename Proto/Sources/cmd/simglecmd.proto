@@ -134,6 +134,7 @@ message SignInTaskRes {
 message TestAddItemReq {
   string Token = 1; //Token
   repeated common.ItemInfo Items = 2;
+  repeated uint64 RoleIDs = 3; //需要发送的人的ID,不填则发给自己
 }
 
 //添加道具回应
@@ -179,6 +180,7 @@ message RolePhotoInfo {
   int32 MapID = 3;
   int32 PhotoConfigID = 4;
   string Wears = 5;
+  int32 Status = 6; // 0 已保存 1 未处理
 }
 
 // 照片摘要（UID/地图/配置/穿戴）
@@ -2168,7 +2170,8 @@ message GetPhotosReq{
 
 //取得照片信息响应
 message GetPhotosRes{
-  repeated RolePhotoInfo Photos = 1; //照片信息
+  repeated RolePhotoInfo Photos = 1; //已保存照片信息
+  repeated RolePhotoInfo UnHandlePhotos = 2; //未处理照片信息
 }
 
 //购买票据请求
@@ -2189,6 +2192,7 @@ message DelPhotosReq{
 
 //删除照片响应
 message DelPhotosRes{
+  RolePhotoInfo Del = 1; //删除的照片
 }
 
 //开放NPC(非正式接口)
@@ -2234,3 +2238,25 @@ message FriendChangeS2C {
     repeated common.PlayerDetailedInfo FriendApplyAdd = 3;//好友申请添加
     repeated common.PlayerDetailedInfo FriendApplyDel = 4;//好友申请删除
 }
+
+//照片操作请求（替换相册中的照片）
+message PhotoOpReq{
+  uint64 UID = 1; //要处理的照片UID(未处理)
+  uint64 TargetUID = 2; //要替换的照片UID(已保存)
+}
+
+//照片操作响应
+message PhotoOpRes{
+  RolePhotoInfo Upd = 1; //更新状态的照片,从1变为0
+  RolePhotoInfo Del = 2; //删除的照片
+}
+
+//读取指定背包信息请求
+message ReadItemBagReq{
+  int32 BagTag = 1; 
+}
+
+//读取指定背包信息响应
+message ReadItemBagRes{
+}
+

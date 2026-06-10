@@ -8,7 +8,7 @@ using EnhancedUI.EnhancedScroller;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+using RM = CLIP.Framework_Unity.Asset.GameAssets;
 
 
 public class CellView_DispatchItem : EnhancedScrollerCellView
@@ -48,7 +48,7 @@ public class CellView_DispatchItem : EnhancedScrollerCellView
         int count = data.count;
         int id = data.id;
         // 稀有度，用于判断应该使用什么颜色的框来表示
-        Enum_RarityType rarity = data.rarity;
+        RarityType rarity = data.rarity;
 
         gameItem_Name.text = name;
         gameItem_Count.text = count.ToString();
@@ -62,11 +62,11 @@ public class CellView_DispatchItem : EnhancedScrollerCellView
             var _image_url_data = url.Split("#");
             if (_image_url_data.Length == 2)
             {
-                RM.load_sub_sprite(_image_url_data[0], _image_url_data[1], (sp)=> gameItem_Icon.sprite = sp);
+                RM.LoadSubSprite(_image_url_data[0], _image_url_data[1], (sp)=> gameItem_Icon.sprite = sp);
             }
             else
             {
-                RM.load_sprite_async(_image_url_data[0], sp=> gameItem_Icon.sprite = sp);
+                RM.LoadSpriteAsync(_image_url_data[0], sp=> gameItem_Icon.sprite = sp);
             }
         }
         if( clickEvent != null) SetClickEvent(()=> clickEvent?.Invoke(data)); 

@@ -114,7 +114,7 @@ public class Dispatch_Procedure_Controller : MonoBehaviour
         {
             case Item_Type.Food:
                 var food_resource_name = Dispatch_Manager.GetFoodInfo(name).model_resource_name;
-                var foodOB = await GameAssets.Instance.LoadAsycByKey<GameObject>(food_resource_name);
+                var foodOB = await GameAssets.Instance.LoadAsyncByKey<GameObject>(food_resource_name);
                 ClearAllChildren(foodRoot);
                 if (foodOB!=null)
                 {
@@ -123,7 +123,7 @@ public class Dispatch_Procedure_Controller : MonoBehaviour
                 break;
             case Item_Type.Snack:
                 var snack_resource_name = Dispatch_Manager.GetSnackInfo(name).model_resource_name;
-                var snackOB = await GameAssets.Instance.LoadAsycByKey<GameObject>(snack_resource_name);
+                var snackOB = await GameAssets.Instance.LoadAsyncByKey<GameObject>(snack_resource_name);
                 ClearAllChildren(snackRoot);
 
                 if (snackOB!=null)
@@ -134,7 +134,7 @@ public class Dispatch_Procedure_Controller : MonoBehaviour
             case Item_Type.Tape:
                 cdMesh.gameObject.SetActive(true);
                 var cd_mt_name = Dispatch_Manager.GetCDInfo(name).mat_resource_name;
-                var cd_mt = await GameAssets.Instance.LoadAsycByKey<Material>(cd_mt_name);
+                var cd_mt = await GameAssets.Instance.LoadAsyncByKey<Material>(cd_mt_name);
                 cdMesh.material = cd_mt;
                 break;
             default:

@@ -1,20 +1,17 @@
 using System;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+using CLIP.Framework_Unity;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Game_Play_System;
-using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.UI;
 using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
 
 public class CellView_GameItem : MonoBehaviour
 {
     public GameObject obj;
+    public GameObject newRedDot;
 
     public TMP_Text gameItem_Name;
     public ZButton button;
@@ -28,14 +25,20 @@ public class CellView_GameItem : MonoBehaviour
     public void OnDestory()
     {
         button.onClick.RemoveAllListeners();
+        button.onPointDown.RemoveAllListeners();
+        button.onLongPress.RemoveAllListeners();
         detailButton.onClick.RemoveAllListeners();
     }
 
-    public void SetData(ScrollData_GameItem data, Action<ScrollData_GameItem> clickEvent = null,Action<ScrollData_GameItem> pointDownEvent = null)
+    public void SetData(ScrollData_GameItem data, 
+    Action<ScrollData_GameItem> clickEvent = null, 
+    Action<ScrollData_GameItem> pointDownEvent = null,
+     Action<ScrollData_GameItem> longPressEvent = null)
     {
         if (data == null)
         {
             obj.SetActive(false);
+            if (newRedDot != null) newRedDot.SetActive(false);
             return;
         }
         else
@@ -43,7 +46,9 @@ public class CellView_GameItem : MonoBehaviour
             obj.SetActive(true);
         }
 
-            string name = data.name;
+        if (newRedDot != null) newRedDot.SetActive(data.isNew);
+
+        string name = data.name;
         int count = data.count;
         int id = data.id;
         gameObject.name = data.name;
@@ -62,33 +67,16 @@ public class CellView_GameItem : MonoBehaviour
         if (!string.IsNullOrEmpty(url))
         {
             string spritePath = Path.Combine("Textures\\UI\\House", "rarity_" + rarity);
-            //gameItemBg_Icon.mSprite = await Task.Run(() =>  GameAssets.LoadAsyncByPath<Sprite>(Path.Combine("Textures/UI/rarity_", rarity.ToString())));
-            //gameItemBg_Icon.mSprite =   Resources.LoadAsync<Sprite>("spritePath");
             Debug.Log(spritePath);
-            //gameItemBg_Icon.mSprite = Resources.Load<Sprite>(spritePath);
             LoadSpriteInVoid(spritePath);
 
-            var _image_url_data = url.Split("#");
-            if (_image_url_data.Length == 2)
-            {
-                RM.load_sub_sprite(_image_url_data[0], _image_url_data[1], (sp) =>
-                {
-                    if (_currentIconUrl == url)
-                        mImage.sprite = sp;
-                });
-            }
-            else
-            {
-                RM.load_sprite_async(_image_url_data[0], (sp) =>
-                {
-                    if (_currentIconUrl == url)
-                        mImage.sprite = sp;
-                });
-            }
+            LoadItemIcon(url, mImage);
         }
         if (clickEvent != null) SetClickEvent(() => clickEvent?.Invoke(data));
 
-        if(pointDownEvent!=null) SetPointDownEvent( () => pointDownEvent?.Invoke(data));
+        if (pointDownEvent != null) SetPointDownEvent(() => pointDownEvent?.Invoke(data));
+
+        if (longPressEvent != null) SetLongPressEvent(() => longPressEvent?.Invoke(data));
 
         SetDetailClickEvent(() =>
         {
@@ -99,18 +87,28 @@ public class CellView_GameItem : MonoBehaviour
     private void OnDisable()
     {
         button.onClick.RemoveAllListeners();
+        button.onPointDown.RemoveAllListeners();
+        button.onLongPress.RemoveAllListeners();
         detailButton.onClick.RemoveAllListeners();
         gameItem_Icon.sprite = null;
     }
 
-
     // 2. 异步方法（async void 适配 Unity 回调）
-    async void LoadSpriteInVoid(string path)
+    private void LoadItemIcon(string url, Image targetImage)
+    {
+        GameAssets.LoadSpriteByUrl(url, sp =>
+        {
+            if (_currentIconUrl == url && targetImage != null)
+                targetImage.sprite = sp;
+        });
+    }
+
+    private async void LoadSpriteInVoid(string path)
     {
         try
         {
             // 调用 Task 并 await 等待完成
-            Sprite loadedSprite = await GameAssets.LoadAsyncByPath<Sprite>(path);
+            Sprite loadedSprite = await GameAssets.LoadAsync<Sprite>(path);
 
             // 等待完成后，在主线程操作 UI（安全）
             if (gameItemBg_Icon != null && loadedSprite != null)
@@ -120,7 +118,7 @@ public class CellView_GameItem : MonoBehaviour
         }
         catch (System.Exception e)
         {
-            Debug.LogError("加载失败：" + e.Message);
+            Log.Error("加载失败：" + e.Message);
         }
     }
 
@@ -135,6 +133,12 @@ public class CellView_GameItem : MonoBehaviour
     {
         button.onPointDown.RemoveAllListeners();
         button.onPointDown.AddListener(() => action?.Invoke());
+    }
+
+    public void SetLongPressEvent(Action action)
+    {
+        button.onLongPress.RemoveAllListeners();
+        button.onLongPress.AddListener(() => action?.Invoke());
     }
 
     public void SetDetailClickEvent(Action action)

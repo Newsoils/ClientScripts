@@ -31,17 +31,17 @@ namespace CLIP
                     //_obtain_date.text = "获取时间 : " + g_i_u._game_item_in_inventory._obtain_date.ToString();
                     switch (giftUnit._game_item_in_inventory.item_info.rarity)
                     {
-                        case Enum_RarityType.Common:
+                        case RarityType.Common:
                             normalRarity.SetActive(true);
                             rareRarity.SetActive(false);
                             previousRarity.SetActive(false);
                             break;
-                        case Enum_RarityType.Rare:
+                        case RarityType.Rare:
                             normalRarity.SetActive(false);
                             rareRarity.SetActive(true);
                             previousRarity.SetActive(false);
                             break;
-                        case Enum_RarityType.Precious:
+                        case RarityType.Precious:
                             normalRarity.SetActive(false);
                             rareRarity.SetActive(false);
                             previousRarity.SetActive(true);

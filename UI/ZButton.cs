@@ -1,12 +1,13 @@
 using DG.Tweening;
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class ZButton : Button, IPointerEnterHandler, IPointerExitHandler ,IBeginDragHandler,IDragHandler,IEndDragHandler
-    ,IPointerDownHandler,IPointerUpHandler
+public class ZButton : Button, IPointerEnterHandler, IPointerExitHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
+    , IPointerDownHandler, IPointerUpHandler
 {
     [Header("ZButton Events")]
     public UnityEvent onHoverEnter;
@@ -21,6 +22,19 @@ public class ZButton : Button, IPointerEnterHandler, IPointerExitHandler ,IBegin
     public UnityEvent onPointDown;
     public UnityEvent onPointUp;
 
+[Header("Long Press Settings")]
+    [SerializeField] private float longPressDelay = 1f;
+    public UnityEvent onLongPress;
+
+    /// <summary>
+    /// 设置长按触发延迟时间
+    /// </summary>
+    public void SetLongPressDelay(float delay)
+    {
+        longPressDelay = Mathf.Max(0.1f, delay);
+    }
+
+    public float GetLongPressDelay() => longPressDelay;
 
     [Header("ZButton Drag Events")]
     public UnityEvent onBeginDrag;
@@ -38,8 +52,8 @@ public class ZButton : Button, IPointerEnterHandler, IPointerExitHandler ,IBegin
     [SerializeField] private float duration = 0.1f;           // 动画时间
 
     private Tween scaleTween;
-
-
+    private Coroutine longPressCoroutine;
+    private bool isPressed;
 
     protected override void Awake()
     {
@@ -73,7 +87,6 @@ public class ZButton : Button, IPointerEnterHandler, IPointerExitHandler ,IBegin
     }
 
 
-
     // 鼠标移入
     public override void OnPointerEnter(PointerEventData eventData)
     {
@@ -103,6 +116,13 @@ public class ZButton : Button, IPointerEnterHandler, IPointerExitHandler ,IBegin
         }
         onHoverExit?.Invoke();
 
+        // Cancel long press if finger leaves button while still pressed
+        if (isPressed && longPressCoroutine != null)
+        {
+            StopCoroutine(longPressCoroutine);
+            longPressCoroutine = null;
+        }
+
         if (enableHoverScale)
         {
             scaleTween?.Kill();
@@ -114,13 +134,37 @@ public class ZButton : Button, IPointerEnterHandler, IPointerExitHandler ,IBegin
     {
         base.OnPointerDown(eventData);
         onPointDown?.Invoke();
+        isPressed = true;
+        longPressCoroutine = StartCoroutine(LongPressDelay());
     }
-
 
     public override void OnPointerUp(PointerEventData eventData)
     {
         base.OnPointerUp(eventData);
         onPointUp?.Invoke();
+        isPressed = false;
+        if (longPressCoroutine != null)
+        {
+            StopCoroutine(longPressCoroutine);
+            longPressCoroutine = null;
+        }
+    }
+
+    private IEnumerator LongPressDelay()
+    {
+        yield return new WaitForSeconds(longPressDelay);
+        longPressCoroutine = null;
+        onLongPress?.Invoke();
+    }
+
+    protected override void OnDisable()
+    {
+        base.OnDisable();
+        if (longPressCoroutine != null)
+        {
+            StopCoroutine(longPressCoroutine);
+            longPressCoroutine = null;
+        }
     }
 
     // 拖拽相关 -------------------------
@@ -157,7 +201,7 @@ public class ZButton : Button, IPointerEnterHandler, IPointerExitHandler ,IBegin
     public void Appear()
     {
         GetComponent<Image>().DOFade(1f, 0.5f).SetEase(Ease.InOutQuad);
-        if(icon != null)
+        if (icon != null)
         {
             icon.DOFade(1f, 0.5f).SetEase(Ease.InOutQuad);
         }

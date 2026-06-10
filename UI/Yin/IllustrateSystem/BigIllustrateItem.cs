@@ -103,17 +103,17 @@ namespace CLIP
 
                 public void UpdateRarity()
                 {
-                    if (currentItem.rarity == Enum_RarityType.Common)
+                    if (currentItem.rarity == RarityType.Common)
                     {
                         rarityImage.color = commonColor;
                         rarityText.text = "普通";
                     }
-                    else if (currentItem.rarity == Enum_RarityType.Rare)
+                    else if (currentItem.rarity == RarityType.Rare)
                     {
                         rarityImage.color = rareColor;
                         rarityText.text = "稀有";
                     }
-                    else if (currentItem.rarity == Enum_RarityType.Precious)
+                    else if (currentItem.rarity == RarityType.Precious)
                     {
                         rarityImage.color = preciousColor;
                         rarityText.text = "珍贵";

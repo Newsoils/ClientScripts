@@ -1,13 +1,10 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using EnhancedUI.EnhancedScroller;
-using UnityEngine;
 
 public class FirstCellView_CD : EnhancedScrollerCellView
 {
     public SecondCellView_CD[] secondCellViews;
-   
 
     public void SetData( List<ScrollData_GameItem> data, int startingIndex,Action<ScrollData_GameItem> action)
     {

@@ -6,7 +6,7 @@ using Cmd;
 using Common;
 using UnityEngine;
 using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
-using CS_Resource_Manager = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+using CS_Resource_Manager = CLIP.Framework_Unity.Asset.GameAssets;
 using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.Network;
 using CLIP.Project_Mouse.Kernel;
@@ -389,7 +389,7 @@ public class Player_Social_Receiver : MonoBehaviour, IMsg_Receiver
 
         yield return new WaitForSeconds(1f);
 
-        CS_Resource_Manager.load_scene_async(
+        CS_Resource_Manager.LoadSceneAsync(
             "Scenes/Yin/Scene_Indoor_Main_Back_007_Yin_Stable",
             () => Debug.Log("Friend roomData scene loaded")
         );

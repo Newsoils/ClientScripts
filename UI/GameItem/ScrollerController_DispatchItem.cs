@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
@@ -71,7 +72,9 @@ public class ScrollerController_DispatchItem : MonoBehaviour, IEnhancedScrollerD
                 item.item_info.name,
                 item.item_info.item_id,
                 item._item_count,
-                item.item_info.rarity));
+                item.item_info.rarity,
+                item.uid,
+                Global_Inventory_Manager.IsNewObtainItem(item.uid)));
         }
 
         scroller.ReloadData();

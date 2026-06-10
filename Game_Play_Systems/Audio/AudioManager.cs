@@ -118,7 +118,7 @@ public class AudioManager : SingletonMono<AudioManager>
         // 停止当前正在进行的淡出淡入动画
         currentFadeTween?.Kill();
         // 获取新的音乐（这个需要你自己实现）
-        AudioClip newClip = await GameAssets.Instance.LoadAsycByKey<AudioClip>(key);
+        AudioClip newClip = await GameAssets.Instance.LoadAsyncByKey<AudioClip>(key);
 
         if (newClip == null)
         {
@@ -167,7 +167,7 @@ public class AudioManager : SingletonMono<AudioManager>
     }
     private async Task PlaySoundEffectAsync(string key, float volume)
     {
-        var clip = await GameAssets.Instance.LoadAsycByKey<AudioClip>(key);
+        var clip = await GameAssets.Instance.LoadAsyncByKey<AudioClip>(key);
         if (clip == null)
             return;
         SoundEffectSource.PlayOneShot(clip, volume);

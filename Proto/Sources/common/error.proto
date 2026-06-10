@@ -73,6 +73,10 @@ enum ErrorCode {
   LogicRole_Npc_Encounter_Not_Enough = 301035;              //与该NPC会面次数不足
   LogicRole_Npc_Gift_Favor_Config_Not_Exist = 301036;       //NPC礼物好感配置不存在
   LogicRole_Npc_Dialogue_History_Invalid = 301037;          //NPC对话历史数据无效
+  LogicRole_Cat_Tape_Not_In_Time = 301038;                  //小猫旅行背包唱片不在可用时间范围内
+  LogicRole_Photo_Not_Exist = 301039;                       //照片不存在
+  LogicRole_Photo_Status_Error = 301040;                    //照片状态不符合操作要求
+  LogicRole_Photo_Op_Error = 301041;                        //照片操作类型非法
 
   //英雄相关 302xxx
   LogicHero_Params_Error = 302000;              //英雄参数错误

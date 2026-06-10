@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CLIP.Framework_Core.Serialization;
 using CLIP.Framework_Core.Tools;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace CLIP.Framework_Unity.Asset
 {
@@ -30,7 +32,7 @@ namespace CLIP.Framework_Unity.Asset
 
         public static string GetPath(string key)
         {
-            return table.TryGetValue(key, out var e) ? e.path : null;
+            return table != null && table.TryGetValue(key, out var e) ? e.path : null;
         }
     }
 
@@ -49,21 +51,12 @@ namespace CLIP.Framework_Unity.Asset
 
         public readonly List<string> assetKeys = new List<string>();
 
-        /// <summary>
-        /// key -> asset
-        /// </summary>
         public readonly Dictionary<string, UnityEngine.Object> allAssets = new();
 
-        /// <summary>
-        /// key -> resource path
-        /// </summary>
         public readonly Dictionary<string, string> keyToPath = new();
 
 
-        /// <summary>
         /// 当前加载进度（0 ~ 100）
-        /// </summary>
-        private int currentProgress = 0;
 
 
         public async Task InitAsync()
@@ -72,9 +65,9 @@ namespace CLIP.Framework_Unity.Asset
 
             ResourceIndexRuntime.Init();
 
-            funiture_Border_Mat = await LoadAsyncByPath<Material>("Materials/Funiture_Border_BarberPoleBorder");
+            funiture_Border_Mat = await LoadAsync<Material>("Materials/Funiture_Border_BarberPoleBorder");
 
-            mainCharacter_Dispatch = await LoadAsyncByPath<GameObject>("Prefabs/Character/MainCharacter_Dispatch");
+            mainCharacter_Dispatch = await LoadAsync<GameObject>("Prefabs/Character/MainCharacter_Dispatch");
 
             // 1️⃣ 建立 Key -> Path 映射
             foreach (var kv in ResourceIndexRuntime.table)
@@ -99,28 +92,30 @@ namespace CLIP.Framework_Unity.Asset
         /// <summary>
         /// 通过逻辑 Key 加载（同步）
         /// </summary>
-        public T Load<T>(string key) where T : UnityEngine.Object
+        public T Load<T>(string keyOrPath) where T : UnityEngine.Object
         {
-            if (allAssets.TryGetValue(key, out var asset))
+            if (allAssets.TryGetValue(keyOrPath, out var asset))
             {
                 return asset as T;
             }
 
-            if (!keyToPath.TryGetValue(key, out var path))
+            var path = ResolveKeyOrPath(keyOrPath);
+            if (string.IsNullOrEmpty(path))
             {
-                Log.Error($"[GameAssets] Key not found: {key}");
+                Log.Error($"[GameAssets] Invalid key or path: {keyOrPath}");
                 return null;
             }
 
             asset = AssetLoader.Instance.Load<T>(path);
-            allAssets[key] = asset;
+            if (asset != null)
+                allAssets[keyOrPath] = asset;
             return asset as T;
         }
 
         /// <summary>
         /// 通过逻辑 Key 加载（异步）
         /// </summary>
-        private async Task<T> LoadAsyncByKey<T>(string key, Action<T> callback = null) where T : UnityEngine.Object
+        public async Task<T> LoadAsyncByKey<T>(string key, Action<T> callback = null) where T : UnityEngine.Object
         {
             if (allAssets.TryGetValue(key, out var asset))
             {
@@ -128,9 +123,11 @@ namespace CLIP.Framework_Unity.Asset
                 return asset as T;
             }
 
-            if (!keyToPath.TryGetValue(key, out var path))
+            var path = ResolveKey(key);
+            if (string.IsNullOrEmpty(path))
             {
                 Log.Warn($"[GameAssets] Key not found: {key}");
+                callback?.Invoke(null);
                 return null;
             }
 
@@ -151,30 +148,149 @@ namespace CLIP.Framework_Unity.Asset
             }
         }
 
-        public async Task<T> LoadAsycByKey<T>(string key) where T : UnityEngine.Object
+        [Obsolete("Use LoadAsyncByKey instead.")]
+        public Task<T> LoadAsycByKey<T>(string key) where T : UnityEngine.Object
         {
-            if (!keyToPath.TryGetValue(key, out var path))
+            return LoadAsyncByKey<T>(key);
+        }
+
+        public static async Task<T> LoadAsync<T>(string keyOrPath, Action<T> callback = null) where T : UnityEngine.Object
+        {
+            var path = ResolvePath(keyOrPath);
+            var asset = await AssetLoader.Instance.LoadAsync<T>(path);
+            callback?.Invoke(asset);
+            return asset;
+        }
+
+        public static async Task<T[]> LoadAllAsync<T>(string keyOrPath) where T : UnityEngine.Object
+        {
+            var assets = await AssetLoader.Instance.LoadAllAsync<T>(ResolvePath(keyOrPath));
+            return assets;
+        }
+
+        public static T LoadByPath<T>(string path) where T : UnityEngine.Object
+        {
+            return AssetLoader.Instance.Load<T>(path);
+        }
+
+
+        public static void LoadSprite(string keyOrPath, Action<Sprite> callback)
+        {
+            _ = LoadAsync(keyOrPath, callback);
+        }
+
+        public static void LoadSpriteAsync(string keyOrPath, Action<Sprite> callback = null)
+        {
+            _ = LoadAsync(keyOrPath, callback);
+        }
+
+        public static async Task<Sprite> LoadSubSpriteAsync(string imagePath, string spriteName, Action<Sprite> callback = null)
+        {
+            var sprites = await LoadAllAsync<Sprite>(imagePath);
+            var sprite = sprites?.FirstOrDefault(s => s != null && s.name == spriteName);
+            callback?.Invoke(sprite);
+            return sprite;
+        }
+
+        public static void LoadSubSprite(string imagePath, string spriteName, Action<Sprite> callback = null)
+        {
+            _ = LoadSubSpriteAsync(imagePath, spriteName, callback);
+        }
+
+        public static void LoadSpriteByUrl(string url, Action<Sprite> callback = null)
+        {
+            if (string.IsNullOrEmpty(url))
             {
-                Log.Error($"[GameAssets] Key not found: {key}");
+                callback?.Invoke(null);
+                return;
+            }
+
+            var parts = url.Split('#');
+            if (parts.Length == 2)
+                LoadSubSprite(parts[0], parts[1], callback);
+            else
+                LoadSpriteAsync(parts[0], callback);
+        }
+
+        public static async Task<Texture2D> LoadPngAsTextureAsync(string path, Action<Texture2D> callback = null)
+        {
+            if (!File.Exists(path))
+            {
+                Debug.LogError("File not found at path: " + path);
+                callback?.Invoke(null);
                 return null;
             }
-            var asset = await AssetLoader.Instance.LoadAsync<T>(path);
-            return asset as T;
+
+            byte[] fileData = await File.ReadAllBytesAsync(path);
+            Texture2D texture = new Texture2D(2, 2);
+            texture.LoadImage(fileData);
+            callback?.Invoke(texture);
+            return texture;
         }
 
-        public static async Task<T> LoadAsyncByPath<T>(string path, Action<T> callback = null) where T : UnityEngine.Object
+        public static void LoadSceneAsync(string path, Action callback = null)
         {
-            var asset = await AssetLoader.Instance.LoadAsync<T>(path);
-
-            callback?.Invoke(asset);
-
-            return asset as T;
+            LoadSceneAsync(path, _ => callback?.Invoke());
         }
 
-        public static async Task<T[]> LoadAllAsyncByPath<T>(string path) where T : UnityEngine.Object
+        public static void LoadSceneAsync(string path, Action<Scene> callback)
         {
-            var assets = await AssetLoader.Instance.LoadAllAsync<T>(path);
-            return assets;
+            var asyncLoader = SceneManager.LoadSceneAsync(path, LoadSceneMode.Single);
+            asyncLoader.completed += _ =>
+            {
+                if (asyncLoader.isDone)
+                {
+                    Debug.Log("Scene loaded successfully: " + path);
+                    callback?.Invoke(SceneManager.GetSceneByName(path));
+                }
+                else
+                {
+                    Debug.LogError("Failed to load scene: " + path);
+                    callback?.Invoke(default);
+                }
+            };
+        }
+
+        public static void LoadMainCharacter(string mainCharacterInfoJson, Action<GameObject> callback)
+        {
+            _ = LoadAsync("Prefabs/Character/Main_Character", callback);
+        }
+
+        public static string ResolvePath(string keyOrPath)
+        {
+            if (Instance != null)
+                return Instance.ResolveKeyOrPath(keyOrPath);
+
+            if (ResourceIndexRuntime.table == null)
+                ResourceIndexRuntime.Init();
+
+            return ResourceIndexRuntime.GetPath(keyOrPath) ?? keyOrPath;
+        }
+
+        public void LoadAndSetByKey<T>(string key, Action<T> onLoaded) where T : UnityEngine.Object
+        {
+            _ = LoadAsyncByKey<T>(key, onLoaded);
+        }
+
+
+        public string ResolveKeyOrPath(string keyOrPath)
+        {
+            if (string.IsNullOrEmpty(keyOrPath))
+                return keyOrPath;
+
+            var path = ResolveKey(keyOrPath);
+            return string.IsNullOrEmpty(path) ? keyOrPath : path;
+        }
+
+        private string ResolveKey(string key)
+        {
+            if (string.IsNullOrEmpty(key))
+                return null;
+
+            if (keyToPath.TryGetValue(key, out var path))
+                return path;
+
+            return ResourceIndexRuntime.GetPath(key);
         }
 
         public void ReleaseAll()
@@ -192,11 +308,6 @@ namespace CLIP.Framework_Unity.Asset
             keyToPath.Clear();
         }
 
-
-        public void LoadAndSetByKey<T>(string key, Action<T> onLoaded) where T : UnityEngine.Object
-        {
-            _ = LoadAsyncByKey<T>(key, onLoaded);
-        }
 
         public static bool TryConvertFileNameToResKey(string fileName, string fileType, out string resKey)
         {

@@ -21,6 +21,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
     public class InputManager : SingletonMono<InputManager>
     {
+        protected override bool PersistAcrossScenes => true;
         #region Public Events
         // 事件：单指点击
         public Action<Vector2> OnSingleTap;

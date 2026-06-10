@@ -110,11 +110,11 @@ public class RecycleSellPopup : MonoBehaviour
             // itemIcon 判空防"弹窗已销毁但 sprite 迟到送达"，不是字段兜底。
             if (parts.Length != 2)
             {
-                Project_Mouse_Resource_Management.Load_Sprite(parts[0], (Sprite icon) => { if (itemIcon != null) itemIcon.sprite = icon; });
+                GameAssets.LoadSprite(parts[0], (Sprite icon) => { if (itemIcon != null) itemIcon.sprite = icon; });
             }
             else
             {
-                Project_Mouse_Resource_Management.load_sub_sprite(parts[0], parts[1], (Sprite icon) => { if (itemIcon != null) itemIcon.sprite = icon; });
+                GameAssets.LoadSubSprite(parts[0], parts[1], (Sprite icon) => { if (itemIcon != null) itemIcon.sprite = icon; });
             }
         }
 

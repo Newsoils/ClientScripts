@@ -100,6 +100,8 @@ public static class EvtNames
     public static string Dispatch_Switch_Bag = "Dispatch_Switch_Bag";
     public static string Dispatch_Change_Item = "Dispatch_Change_Item";
     public static string Dispatch_Refresh_Model = "Dispatch_Refresh_Model";
+    public static string DispatchDesk_Click_Action = "DispatchDesk_Click_Action";
+    public static string DispatchDesk_Select_Tape = "DispatchDesk_Select_Tape";
     /// <summary>旅行背包打包成功（<see cref="PackageBagRes"/>），参数为 0-based 背包下标。</summary>
     public static string Dispatch_Package_Bag_Res = "Dispatch_Package_Bag_Res";
     public static string Dispatch_Show_Reward = "Dispatch_Get_Reward";

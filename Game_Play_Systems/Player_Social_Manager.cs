@@ -10,7 +10,7 @@ using Common;
 using UnityEngine;
 using UnityEngine.Events;
 using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
-using PM_RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+using PM_RM = CLIP.Framework_Unity.Asset.GameAssets;
 
 
 namespace CLIP.Project_Mouse.Game_Play_System

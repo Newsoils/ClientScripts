@@ -449,7 +449,7 @@ namespace CLIP.Project_Mouse.UI
                     if (!string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
                     {
                         bool isLoaded = false;
-                        Project_Mouse_Resource_Management.load_png_as_texture(path, (texture) =>
+                        GameAssets.LoadPngAsTextureAsync(path, (texture) =>
                         {
                             imageList[i].texture = texture;
                             isLoaded = true;

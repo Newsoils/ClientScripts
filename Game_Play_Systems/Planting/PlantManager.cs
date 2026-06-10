@@ -9,6 +9,7 @@ using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Network;
 using Newtonsoft.Json;
+using UnityEditor.Overlays;
 using UnityEngine;
 
 
@@ -23,6 +24,8 @@ public class PlantManager : SingletonMono<PlantManager>
     public Dictionary<string, FertilizerData> fertilizerDatas;
     public Dictionary<string, PotData> potDatas;
     private GameObject waterPrefab;
+
+    public Dictionary<int, SeedInfo> seedInfoDic;
 
     [Header("实例")]
     public GameObject plantPrefab;
@@ -49,7 +52,7 @@ public class PlantManager : SingletonMono<PlantManager>
     {
         if (waterPrefab == null)
         {
-            waterPrefab = await GameAssets.Instance.LoadAsycByKey<GameObject>(ResKeys.PREFAB_WATERFALL);
+            waterPrefab = await GameAssets.Instance.LoadAsyncByKey<GameObject>(ResKeys.PREFAB_WATERFALL);
         }
         return waterPrefab;
     }
@@ -95,6 +98,8 @@ public class PlantManager : SingletonMono<PlantManager>
         }
         fertilizerDatas = JsonConvert.DeserializeObject<List<FertilizerData>>(JsonDataManager.Load_Single_JsonData("project_mouse_tb_fertilizer_effect")).ToDictionary(x => x.fertilizerName, x => x);
         potDatas = JsonConvert.DeserializeObject<List<PotData>>(JsonDataManager.Load_Single_JsonData("project_mouse_tb_pot_info")).ToDictionary(x => x.itemName, x => x);
+        JsonDataManager.GetSeedInfo(out seedInfoDic);
+
     }
     #region 植物相关
     public void RequestPlantDataFromServer()

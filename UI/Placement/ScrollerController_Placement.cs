@@ -2,166 +2,302 @@ using System.Collections.Generic;
 using System.Linq;
 using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
+using CLIP.Project_Mouse;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
+using EnhancedUI.EnhancedScroller;
 using UnityEngine;
 
-public class ScrollerController_Placement : ScrollerController_GameItem<ScrollData_GameItem, FirstCellView_GameItem>
+enum PlacementScrollerMode
 {
-    //本地缓存：保存从全局获取的原始物品数据
-    private List<Game_Item_In_Inventory> _placementItemList = new List<Game_Item_In_Inventory>();
+    Items,
+    Groups,
+    GroupItems
+}
 
-    //默认按照品级
+public class ScrollerController_Placement : MonoBehaviour, IEnhancedScrollerDelegate
+{
+    public EnhancedScroller scroller;
+    public FirstCellView_GameItem rowCellPrefab;
+    public FirstCellView_Group groupRowCellPrefab;
+    public int numberOfCellsPerRow = 5;
+
+    private readonly List<Game_Item_In_Inventory> _placementItemList = new List<Game_Item_In_Inventory>();
+    private readonly List<ScrollData_GameItem> _itemDataList = new List<ScrollData_GameItem>();
+    private readonly List<ScrollData_ItemGroup> _groupDataList = new List<ScrollData_ItemGroup>();
+
+    private PlacementScrollerMode _mode = PlacementScrollerMode.Items;
+    private Placement_First_Category _currentFirstCategory = Placement_First_Category.None;
     private InventorySortType _currentSortType = InventorySortType.ObtainDate;
+    private int _selectedGroupId = -1;
+
+    private void Start()
+    {
+        if (scroller != null)
+            scroller.Delegate = this;
+    }
 
     private void OnDestroy()
     {
-        _placementItemList.Clear();
+        ClearData();
     }
 
-    /// <summary>
-    /// 载入数据（再开始使用面板之前载入再调用RefreshPanel
-    /// ，否则_placementItemList为空不起作用）
-    /// </summary>
     public void ReloadData()
     {
-        ClearData();
-
-        _placementItemList = Global_Inventory_Manager.Get_Items_By_Type(Item_Type.Room_Placement);
-
-        foreach (var item in _placementItemList)
+        if (_currentFirstCategory == Placement_First_Category.Set)
         {
-            dataList.Add(new ScrollData_GameItem(
-                item.item_info.name,
-                item.item_info.item_id,
-                item._item_count,
-                item.item_info.rarity));
+            if (_mode == PlacementScrollerMode.GroupItems && _selectedGroupId > 0)
+                ShowGroupItems(_selectedGroupId, string.Empty, _currentSortType, false, false);
+            else
+                ShowGroups(string.Empty, _currentSortType, false);
+
+            return;
         }
 
-        ReloadScroller();
+        ShowPlacementItems(Placement_First_Category.None, Placement_Second_Category.None, string.Empty, _currentSortType, false, false);
     }
 
-    /// <summary>
-    /// 根据给定的排序刷新面板
-    /// </summary>
-    /// <param name="first_Category"></param>
-    /// <param name="second_Category"></param>
-    /// <param name="sortType"></param>
-    /// <param name="isAscending"></param>
-    public void RefreshPanel(Placement_First_Category first_Category = Placement_First_Category.None,
-        Placement_Second_Category second_Category = Placement_Second_Category.None,
-        string filterStr = "", InventorySortType sortType = InventorySortType.Rarity,bool isfavorive = false, bool isAscending = false)
+    public void RefreshPanel(Placement_First_Category firstCategory = Placement_First_Category.None,
+        Placement_Second_Category secondCategory = Placement_Second_Category.None,
+        string filterStr = "", InventorySortType sortType = InventorySortType.Rarity, bool isFavorite = false, bool isAscending = false)
     {
-        //清理UI数据
-        ClearData();
-
         _currentSortType = sortType;
+        _currentFirstCategory = firstCategory;
 
-        //（打开面板时）更新数据（游戏中数据可能会发生变化）
-        _placementItemList = Global_Inventory_Manager.Get_Items_By_Type(Item_Type.Room_Placement);
-
-        // 1. 基础防护：检查源数据是否存在
-        if (_placementItemList == null)
+        if (firstCategory == Placement_First_Category.Set)
         {
-            Log.Custom("ScrollerController_Placement", "源列表 _placementItemList 为空，请先加载数据！", Color.red);
+            if (_mode == PlacementScrollerMode.GroupItems && _selectedGroupId > 0)
+                ShowGroupItems(_selectedGroupId, filterStr, sortType, isFavorite, isAscending);
+            else
+                ShowGroups(filterStr, sortType, isAscending);
+
             return;
         }
 
-        var _placementNameDic = GridObjectSystem.InfoNameDic;
-        if (_placementNameDic == null)
+        _selectedGroupId = -1;
+        ShowPlacementItems(firstCategory, secondCategory, filterStr, sortType, isFavorite, isAscending);
+    }
+
+    public void BackToGroupList(string filterStr = "", InventorySortType sortType = InventorySortType.Rarity, bool isAscending = false)
+    {
+        _currentFirstCategory = Placement_First_Category.Set;
+        _selectedGroupId = -1;
+        ShowGroups(filterStr, sortType, isAscending);
+    }
+
+    public int GetNumberOfCells(EnhancedScroller scroller)
+    {
+        var count = _mode == PlacementScrollerMode.Groups ? _groupDataList.Count : _itemDataList.Count;
+        if (count == 0) return 0;
+        return Mathf.CeilToInt((float)count / numberOfCellsPerRow);
+    }
+
+    public float GetCellViewSize(EnhancedScroller scroller, int dataIndex)
+    {
+        var cell = scroller.GetCellViewAtDataIndex(dataIndex);
+        if (cell is FirstCellView_GameItem) return 205f;
+        else return 268f;
+    }
+   
+
+    public EnhancedScrollerCellView GetCellView(EnhancedScroller scroller, int dataIndex, int cellIndex)
+    {
+        var startIndex = dataIndex * numberOfCellsPerRow;
+
+        if (_mode == PlacementScrollerMode.Groups)
         {
-            Log.Custom("家具字典为空，无法刷新面板", "ScrollerController_Placement", Color.red);
-            return;
+            var groupRow = scroller.GetCellView(groupRowCellPrefab) as FirstCellView_Group;
+            groupRow.name = $"Group Row {dataIndex}";
+            groupRow.SetData(_groupDataList, startIndex, OnGroupClick);
+            return groupRow;
         }
 
-        // 2. 初始化用于显示的列表 (showData)
-        List<Game_Item_In_Inventory> showData = new List<Game_Item_In_Inventory>(_placementItemList);
-
-        // 3. 名称过滤 
-        if (!string.IsNullOrEmpty(filterStr))
-        {
-            showData = showData.SelectByName(filterStr);
-        }
-
-        // 4. 一级分类过滤
-        if (first_Category != Placement_First_Category.None)
-        {
-            // 这里直接覆盖 showData，调试时你可以在这里打断点，查看 showData 的 Count
-            showData = showData.Where(item =>
-            {
-                if (item?.item_info == null) return false;
-                if (_placementNameDic.TryGetValue(item.item_info.name, out var meta))
-                {
-                    return meta.first_Category == first_Category;
-                }
-                return false;
-            }).ToList();
-        }
-
-        // 5. 二级分类过滤
-        if (second_Category != Placement_Second_Category.None)
-        {
-            showData = showData.Where(item =>
-            {
-                if (_placementNameDic.TryGetValue(item.item_info.name, out var meta))
-                {
-                    return meta.second_Category == second_Category;
-                }
-                return false;
-            }).ToList();
-        }
-
-        // 6. 排序（此时 showData 已经是过滤后的结果）
-        showData.SortByType(sortType, isAscending);
-
-        //如果是最爱分类，筛选下分类
-        if(isfavorive)
-        {
-            showData = showData.Where(i => i.is_favorite).ToList();
-        }
-
-        // 7. 填充显示数据
-        foreach (var item in showData)
-        {
-            dataList.Add(new ScrollData_GameItem(
-                item.item_info.name,
-                item.item_info.item_id,
-                item._item_count,
-                item.item_info.rarity));
-        }
-
-        ReloadScroller();
+        var itemRow = scroller.GetCellView(rowCellPrefab) as FirstCellView_GameItem;
+        itemRow.name = $"Item Row {dataIndex}";
+        itemRow.SetData(_itemDataList, startIndex, OnItemClick, null,OnItemClick);
+        return itemRow;
     }
 
     public CellView_GameItem GetFirstCell()
     {
+        if (_mode == PlacementScrollerMode.Groups)
+            return null;
+
         var row = scroller.GetCellViewAtDataIndex(scroller.StartCellViewIndex);
-        var cell = (row as FirstCellView_GameItem)?.GetFirestElement();
-        return cell;
+        return (row as FirstCellView_GameItem)?.GetFirstElement();
     }
-    public override void ClearData()
+
+    public void ClearData()
     {
-        base.ClearData();
+        _itemDataList.Clear();
+        _groupDataList.Clear();
         _placementItemList.Clear();
     }
 
-    protected override void BindRow(FirstCellView_GameItem rowCell, int startIndex)
+    private void ReloadScroller()
     {
-        rowCell.SetData(dataList, startIndex, null, OnItemClick);
+        if (scroller != null)
+            scroller.ReloadData();
+    }
+
+    private void ShowGroups(string filterStr, InventorySortType sortType, bool isAscending)
+    {
+        ClearData();
+        _mode = PlacementScrollerMode.Groups;
+
+        if (groupRowCellPrefab == null)
+        {
+            Log.Custom("ScrollerController_Placement", "groupRowCellPrefab is not assigned.", Color.red);
+            ReloadScroller();
+            return;
+        }
+
+        var groups = Global_Inventory_Manager.GetObtainedGroupsByType(GroupType.FurnitureSuit);
+        if (!string.IsNullOrEmpty(filterStr))
+            groups = groups.Where(group => group?.itemGroupInfo != null && group.itemGroupInfo.group_name.Contains(filterStr)).ToList();
+
+        SortGroups(groups, sortType, isAscending);
+
+        foreach (var group in groups)
+        {
+            if (group == null) continue;
+            _groupDataList.Add(new ScrollData_ItemGroup(group));
+        }
+
+        ReloadScroller();
+    }
+
+    private void ShowGroupItems(int groupId, string filterStr, InventorySortType sortType, bool isFavorite, bool isAscending)
+    {
+        ClearData();
+        _mode = PlacementScrollerMode.GroupItems;
+        _selectedGroupId = groupId;
+
+        var showData = Global_Inventory_Manager.GetGroupObtainedItems(groupId) ?? new List<Game_Item_In_Inventory>();
+        FillItemData(showData, filterStr, sortType, isFavorite, isAscending);
+    }
+
+    private void ShowPlacementItems(Placement_First_Category firstCategory, Placement_Second_Category secondCategory,
+        string filterStr, InventorySortType sortType, bool isFavorite, bool isAscending)
+    {
+        ClearData();
+        _mode = PlacementScrollerMode.Items;
+
+        var placementItems = Global_Inventory_Manager.Get_Items_By_Type(Item_Type.Room_Placement);
+        if (placementItems == null)
+        {
+            Log.Custom("ScrollerController_Placement", "源列表 _placementItemList 为空，请先加载数据！", Color.red);
+            ReloadScroller();
+            return;
+        }
+
+        _placementItemList.AddRange(placementItems);
+
+        var placementNameDic = GridObjectSystem.InfoNameDic;
+        if (placementNameDic == null)
+        {
+            Log.Custom("家具字典为空，无法刷新面板", "ScrollerController_Placement", Color.red);
+            ReloadScroller();
+            return;
+        }
+
+        List<Game_Item_In_Inventory> showData = new List<Game_Item_In_Inventory>(_placementItemList);
+
+        if (firstCategory != Placement_First_Category.None)
+        {
+            showData = showData.Where(item =>
+            {
+                if (item?.item_info == null) return false;
+                if (placementNameDic.TryGetValue(item.item_info.name, out var meta))
+                    return meta.first_Category == firstCategory;
+
+                return false;
+            }).ToList();
+        }
+
+        if (secondCategory != Placement_Second_Category.None)
+        {
+            showData = showData.Where(item =>
+            {
+                if (item?.item_info == null) return false;
+                if (placementNameDic.TryGetValue(item.item_info.name, out var meta))
+                    return meta.second_Category == secondCategory;
+
+                return false;
+            }).ToList();
+        }
+
+        FillItemData(showData, filterStr, sortType, isFavorite, isAscending);
+    }
+
+    private void FillItemData(List<Game_Item_In_Inventory> showData, string filterStr,
+        InventorySortType sortType, bool isFavorite, bool isAscending)
+    {
+        if (!string.IsNullOrEmpty(filterStr))
+            showData = showData.SelectByName(filterStr);
+
+        if (isFavorite)
+            showData = showData.Where(i => i.is_favorite).ToList();
+
+        showData.SortByType(sortType, isAscending);
+
+        foreach (var item in showData)
+        {
+            if (item?.item_info == null) continue;
+            _itemDataList.Add(new ScrollData_GameItem(
+                item.item_info.name,
+                item.item_info.item_id,
+                item._item_count,
+                item.item_info.rarity,
+                item.uid,
+                Global_Inventory_Manager.IsNewObtainItem(item.uid)));
+        }
+
+        ReloadScroller();
+    }
+
+    private static void SortGroups(List<ItemGroupData> groups, InventorySortType sortType, bool isAscending)
+    {
+        groups.Sort((a, b) =>
+        {
+            int result;
+            switch (sortType)
+            {
+                case InventorySortType.Count:
+                    result = b.obtainCount.CompareTo(a.obtainCount);
+                    break;
+                default:
+                    result = string.Compare(a.itemGroupInfo?.group_name, b.itemGroupInfo?.group_name, System.StringComparison.Ordinal);
+                    break;
+            }
+
+            if (result == 0)
+                result = a.group_id.CompareTo(b.group_id);
+
+            return isAscending ? -result : result;
+        });
+    }
+
+    private void OnGroupClick(ScrollData_ItemGroup data)
+    {
+        if (data == null) return;
+        ShowGroupItems(data.groupId, string.Empty, _currentSortType, false, false);
     }
 
     private async void OnItemClick(ScrollData_GameItem data)
     {
-        var currentRoom = RoomSystem.currentRoom;
+        if (data == null) return;
 
+        var currentRoom = RoomSystem.currentRoom;
         var placementInfo = GridObjectSystem.GetPlacementInfo(data.id);
+        if (placementInfo == null || currentRoom == null)
+            return;
+
         var roomTypes = placementInfo.relating_rooms;
         if (roomTypes.Contains(currentRoom.RoomType))
         {
-            //加载prefab
             var placement = await GridObjectSystem.CreatePlacement(data.id);
-            //通知编辑Manager进入放置家具模式
             if (placement != null)
             {
                 EditManager.Instance.SetMode(new CreateGridObjectMode(placement));
@@ -169,27 +305,18 @@ public class ScrollerController_Placement : ScrollerController_GameItem<ScrollDa
 
                 Enum_Helper.GridLayerMap.TryGetValue(placingType, out var gridLayerTypes);
 
-                if (currentRoom != null && gridLayerTypes != null && gridLayerTypes.Count > 0)
+                if (gridLayerTypes != null && gridLayerTypes.Count > 0)
                 {
-                   var pos = currentRoom.GetRandomPosition(gridLayerTypes[0]);
-
-                    placement.transform.position =pos;
+                    var pos = currentRoom.GetRandomPosition(gridLayerTypes[0]);
+                    placement.transform.position = pos;
                 }
             }
 
-            //Global_Inventory_Manager.Change_Item_Count(data.id, -1);
             EvtDsp.TriggerEvt(EvtNames.ReloadPlacementData);
-
         }
         else
         {
             PromptManager.ShowWarning(PromptId.FurnitureWrongRoom);
-            return;
         }
     }
-
-
-
-
-
 }

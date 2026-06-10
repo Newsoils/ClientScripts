@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using CLIP.Framework_Core.Event;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
+using Cmd;
+using DG.Tweening;
+using Google.Protobuf;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -24,7 +27,11 @@ public class ClothPanel : UIPanelBase
     public Button BtnCloseSearch;
     public GameObject searchPanel;
 
-    public Button btn_Close;
+    public Button btn_DrawUp;
+    public RectTransform invenArea;
+    public Sprite up;
+    public Sprite down;
+
     public Button ConfirmModification;
 
     private ClothFirstLabel[] firstLabels;
@@ -40,8 +47,15 @@ public class ClothPanel : UIPanelBase
     private InventorySortType _currentSort = InventorySortType.Rarity;
     private bool _isAscending = false;
     private string filterString = "";
+    // 新增：记录当前是否为只显示收藏项
+    private bool _currentIsFavorite = false;
     public float debounceTime = 0.25f;
     Coroutine currentCoroutine;
+
+    // 新增：控制展开/收起状态与 Tween
+    private bool _isInvenExpanded = false;
+    private Tween _invenTween = null;
+    public float invenToggleDuration = 0.25f;
 
     private void Start()
     {
@@ -52,7 +66,8 @@ public class ClothPanel : UIPanelBase
         ConfirmModification.onClick.AddListener(CloseChangeCloth);
 
         btn_Search.onClick.AddListener(() => OpenSearchPanel());
-        btn_Close.onClick.AddListener(ClosePanel);
+        // 将按钮行为改为切换展开/收起
+        btn_DrawUp.onClick.AddListener(ToggleInvenArea);
         BtnCloseSearch.onClick.AddListener(CloseSearchPanel);
 
         searchInputField.onValueChanged.AddListener(value =>
@@ -81,14 +96,27 @@ public class ClothPanel : UIPanelBase
 
         exitButton.onClick.AddListener(ClosePanel);
 
+        // 确保初始状态为收起（anchorMax = (1,0.5)，按钮图为 up）
+        _isInvenExpanded = false;
+        if (invenArea != null)
+        {
+            invenArea.anchorMax = new Vector2(1f, 0.5f);
+        }
+        if (btn_DrawUp != null && btn_DrawUp.image != null)
+        {
+            btn_DrawUp.image.sprite = up;
+        }
     }
 
 
     public override void OnDestroy()
     {
         base.OnDestroy();
+        // 结束可能存在的 tween
+        _invenTween?.Kill();
+
         btn_Search.onClick.RemoveAllListeners();
-        btn_Close.onClick.RemoveAllListeners();
+        btn_DrawUp.onClick.RemoveAllListeners();
         ConfirmModification.onClick.RemoveAllListeners();
 
         searchInputField.onSubmit.RemoveAllListeners();
@@ -108,6 +136,9 @@ public class ClothPanel : UIPanelBase
 
         // 恢复 MainPanel 所有 UI 的正常显示
         UIManager.Instance.GetPanel<MainPanel>().ShowAll();
+
+        ReadItemBagReq req = new ReadItemBagReq() { BagTag = 7 };
+        EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, req);
     }
 
     public override void OpenPanel(params object[] data)
@@ -121,25 +152,41 @@ public class ClothPanel : UIPanelBase
 
         mScroller.ReloadData();
         ResetAllLabels();
+        // 默认打开时不带收藏筛选
         RefreshByFirstCategory(Cloth_First_Category.None);
 
         // 开启 wood 身体预览（只对 Target 预览角色）
         CharacterClothesManager.Instance.SetWoodBodyPreview(CharacterType.Target, true);
 
         EvtDsp.TriggerEvt(EvtNames.OnClothPanelOpen);
-
     }
 
+    // 新增：切换 invenArea 展开/收起（使用 DOTween 动画）
+    public void ToggleInvenArea()
+    {
+        _isInvenExpanded = InventoryPanelUIHelper.ToggleInventoryArea(
+            invenArea,
+            btn_DrawUp,
+            up,
+            down,
+            _isInvenExpanded,
+            ref _invenTween,
+            invenToggleDuration,
+            new Vector2(1f, 0.5f),
+            new Vector2(1f, 0.65f));
+    }
 
-    // 刷新逻辑：由内部统一调度状态
-    public void RefreshByFirstCategory(Cloth_First_Category first)
+    // 刷新逻辑：由面板负责调度状态
+    public void RefreshByFirstCategory(Cloth_First_Category first, bool isFavorite = false)
     {
         _currentFirst = first;
+        _currentSecond = Cloth_Second_Category.None;
+        _currentIsFavorite = isFavorite;
 
-        // 1. 刷新列表（二级菜单默认为 None）
-        mScroller.RefreshPanel(_currentFirst, Cloth_Second_Category.None, filterString, _currentSort, _isAscending);
+        // 将 isFavorite 传给 scroller（scroller 会根据 isFavorite 只显示收藏项）
+        mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _currentIsFavorite, _isAscending);
 
-        // 2. 核心：由面板负责更新二级菜单栏的显示
+        // 由面板负责更新二级菜单栏的显示
         UpdateSecondCategoryUI();
     }
 
@@ -153,39 +200,34 @@ public class ClothPanel : UIPanelBase
 
     private void UpdateSecondCategoryUI()
     {
-        // 从 Helper 获取映射
         var subsToOpen = Enum_Helper.GetSubCategories(_currentFirst);
-
-
-        foreach (var label in secondLabels)
-        {
-            if (subsToOpen.Contains(label.second_Category))
-            {
-                label.gameObject.SetActive(true); // 激活已有的
-            }
-            else
-            {
-                label.gameObject.SetActive(false); // 不需要的就隐藏
-            }
-            if (label.second_Category == Cloth_Second_Category.None)
-            {
-                label.gameObject.SetActive(true);
-            }
-        }
+        InventoryPanelUIHelper.UpdateSecondCategoryLabels(
+            secondLabels,
+            subsToOpen,
+            Cloth_Second_Category.None,
+            label => label.second_Category,
+            label => label.gameObject);
     }
 
     public void RefreshBySecondCategory(Cloth_Second_Category second)
     {
-        // 点击二级菜单时，直接带上记录好的 _currentFirst
-        mScroller.RefreshPanel(_currentFirst, second, filterString, _currentSort, _isAscending);
+        // 点击二级菜单时，直接带上记录好的 _currentFirst 和收藏过滤状态
+        mScroller.RefreshPanel(_currentFirst, second, filterString, _currentSort, _currentIsFavorite, _isAscending);
     }
 
 
     public void RefreshPanel(Cloth_First_Category first_Category = Cloth_First_Category.None,
         Cloth_Second_Category second_Category = Cloth_Second_Category.None, string filterStr = "",
-        InventorySortType sortType = InventorySortType.Rarity, bool isAscending = false)
+        InventorySortType sortType = InventorySortType.Rarity, bool isFavorite = false, bool isAscending = false)
     {
-        mScroller.RefreshPanel(first_Category, second_Category, filterStr, sortType, isAscending);
+        _currentFirst = first_Category;
+        _currentSecond = second_Category;
+        _currentSort = sortType;
+        _isAscending = isAscending;
+        _currentIsFavorite = isFavorite;
+        filterString = filterStr;
+
+        mScroller.RefreshPanel(first_Category, second_Category, filterStr, sortType, _currentIsFavorite, isAscending);
     }
 
     /// <summary>
@@ -194,13 +236,7 @@ public class ClothPanel : UIPanelBase
     /// <param name="selected">谁是被选中的</param>
     public void Set_FirstLabel_SelectedState(ClothFirstLabel selected)
     {
-        foreach (var label in firstLabels)
-        {
-            if (label != selected)
-            {
-                label.SetSelectFalse();
-            }
-        }
+        InventoryPanelUIHelper.ResetOtherLabels(firstLabels, selected, label => label.SetSelectFalse());
     }
 
     /// <summary>
@@ -209,25 +245,13 @@ public class ClothPanel : UIPanelBase
     /// <param name="selected">谁是被选中的</param>
     public void Set_AllSecondLabel_SelectState(ClothSecondLabel selected)
     {
-        foreach (var label in secondLabels)
-        {
-            if (label != selected)
-                label.SetSelectFalse();
-        }
+        InventoryPanelUIHelper.ResetOtherLabels(secondLabels, selected, label => label.SetSelectFalse());
     }
 
     public void ResetAllLabels()
     {
-        // 重置一级标签
-        foreach (var label in firstLabels)
-        {
-            label.SetSelectFalse();
-        }
-        // 重置二级标签
-        foreach (var label in secondLabels)
-        {
-            label.SetSelectFalse();
-        }
+        InventoryPanelUIHelper.ResetAllLabels(firstLabels, label => label.SetSelectFalse());
+        InventoryPanelUIHelper.ResetAllLabels(secondLabels, label => label.SetSelectFalse());
     }
 
 
@@ -279,7 +303,7 @@ public class ClothPanel : UIPanelBase
         {
             _isAscending = !_isAscending;
             RefreshSortDropdownVisual();
-            mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+            mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _currentIsFavorite, _isAscending);
             _waitingForCloseToggle = false;
             return;
         }
@@ -288,7 +312,7 @@ public class ClothPanel : UIPanelBase
         _isAscending = false;
         _waitingForCloseToggle = false;
         RefreshSortDropdownVisual();
-        mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+        mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _currentIsFavorite, _isAscending);
     }
 
     private void LateUpdate()
@@ -306,7 +330,7 @@ public class ClothPanel : UIPanelBase
                 {
                     _isAscending = !_isAscending;
                     RefreshSortDropdownVisual();
-                    mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+                    mScroller.RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _currentIsFavorite, _isAscending);
                 }
             }
         }
@@ -323,8 +347,8 @@ public class ClothPanel : UIPanelBase
         var options = dropdown_SortType.options;
         for (int i = 0; i < options.Count; i++)
         {
-            string arrow = i == (int)_currentSort 
-                ? (_isAscending ? " <size=120%><b>↑</b></size>" : " <size=120%><b>↓</b></size>") 
+            string arrow = i == (int)_currentSort
+                ? (_isAscending ? " <size=120%><b>↑</b></size>" : " <size=120%><b>↓</b></size>")
                 : "";
             options[i].text = _baseSortOptions[i] + arrow;
         }
@@ -370,25 +394,29 @@ public class ClothPanel : UIPanelBase
         searchInputField.text = filterString;
 
 
-        RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
+        RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _currentIsFavorite, _isAscending);
 
         Debug.Log($"Validating: {text}");
     }
     public void OpenSearchPanel()
     {
-        searchPanel.gameObject.SetActive(true);
-        dropdown_SortType.gameObject.SetActive(false);
-        btn_Search.gameObject.SetActive(false);
-        PanelSecondLevelMenuPanel.SetActive(false);
+        InventoryPanelUIHelper.SetSearchPanelVisible(
+            searchPanel,
+            dropdown_SortType,
+            btn_Search,
+            PanelSecondLevelMenuPanel,
+            true);
     }
 
 
     public void CloseSearchPanel()
     {
-        PanelSecondLevelMenuPanel.SetActive(true);
-        dropdown_SortType.gameObject.SetActive(true);
-        btn_Search.gameObject.SetActive(true);
-        searchPanel.gameObject.SetActive(false);
-        RefreshPanel(_currentFirst, _currentSecond, "", _currentSort, _isAscending);
+        InventoryPanelUIHelper.SetSearchPanelVisible(
+            searchPanel,
+            dropdown_SortType,
+            btn_Search,
+            PanelSecondLevelMenuPanel,
+            false);
+        RefreshPanel(_currentFirst, _currentSecond, "", _currentSort, _currentIsFavorite, _isAscending);
     }
 }

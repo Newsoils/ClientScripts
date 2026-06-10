@@ -22,7 +22,7 @@ namespace CLIP.Project_Mouse.UI
 
             if (image != null && TryParseIconPath(iconPath, out var atlasPath, out var spriteName))
             {
-                Project_Mouse_Resource_Management.load_sub_sprite(atlasPath, spriteName, sprite =>
+                GameAssets.LoadSubSprite(atlasPath, spriteName, sprite =>
                 {
                     if (image != null && sprite != null)
                         image.sprite = sprite;

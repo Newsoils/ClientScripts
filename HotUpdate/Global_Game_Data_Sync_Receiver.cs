@@ -14,12 +14,9 @@ using CLIP.Project_Mouse.Network;
 using Cmd;
 using Common;
 using Google.Protobuf;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.Video;
 using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
-using PM_RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
 
 public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Sync_Receiver>, IMsg_Receiver
 {
@@ -125,18 +122,7 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
                 .AddListener(UploadPlayerBriefToServer);
         }
 
-        if (Global_Inventory_Manager.Instance != null)
-        {
-            // Global_Inventory_Manager.Instance._update_inventory_from_server
-            //     .AddListener(UpdateInventoryFromServer);
-            // Global_Inventory_Manager.Instance._send_inventory_to_server
-            //     .AddListener(SendInventoryToServer);
 
-            Global_Inventory_Manager.Instance._update_shop_state_from_server
-                .AddListener(UpdateShopStateFromServer);
-            Global_Inventory_Manager.Instance._send_shop_state_to_server
-                .AddListener(SendShopStateToServer);
-        }
     }
 
     private void UnbindUnityEvents()
@@ -154,18 +140,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
                 .RemoveListener(UploadPlayerBriefToServer);
         }
 
-        if (Global_Inventory_Manager.Instance != null)
-        {
-            // Global_Inventory_Manager.Instance._update_inventory_from_server
-            //     .RemoveListener(UpdateInventoryFromServer);
-            // Global_Inventory_Manager.Instance._send_inventory_to_server
-            //     .RemoveListener(SendInventoryToServer);
-
-            Global_Inventory_Manager.Instance._update_shop_state_from_server
-                .RemoveListener(UpdateShopStateFromServer);
-            Global_Inventory_Manager.Instance._send_shop_state_to_server
-                .RemoveListener(SendShopStateToServer);
-        }
     }
 
     #endregion
@@ -226,7 +200,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         if (NetWork_Center_WSS.IsConnectedToPlayerServer)
             NetWork_Center_WSS.SendMsg(new Cmd.EmptyReq());
     }
-
 
 
     #endregion
@@ -332,7 +305,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
             NetWork_Center_WSS.SendMsg(req);
     }
 
-
     private void UpdateWeatherStateFromServer()
     {
         // SendMsg("Get_Data", "Weather_State");
@@ -350,25 +322,6 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         // var lastData = GF_SP.SerializeObject( new List<string>() { "Weather_State", json });
 
         // SendMsg("Save_Data", lastData );
-        // TODO zhaorui
-        if (NetWork_Center_WSS.IsConnectedToPlayerServer)
-            NetWork_Center_WSS.SendMsg(new Cmd.EmptyReq());
-    }
-
-    private void UpdateShopStateFromServer()
-    {
-        // SendMsg("Get_Data", "Shop_State");
-        // if (NetWork_Center_WSS.IsConnectedToPlayerServer)
-        //     NetWork_Center_WSS.SendMsg(1063, new Cmd.GetAllShopInfoReq());
-    }
-
-    private void SendShopStateToServer()
-    {
-        if (Global_Inventory_Manager.Instance == null) return;
-
-        // string json = Global_Inventory_Manager.Instance.get_shop_state_json();
-        // var lastData = GF_SP.SerializeObject( new List<string>() { "Shop_State", json });
-        // SendMsg("Save_Data", lastData);
         // TODO zhaorui
         if (NetWork_Center_WSS.IsConnectedToPlayerServer)
             NetWork_Center_WSS.SendMsg(new Cmd.EmptyReq());
@@ -434,7 +387,7 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
         var roleInfo = Global_Game_Manager.Instance?._current_player_role_info;
         if ((roleInfo.FirstInfoFlag & 1 << 1) == 0)
         {
-            var clip = await GameAssets.Instance.LoadAsycByKey<VideoClip>("MP4_STORY");
+            var clip = await GameAssets.Instance.LoadAsyncByKey<VideoClip>("MP4_STORY");
             if (clip == null)
             {
                 Debug.LogWarning("[TransitionVideoPanel] VideoClip load failed, trigger scene load directly.");
@@ -794,7 +747,7 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
 
     private void HandleResponseData1328(Cmd.ItemChangeS2C res)
     {
-        Global_Inventory_Manager.Instance.update_inventory_from_s2c(res);
+        Global_Inventory_Manager.Instance.UpdateInventory_From_S2c(res);
     }
 
     private void HandleResponseData1322(Cmd.EmptyRes res)
@@ -1319,4 +1272,3 @@ public class Global_Game_Data_Sync_Receiver : SingletonMono<Global_Game_Data_Syn
     #endregion
 
 }
-

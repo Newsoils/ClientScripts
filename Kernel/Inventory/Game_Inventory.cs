@@ -7,6 +7,7 @@ using CLIP.Project_Mouse.ENUM;
 using Cmd;
 using Common;
 using Newtonsoft.Json;
+using Sirenix.OdinInspector;
 using UnityEngine;
 
 
@@ -20,23 +21,76 @@ namespace CLIP.Project_Mouse.Kernel
     [System.Serializable]
     public class Game_Inventory
     {
-        public List<Game_Item_In_Inventory> _current_inventory = new List<Game_Item_In_Inventory>();
+        [Title("新获得物品UID", Bold = true)]
+        public List<long> _new_Obtained_Item_Uid = new List<long>();
 
-        [JsonIgnore]
-        public IReadOnlyList<Game_Item_In_Inventory> Items => _current_inventory;
+        [Title("库存物品", Bold = true)]
+        [ListDrawerSettings(
+            ShowIndexLabels = true,
+            ListElementLabelName = "item_name",
+            DraggableItems = false
+        )]
+        public List<Game_Item_In_Inventory> _items = new List<Game_Item_In_Inventory>();
+
+
+        #region Inspector 查询功能
+
+        [Title("库存查询", Bold = true)]
+        [EnumToggleButtons]
+        [LabelText("查询类型")]
+        [HorizontalGroup("InventorySearch/Line", Width = 160)]
+        public SearchType searchType = SearchType.Name;
+
+        [HorizontalGroup("InventorySearch/Line")]
+        [LabelText("名字 / UID / ID")]
+        public string searchInput;
+
+        [HorizontalGroup("InventorySearch/Line", Width = 90)]
+        [Button("查询", ButtonSizes.Medium)]
+        public void SearchItem()
+        {
+            searchResults.Clear();
+
+            if (string.IsNullOrWhiteSpace(searchInput))
+            {
+                UnityEngine.Debug.LogWarning("[Game_Inventory] 请输入查询内容");
+                return;
+            }
+
+            searchResults.AddRange(FindItems(searchType, searchInput.Trim()));
+
+            if (searchResults.Count == 0)
+            {
+                UnityEngine.Debug.LogWarning($"[Game_Inventory] 未找到物品: {searchInput}");
+                return;
+            }
+
+            foreach (var item in searchResults)
+            {
+                UnityEngine.Debug.Log($"[Game_Inventory] 找到物品: {FormatItemForLog(item)}");
+            }
+        }
+
+        [ShowInInspector]
+        [ReadOnly]
+        [LabelText("查询结果")]
+        [ListDrawerSettings(ShowIndexLabels = false, ListElementLabelName = "item_name", DraggableItems = false)]
+        private readonly List<Game_Item_In_Inventory> searchResults = new List<Game_Item_In_Inventory>();
+
+        public enum SearchType
+        {
+            Name,
+            ID,
+            UID
+        }
+
+        #endregion
 
         [JsonIgnore]
         private readonly Dictionary<int, List<Game_Item_In_Inventory>> _idDic = new Dictionary<int, List<Game_Item_In_Inventory>>();
         [JsonIgnore]
         private readonly Dictionary<string, List<Game_Item_In_Inventory>> _nameDic = new Dictionary<string, List<Game_Item_In_Inventory>>();
 
-        public List<long> _new_obtained_item_names = new List<long>();
-
-        /// <summary>
-        /// UI 刷新回调（由上层系统订阅）。
-        /// </summary>
-        [JsonIgnore]
-        public Action OnInventoryUIUpdateRequested;
 
         #region 查询
         public Game_Item_In_Inventory Get_Item(string name)
@@ -54,7 +108,60 @@ namespace CLIP.Project_Mouse.Kernel
 
         public Game_Item_In_Inventory Get_Item(long uid)
         {
-            return _current_inventory.FirstOrDefault(i => i != null && i.uid == uid);
+            return _items.FirstOrDefault(i => i != null && i.uid == uid);
+        }
+
+        private IEnumerable<Game_Item_In_Inventory> FindItems(SearchType type, string input)
+        {
+            if (_items == null || _items.Count == 0)
+                return Enumerable.Empty<Game_Item_In_Inventory>();
+
+            switch (type)
+            {
+                case SearchType.Name:
+                    return _items.Where(i =>
+                        i != null &&
+                        !string.IsNullOrEmpty(i.item_name) &&
+                        i.item_name.IndexOf(input, StringComparison.OrdinalIgnoreCase) >= 0);
+
+                case SearchType.ID:
+                    if (!int.TryParse(input, out int id))
+                    {
+                        UnityEngine.Debug.LogWarning("[Game_Inventory] ID 必须是整数");
+                        return Enumerable.Empty<Game_Item_In_Inventory>();
+                    }
+                    return _items.Where(i => i != null && i.item_id == id);
+
+                case SearchType.UID:
+                    if (!long.TryParse(input, out long uid))
+                    {
+                        UnityEngine.Debug.LogWarning("[Game_Inventory] UID 必须是整数");
+                        return Enumerable.Empty<Game_Item_In_Inventory>();
+                    }
+                    return _items.Where(i => i != null && i.uid == uid);
+
+                default:
+                    return Enumerable.Empty<Game_Item_In_Inventory>();
+            }
+        }
+
+        private static string FormatItemForLog(Game_Item_In_Inventory item)
+        {
+            if (item == null)
+                return "NULL";
+
+            return $"{item.item_name} (ID: {item.item_id}, UID: {item.uid}, 数量: {item._item_count})";
+        }
+
+        public bool Is_New_Obtained_Item(long uid)
+        {
+            if (uid == 0) return false;
+
+            if (_new_Obtained_Item_Uid.Contains(uid))
+                return true;
+
+            var item = Get_Item(uid);
+            return item != null && item.IsNew;
         }
 
 
@@ -74,7 +181,7 @@ namespace CLIP.Project_Mouse.Kernel
 
         public List<Game_Item_In_Inventory> Get_Items_By_Type(Item_Type type)
         {
-            return _current_inventory.Where(i => i.item_info?.type == type).ToList();
+            return _items.Where(i => i.item_info?.type == type).ToList();
         }
         #endregion
 
@@ -88,15 +195,14 @@ namespace CLIP.Project_Mouse.Kernel
         {
             if (s2c == null) return;
 
-            ApplyItemInfosAddOrUpd(s2c.ItemAdd, getItemInfo);
-            ApplyItemInfosAddOrUpd(s2c.ItemUpd, getItemInfo);
+            ApplyItemInfosAddOrUpd(s2c.ItemAdd, getItemInfo, true);
+            ApplyItemInfosAddOrUpd(s2c.ItemUpd, getItemInfo, false);
             ApplyItemInfosDel(s2c.ItemDel);
 
             RebuildIndexesAndSort();
-            Update_Inventory_UI();
         }
 
-        private void ApplyItemInfosAddOrUpd(IEnumerable<ItemInfo> infos, Func<int, Game_Item_Info> getItemInfo)
+        private void ApplyItemInfosAddOrUpd(IEnumerable<ItemInfo> infos, Func<int, Game_Item_Info> getItemInfo, bool markNewWhenCreated)
         {
             if (infos == null) return;
             foreach (var it in infos)
@@ -110,7 +216,7 @@ namespace CLIP.Project_Mouse.Kernel
 
                 Game_Item_Info itemInfo = getItemInfo?.Invoke(itemId);
 
-                var local = _current_inventory.FirstOrDefault(x => x != null && x.uid == uid);
+                var local = _items.FirstOrDefault(x => x != null && x.uid == uid);
                 if (local == null)
                 {
                     local = new Game_Item_In_Inventory
@@ -122,22 +228,21 @@ namespace CLIP.Project_Mouse.Kernel
                         _obtain_date = DateTime.Now,
                         _item_count = Mathf.Max(0, count),
                         is_favorite = false,
-                        IsNew = it.IsNew,
                         VaildTime = it.VaildTime,
+                        IsNew = it.IsNew == 0 ?false :true
                     };
-                    _current_inventory.Add(local);
-                    _new_obtained_item_names.Add(uid);
+                    _items.Add(local);
                 }
                 else
                 {
                     local.item_id = itemId;
                     local._item_count = Mathf.Max(0, count);
-                    local.IsNew = it.IsNew;
                     local.VaildTime = it.VaildTime;
                     if (itemInfo != null)
                     {
                         local.item_name = itemInfo.name;
                         local.item_info = itemInfo;
+                        local.IsNew = it.IsNew != 0;
                     }
                 }
             }
@@ -152,12 +257,14 @@ namespace CLIP.Project_Mouse.Kernel
                 long uid = unchecked((long)it.UID);
                 if (uid == 0) continue;
 
-                for (int i = _current_inventory.Count - 1; i >= 0; i--)
+                for (int i = _items.Count - 1; i >= 0; i--)
                 {
-                    var local = _current_inventory[i];
+                    var local = _items[i];
                     if (local != null && local.uid == uid)
-                        _current_inventory.RemoveAt(i);
+                        _items.RemoveAt(i);
                 }
+
+                _new_Obtained_Item_Uid.Remove(uid);
             }
         }
 
@@ -166,12 +273,12 @@ namespace CLIP.Project_Mouse.Kernel
             _idDic.Clear();
             _nameDic.Clear();
 
-            for (int i = _current_inventory.Count - 1; i >= 0; i--)
+            for (int i = _items.Count - 1; i >= 0; i--)
             {
-                var item = _current_inventory[i];
+                var item = _items[i];
                 if (item == null)
                 {
-                    _current_inventory.RemoveAt(i);
+                    _items.RemoveAt(i);
                     continue;
                 }
 
@@ -193,10 +300,7 @@ namespace CLIP.Project_Mouse.Kernel
                 kv.Value.Sort((a, b) => (a?._item_count ?? 0).CompareTo(b?._item_count ?? 0));
         }
 
-        public void Update_Inventory_UI()
-        {
-            OnInventoryUIUpdateRequested?.Invoke();
-        }
+
 
         #region 修改
 
@@ -208,10 +312,16 @@ namespace CLIP.Project_Mouse.Kernel
         {
             _idDic.Clear();
             _nameDic.Clear();
-            _current_inventory = newSlots ?? new List<Game_Item_In_Inventory>();
-            for (int i = _current_inventory.Count - 1; i >= 0; i--)
+            _new_Obtained_Item_Uid.Clear();
+            _items = newSlots ?? new List<Game_Item_In_Inventory>();
+            for (int i = _items.Count - 1; i >= 0; i--)
             {
-                var item = _current_inventory[i];
+                var item = _items[i];
+                if (item == null)
+                {
+                    _items.RemoveAt(i);
+                    continue;
+                }
 
                 if (!_idDic.TryGetValue(item.item_id, out var idList) || idList == null)
                     _idDic[item.item_id] = idList = new List<Game_Item_In_Inventory>();
@@ -220,6 +330,9 @@ namespace CLIP.Project_Mouse.Kernel
 
                 idList.Add(item);
                 nameList.Add(item);
+
+                if (item.IsNew && item.uid != 0 && !_new_Obtained_Item_Uid.Contains(item.uid))
+                    _new_Obtained_Item_Uid.Add(item.uid);
             }
 
             foreach (var kv in _idDic) kv.Value.Sort((a, b) => (a?._item_count ?? 0).CompareTo(b?._item_count ?? 0));
@@ -272,7 +385,6 @@ namespace CLIP.Project_Mouse.Kernel
             }
 
             RebuildIndexesAndSort();
-            Update_Inventory_UI();
         }
 
         private static long _nextLocalNegativeUid = -1L;
@@ -300,7 +412,7 @@ namespace CLIP.Project_Mouse.Kernel
                 _item_count = add,
                 is_favorite = false,
             };
-            _current_inventory.Add(slot);
+            _items.Add(slot);
         }
 
         private void RemoveItemCountLocal(Game_Item_Info info, int remove)
@@ -323,15 +435,11 @@ namespace CLIP.Project_Mouse.Kernel
                 remaining -= take;
 
                 if (slot._item_count <= 0)
-                    _current_inventory.Remove(slot);
+                    _items.Remove(slot);
             }
         }
 
         #endregion
-
-
-
-
     }
 
 }

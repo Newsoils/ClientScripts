@@ -5,7 +5,7 @@ using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Game_Play_System.Dispatch_System;
 using UnityEngine;
 using UnityEngine.UI;
-using RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+using RM = CLIP.Framework_Unity.Asset.GameAssets;
 using System.Linq;
 
 public class SecondCellView_CD : MonoBehaviour
@@ -106,11 +106,11 @@ public class SecondCellView_CD : MonoBehaviour
             var _image_url_data = url.Split("#");
             if (_image_url_data.Length == 2)
             {
-                RM.load_sub_sprite(_image_url_data[0], _image_url_data[1], (sp) => cd_Icon.sprite = sp);
+                RM.LoadSubSprite(_image_url_data[0], _image_url_data[1], (sp) => cd_Icon.sprite = sp);
             }
             else
             {
-                RM.load_sprite_async(_image_url_data[0], sp => cd_Icon.sprite = sp);
+                RM.LoadSpriteAsync(_image_url_data[0], sp => cd_Icon.sprite = sp);
             }
         }
 

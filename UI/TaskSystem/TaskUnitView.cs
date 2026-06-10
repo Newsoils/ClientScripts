@@ -42,7 +42,7 @@ namespace CLIP.Project_Mouse.UI
             foreach (var iconName in iconNames)
             {
                 var icon = Instantiate(_rewardIconPrefab, _rewardField);
-                var sprite = await GameAssets.Instance.LoadAsycByKey<Sprite>(iconName);
+                var sprite = await GameAssets.Instance.LoadAsyncByKey<Sprite>(iconName);
                 icon.transform.Find("ItemImage").GetComponent<Image>().sprite = sprite;
             }
         }

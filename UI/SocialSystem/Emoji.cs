@@ -5,7 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Kernel.Social;
-using RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+using RM = CLIP.Framework_Unity.Asset.GameAssets;
 
 namespace CLIP.Project_Mouse.UI
 {
@@ -31,7 +31,7 @@ namespace CLIP.Project_Mouse.UI
                 string[] _image_url_data = social_Chat_Msg.res_url.Split('#');
                 if (_image_url_data.Length == 2)
                 {
-                    RM.load_sub_sprite(_image_url_data[0], _image_url_data[1], (sprite) =>
+                    RM.LoadSubSprite(_image_url_data[0], _image_url_data[1], (sprite) =>
                     {
                         this.mSprite = sprite;
                         image.sprite = sprite;
@@ -43,7 +43,7 @@ namespace CLIP.Project_Mouse.UI
                 }
                 else
                 {
-                    RM.load_sprite_async(_image_url_data[0], (sprite) =>
+                    RM.LoadSpriteAsync(_image_url_data[0], (sprite) =>
                     {
                         this.mSprite = sprite;
                         image.sprite = sprite;

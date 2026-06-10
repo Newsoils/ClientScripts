@@ -41,7 +41,7 @@ namespace CLIP
             /// <summary>
             /// 稀有度（越大越稀有）
             /// </summary>
-            public Enum_RarityType rarity;
+            public RarityType rarity;
 
             /// <summary>
             /// 售价单位物品
@@ -62,14 +62,10 @@ namespace CLIP
             /// </summary>
             public bool can_be_present;
 
-
-            public bool IsPot
-            {
-                get
-                {
-                    return type == Item_Type.Pot;
-                }
-            }
+            /// <summary>
+            /// 物品获取方式（用于区分来源：商店/活动/伙伴/派遣等）
+            /// </summary>
+            public ObtainSource obtain_source = ObtainSource.Unknown;
 
         }
     }

@@ -14,7 +14,7 @@ using Google.Protobuf;
 using Sych.ShareAssets.Runtime;
 using UnityEngine;
 using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
-using PM_RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+using PM_RM = CLIP.Framework_Unity.Asset.GameAssets;
 
 
 namespace CLIP.Project_Mouse.Game_Play_System
@@ -333,7 +333,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             if (File.Exists(Last_Photo_Path))
             {
-                return await PM_RM.load_png_as_texture(Last_Photo_Path, callback);
+                return await PM_RM.LoadPngAsTextureAsync(Last_Photo_Path, callback);
             }
             return null;
         }
@@ -343,7 +343,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             var imageInfo = imageList.Find(info => info.photoName == imageName);
             if(imageInfo != null && File.Exists(imageInfo.localPath))
             {
-                return await PM_RM.load_png_as_texture(imageInfo.localPath, callback);
+                return await PM_RM.LoadPngAsTextureAsync(imageInfo.localPath, callback);
             }
             else
             {
@@ -356,7 +356,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             if (File.Exists(imagePath))
             {
-                return await PM_RM.load_png_as_texture(imagePath, callback);
+                return await PM_RM.LoadPngAsTextureAsync(imagePath, callback);
             }
             else
             {

@@ -23,11 +23,11 @@ namespace CLIP.Project_Mouse.UI
                 var _image_url_data = item.res_url.Split("#");
                 if (_image_url_data.Length != 2)
                 {
-                    Project_Mouse_Resource_Management.Load_Sprite(_image_url_data[0], SetIcon);
+                    GameAssets.LoadSprite(_image_url_data[0], SetIcon);
                 }
                 else
                 {
-                    Project_Mouse_Resource_Management.load_sub_sprite(_image_url_data[0], _image_url_data[1], SetIcon);
+                    GameAssets.LoadSubSprite(_image_url_data[0], _image_url_data[1], SetIcon);
                 }
             }
             if (item.name == "鱼币" || item.name == "罐罐")

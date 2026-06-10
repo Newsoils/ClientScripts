@@ -42,7 +42,9 @@ public class ScrollerController_Recycle : ScrollerController_GameItem<ScrollData
                 item.item_info.name,
                 item.item_info.item_id,
                 item._item_count,
-                item.item_info.rarity));
+                item.item_info.rarity,
+                item.uid,
+                Global_Inventory_Manager.IsNewObtainItem(item.uid)));
         }
 
         ReloadScroller();
@@ -74,7 +76,9 @@ public class ScrollerController_Recycle : ScrollerController_GameItem<ScrollData
                     item.item_info.name,
                     item.item_info.item_id,
                     item._item_count,
-                    item.item_info.rarity));
+                    item.item_info.rarity,
+                    item.uid,
+                    Global_Inventory_Manager.IsNewObtainItem(item.uid)));
             }
             ReloadScroller();
             return;
@@ -128,7 +132,9 @@ public class ScrollerController_Recycle : ScrollerController_GameItem<ScrollData
                 item.item_info.name,
                 item.item_info.item_id,
                 item._item_count,
-                item.item_info.rarity));
+                item.item_info.rarity,
+                item.uid,
+                Global_Inventory_Manager.IsNewObtainItem(item.uid)));
         }
 
         ReloadScroller();

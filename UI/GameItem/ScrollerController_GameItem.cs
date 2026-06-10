@@ -4,7 +4,7 @@ using UnityEngine;
 
 public abstract class ScrollerController_GameItem<TData, TRowCell>
     : MonoBehaviour, IEnhancedScrollerDelegate
-    where TRowCell : FirstCellView_GameItem
+    where TRowCell : EnhancedScrollerCellView
 {
     public EnhancedScroller scroller;
     public TRowCell rowCellPrefab; // 明确这是 Prefab

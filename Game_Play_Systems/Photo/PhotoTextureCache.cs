@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using CLIP.Framework_Unity.Asset;
 using CLIP.Project_Mouse.Kernel;
 using UnityEngine;
-using PM_RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+using PM_RM = CLIP.Framework_Unity.Asset.GameAssets;
 
 namespace CLIP.Project_Mouse.Game_Play_System
 {
@@ -42,7 +42,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
             EvictCacheIfNeeded();
 
-            _ = PM_RM.load_png_as_texture(path, tex =>
+            _ = PM_RM.LoadPngAsTextureAsync(path, tex =>
             {
                 if (tex != null)
                 {

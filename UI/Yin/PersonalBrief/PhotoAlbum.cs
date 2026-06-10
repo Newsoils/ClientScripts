@@ -7,7 +7,7 @@
 //using CLIP.Project_Mouse.NewFrame.UI;
 //using UnityEngine;
 //using UnityEngine.UI;
-//using PM_RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+//using PM_RM = CLIP.Framework_Unity.Asset.GameAssets;
 
 //namespace CLIP
 //{
@@ -49,7 +49,7 @@
 //                        if (File.Exists(photoPath))
 //                        {
 //                            bool isLoaded = false;
-//                            PM_RM.load_png_as_texture(photoPath, (texture) =>
+//                            PM_RM.LoadPngAsTextureAsync(photoPath, (texture) =>
 //                            {
 //                                if (texture != null)
 //                                {
@@ -106,7 +106,7 @@
 //                    this.gameObject.SetActive(false);
 //                }
 
-//                // 上一页
+//                // 上一�?
 //                public void LastPage()
 //                {
 //                    if (currentPage > 0)
@@ -116,7 +116,7 @@
 //                    }
 //                }
 
-//                // 下一页
+//                // 下一�?
 //                public void NextPage()
 //                {
 //                    if ((currentPage + 1) * 2 < textures.Count)

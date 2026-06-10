@@ -6,19 +6,32 @@ using CLIP.Framework_Unity;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Kernel;
 using Cmd;
+using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace CLIP.Project_Mouse.Game_Play_System
 {
+
+    //背包Id   
+    //1	食物背包
+    //2	幸运小物背包
+    //3	唱片背包
+    //4	种子背包
+    //5	肥料背包
+    //6	花盆背包
+    //7	家具背包
+    //8	服装背包
+    //9	可回收物品背包
+
+
     public class Global_Inventory_Manager : SingletonMono<Global_Inventory_Manager>
     {
         protected override bool PersistAcrossScenes => true;
 
-        public GameItem_DB_SO _itemDB_SO;
-
+        [Header("物品配置表（仅作展示，数据实际由 JsonDataManager 加载）")]
         [SerializeField]
-        private Game_Inventory _inventory;
+        private List<Game_Item_Info> _gameItem_db;
 
         /// <summary>最近一次 <see cref="GetItemBagRes"/> 中的道具背包上限。</summary>
         public long LastServerItemBagCapacity { get; private set; }
@@ -27,23 +40,34 @@ namespace CLIP.Project_Mouse.Game_Play_System
         /// 注意！这是只读接口，不要对其进行修改操作
         /// 修改请通过Global_Inventory_Manager.Change_Items_count
         /// </summary>
-        public static IReadOnlyList<Game_Item_In_Inventory> Items  => Instance._inventory.Items;
-  
+        public static IReadOnlyList<Game_Item_In_Inventory> Items => Instance._inventory._items;
 
-        // [HideInInspector]
-        // public UnityEvent _update_inventory_from_server;
         [HideInInspector]
-        public UnityEvent _send_inventory_to_server;
-        [HideInInspector]
-        public UnityEvent _update_shop_state_from_server;
-        [HideInInspector]
-        public UnityEvent _send_shop_state_to_server;
+        public Dictionary<int, ItemGroupInfo> itemGroupDic = new Dictionary<int, ItemGroupInfo>();
+        [ReadOnly]
+        public Dictionary<GroupType, List<ItemGroupInfo>> itemGroupByTypeDic = new Dictionary<GroupType, List<ItemGroupInfo>>();
+
+        /// <summary>套组实时状态缓存（玩家已获得的套组信息）。</summary>
+        private Dictionary<int, ItemGroupData> _obtainedItemGroups = new Dictionary<int, ItemGroupData>();
+
+        #region 物品静态数据字典
+
+        /// <summary>物品 ID 到信息的字典缓存。</summary>
+        private Dictionary<int, Game_Item_Info> _itemInfoIdDic = new Dictionary<int, Game_Item_Info>();
+
+        /// <summary>物品名称到信息的字典缓存。</summary>
+        private Dictionary<string, Game_Item_Info> _itemInfoNameDic = new Dictionary<string, Game_Item_Info>();
+
+        #endregion
+
+        [ShowInInspector]
+        private Game_Inventory _inventory = new Game_Inventory();
 
         public static List<Game_Item_Info> GameItem_DB
         {
             get
             {
-                return Instance._itemDB_SO._gameItem_db;
+                return Instance._gameItem_db;
             }
         }
 
@@ -51,23 +75,211 @@ namespace CLIP.Project_Mouse.Game_Play_System
         {
             get
             {
-                return Instance._inventory._new_obtained_item_names;
+                return Instance._inventory._new_Obtained_Item_Uid;
             }
         }
 
 
+        #region 套组相关 查询
+
+
+        /// <summary>
+        /// 重建套组缓存（全量刷新，初始化或服务器全量同步后调用）。
+        /// </summary>
+        private void BuildObtainedItemGroups()
+        {
+            _obtainedItemGroups.Clear();
+
+            if (itemGroupDic == null || _inventory == null)
+                return;
+
+            var currentItems = _inventory._items;
+            if (currentItems == null || currentItems.Count == 0)
+                return;
+
+            var obtainedItemIds = new HashSet<int>();
+            foreach (var slot in currentItems)
+            {
+                if (slot != null && slot.item_info != null)
+                    obtainedItemIds.Add(slot.item_info.item_id);
+            }
+
+            foreach (var kvp in itemGroupDic)
+            {
+                var group = kvp.Value;
+                if (group.group_item_list == null || group.group_item_list.Count == 0)
+                    continue;
+
+                var runtime = new ItemGroupData
+                {
+                    group_id = group.group_id,
+                    itemGroupInfo = group,
+                    totalCount = group.group_item_list.Count,
+                    obtainCount = 0,
+                    obtained = new List<int>()
+                };
+
+                foreach (var itemId in group.group_item_list)
+                {
+                    if (obtainedItemIds.Contains(itemId))
+                    {
+                        runtime.obtainCount++;
+                        runtime.obtained.Add(itemId);
+                    }
+                }
+
+                _obtainedItemGroups[group.group_id] = runtime;
+            }
+        }
+
+        private void RefreshObtainedItemGroups()
+        {
+            BuildObtainedItemGroups();
+        }
+
+        /// <summary>
+        /// 增量更新套组缓存（物品变更时调用，自动处理增加和移除）。
+        /// </summary>
+        private void UpdateObtainedItemGroups(IEnumerable<(Game_Item_Info info, int count)> changedItems)
+        {
+            if (itemGroupDic == null || _inventory == null || changedItems == null)
+                return;
+
+            var affectedGroupIds = new HashSet<int>();
+            foreach (var (info, _) in changedItems)
+            {
+                if (info == null) continue;
+
+                foreach (var kvp in itemGroupDic)
+                {
+                    var group = kvp.Value;
+                    if (group.group_item_list != null && group.group_item_list.Contains(info.item_id))
+                        affectedGroupIds.Add(group.group_id);
+                }
+            }
+
+            if (affectedGroupIds.Count == 0)
+                return;
+
+            var obtainedItemIds = new HashSet<int>();
+            foreach (var slot in _inventory._items)
+            {
+                if (slot != null && slot.item_info != null)
+                    obtainedItemIds.Add(slot.item_info.item_id);
+            }
+
+            foreach (var groupId in affectedGroupIds)
+            {
+                if (!itemGroupDic.TryGetValue(groupId, out var group))
+                    continue;
+
+                if (!_obtainedItemGroups.TryGetValue(groupId, out var runtime))
+                {
+                    runtime = new ItemGroupData
+                    {
+                        group_id = group.group_id,
+                        itemGroupInfo = group,
+                        totalCount = group.group_item_list.Count,
+                        obtainCount = 0,
+                        obtained = new List<int>()
+                    };
+                    _obtainedItemGroups[groupId] = runtime;
+                }
+
+                runtime.obtainCount = 0;
+                runtime.obtained.Clear();
+                foreach (var itemId in group.group_item_list)
+                {
+                    if (obtainedItemIds.Contains(itemId))
+                    {
+                        runtime.obtainCount++;
+                        runtime.obtained.Add(itemId);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 查询玩家当前已获得的套组列表（至少拥有一件套组物品）。
+        /// </summary>
+        public static List<ItemGroupData> GetObtainedGroups()
+        {
+            if (Instance == null)
+                return new List<ItemGroupData>();
+
+            Instance.RefreshObtainedItemGroups();
+            if (Instance._obtainedItemGroups == null)
+                return new List<ItemGroupData>();
+
+            var result = new List<ItemGroupData>();
+            foreach (var kvp in Instance._obtainedItemGroups)
+            {
+                if (kvp.Value.obtainCount > 0)
+                    result.Add(kvp.Value);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 查询特定套组中玩家已获得的物品信息。
+        /// </summary>
+        public static List<Game_Item_In_Inventory> GetGroupObtainedItems(int groupId)
+        {
+            if (Instance == null)
+                return new List<Game_Item_In_Inventory>();
+
+            Instance.RefreshObtainedItemGroups();
+            if (Instance._obtainedItemGroups == null)
+                return new List<Game_Item_In_Inventory>();
+
+            var res = new List<Game_Item_In_Inventory>();
+            if (!Instance._obtainedItemGroups.TryGetValue(groupId, out var runtime) || runtime?.obtained == null)
+                return res;
+
+            foreach (var itemId in runtime.obtained)
+            {
+                var item = Instance._inventory.Get_Item(itemId);
+                if (item != null)
+                    res.Add(item);
+            }
+            return res;
+        }
+
+        public static List<ItemGroupData> GetObtainedGroupsByType(GroupType groupType)
+        {
+            if (Instance == null)
+                return new List<ItemGroupData>();
+
+            Instance.RefreshObtainedItemGroups();
+            if (Instance._obtainedItemGroups == null || Instance.itemGroupByTypeDic == null)
+                return new List<ItemGroupData>();
+            if (!Instance.itemGroupByTypeDic.TryGetValue(groupType, out var groupsOfType) || groupsOfType == null)
+                return new List<ItemGroupData>();
+            var result = new List<ItemGroupData>();
+            foreach (var group in groupsOfType)
+            {
+                if (Instance._obtainedItemGroups.TryGetValue(group.group_id, out var runtime) && runtime.obtainCount > 0)
+                    result.Add(runtime);
+            }
+            return result;
+        }
+
+        #endregion
+
         void Start()
         {
-            _itemDB_SO.RefreshData();
+            JsonDataManager.LoadGameItemData(out _gameItem_db, out _itemInfoIdDic, out _itemInfoNameDic);
+            JsonDataManager.LoadItemGroupData(out itemGroupDic, out itemGroupByTypeDic);
+            BuildObtainedItemGroups();
         }
-  
+
         protected override void OnDestroy()
         {
             base.OnDestroy();
         }
 
         #region 增删改
-  
+
         public static void Change_Items_Count(in List<(string, int)> changeList, string source = "")
         {
             List<(string, int)> moneyList = new();
@@ -144,15 +356,16 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
 
             Log.Info(resLog);
-            _inventory.Change_Item_Count(in itemList, _itemDB_SO._gameItem_db);
+            _inventory.Change_Item_Count(in itemList, _gameItem_db);
+            UpdateObtainedItemGroups(itemList);
         }
 
         public void ClearAllItems()
         {
-            _inventory._current_inventory = new List<Game_Item_In_Inventory>();
+            _inventory._items.Clear();
         }
 
-        public void Set_Favorite(string item_Name,bool isFrvorite)
+        public void Set_Favorite(string item_Name, bool isFrvorite)
         {
             _inventory.Set_Favorite(item_Name, isFrvorite);
         }
@@ -167,37 +380,53 @@ namespace CLIP.Project_Mouse.Game_Play_System
         #region 查
         public static List<Game_Item_Info> GetItemInfos(IEnumerable<int> ids)
         {
-            return Instance._itemDB_SO.GetItemInfos(ids);
+            var result = new List<Game_Item_Info>();
+            foreach (var id in ids)
+            {
+                if (Instance._itemInfoIdDic.TryGetValue(id, out var info) && info != null)
+                    result.Add(info);
+            }
+            return result;
         }
 
         public static List<Game_Item_Info> GetItemInfos(IEnumerable<string> names)
         {
-            return Instance._itemDB_SO.GetItemInfos(names);
+            var result = new List<Game_Item_Info>();
+            foreach (var name in names)
+            {
+                if (Instance._itemInfoNameDic.TryGetValue(name, out var info) && info != null)
+                    result.Add(info);
+            }
+            return result;
         }
 
         public static Game_Item_Info GetItemInfo(string itemName)
         {
-            return Instance._itemDB_SO.GetItemInfo(itemName);
+            if (Instance == null || string.IsNullOrEmpty(itemName))
+                return null;
+
+            Instance._itemInfoNameDic.TryGetValue(itemName, out var info);
+            return info;
         }
         public static Game_Item_Info GetItemInfo(int itemId)
         {
-            return Instance._itemDB_SO.GetItemInfo(itemId);
+            if (Instance == null)
+                return null;
+
+            Instance._itemInfoIdDic.TryGetValue(itemId, out var info);
+            return info;
         }
 
         public static List<Game_Item_Info> Get_Current_Has_Item()
         {
-            return Instance._inventory._current_inventory.Select(i => i.item_info).ToList();
+            return Instance._inventory._items.Select(i => i.item_info).ToList();
         }
 
-        public static List<Game_Item_In_Inventory>  Get_Items_By_Type(Item_Type type)
+        public static List<Game_Item_In_Inventory> Get_Items_By_Type(Item_Type type)
         {
             return Instance._inventory.Get_Items_By_Type(type);
         }
 
-        public static IReadOnlyList<Game_Item_In_Inventory> GetAllItems()
-        {
-            return Instance._inventory.Items;
-        }
 
         public static Game_Item_In_Inventory GetItem(string name)
         {
@@ -213,19 +442,19 @@ namespace CLIP.Project_Mouse.Game_Play_System
             return Instance._inventory.Get_Item(uid);
         }
 
+        public static bool IsNewObtainItem(long uid)
+        {
+            return Instance != null && Instance._inventory != null && Instance._inventory.Is_New_Obtained_Item(uid);
+        }
+
+
         public int GetItemNum(string itemName)
         {
-            //TODO:获取钱币数量
-            //if (MoneyManager_v2.Instance.nameDic.ContainsKey(itemName))
-            //{
-            //    MoneyManager_v2.Instance.GetMoneyCount(itemName);
-            //}
             return _inventory.Get_Item_Count(itemName);
         }
 
         public int GetItemNum(int itemId)
         {
-            //TODO:获取钱币数量
             return _inventory.Get_Item_Count(itemId);
         }
 
@@ -251,6 +480,8 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         #endregion
 
+
+        #region 排序
         /// <summary>
         /// 【对外接口】直接对全局背包进行排序
         /// 会修改 Instance._inventory 中的列表顺序
@@ -279,13 +510,16 @@ namespace CLIP.Project_Mouse.Game_Play_System
         // 内部实现，用于访问 _inventory 私有变量
         private void SortInternalInventory(InventorySortType sortType, bool isAscending)
         {
-            // 直接对 _current_inventory 进行原地排序
-            InventorySorter.SortList(_inventory._current_inventory, sortType, isAscending);
+            // 直接对 _items 进行原地排序
+            InventorySorter.SortList(_inventory._items, sortType, isAscending);
 
             // 可选：如果你的背包UI是基于事件刷新的，这里建议调用一次刷新事件
             // _update_inventory_from_server?.Invoke(); // 或者是专门的 UI_Refresh_Event
             Debug.Log($"Inventory Sorted by {sortType}, Ascending: {isAscending}");
         }
+
+        #endregion
+
         #region 传输消息
 
         /// <summary>
@@ -294,7 +528,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
         /// </summary>
         public void ApplyGetItemBagRes(GetItemBagRes res)
         {
-            if (res == null || _inventory == null || _itemDB_SO == null)
+            if (res == null || _inventory == null)
                 return;
 
             LastServerItemBagCapacity = res.ItemBagCapacity;
@@ -325,7 +559,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
                     item_id = cfgId,              // Common.ItemInfo.ConfigID
                     item_name = info.name,
                     item_info = info,
-                    IsNew = it.IsNew,
+                    IsNew = it.IsNew != 0,
                     VaildTime = it.VaildTime,
                     _obtain_date = DateTime.Now,
                     _item_count = count,           // Common.ItemInfo.Count
@@ -335,12 +569,14 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
 
             _inventory.ReplaceInventoryFromServerSlots(slots);
+            RefreshObtainedItemGroups();
             EvtDsp.TriggerEvt(EvtNames.RefreshUI);
         }
 
-        public void update_inventory_from_s2c(ItemChangeS2C s2c)
+        public void UpdateInventory_From_S2c(ItemChangeS2C s2c)
         {
             _inventory.update_inventory_from_s2c(s2c, GetItemInfo);
+            RefreshObtainedItemGroups();
             EvtDsp.TriggerEvt(EvtNames.RefreshUI);
         }
         #endregion

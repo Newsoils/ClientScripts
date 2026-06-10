@@ -3,7 +3,7 @@ using CLIP.Project_Mouse.Kernel;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using PM_RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+using PM_RM = CLIP.Framework_Unity.Asset.GameAssets;
 
 namespace CLIP.Project_Mouse.UI
 {
@@ -39,11 +39,11 @@ namespace CLIP.Project_Mouse.UI
             var _image_url_data = resUrl.Split("#");
             if (_image_url_data.Length != 2)
             {
-                GameAssets.LoadAsyncByPath<Sprite>(resUrl, _set_sprite);
+                GameAssets.LoadAsync<Sprite>(resUrl, _set_sprite);
             }
             else
             {
-                PM_RM.load_sub_sprite(_image_url_data[0], _image_url_data[1], _set_sprite);
+                PM_RM.LoadSubSprite(_image_url_data[0], _image_url_data[1], _set_sprite);
 
             }
 

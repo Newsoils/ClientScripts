@@ -80,11 +80,11 @@ namespace CLIP.Project_Mouse.UI
                 var _image_url_data = itemInfo.res_url.Split("#");
                 if (_image_url_data.Length != 2)
                 {
-                    Project_Mouse_Resource_Management.Load_Sprite(_image_url_data[0], (Sprite icon) => itemIcon.sprite = icon);
+                    GameAssets.LoadSprite(_image_url_data[0], (Sprite icon) => itemIcon.sprite = icon);
                 }
                 else
                 {
-                    Project_Mouse_Resource_Management.load_sub_sprite(_image_url_data[0], _image_url_data[1], (Sprite icon) => itemIcon.sprite = icon);
+                    GameAssets.LoadSubSprite(_image_url_data[0], _image_url_data[1], (Sprite icon) => itemIcon.sprite = icon);
                 }
             }
 
@@ -110,11 +110,11 @@ namespace CLIP.Project_Mouse.UI
                 var _image_url_data = item.item_info.res_url.Split("#");
                 if (_image_url_data.Length != 2)
                 {
-                    Project_Mouse_Resource_Management.Load_Sprite(_image_url_data[0], (Sprite icon) => itemIcon.sprite = icon);
+                    GameAssets.LoadSprite(_image_url_data[0], (Sprite icon) => itemIcon.sprite = icon);
                 }
                 else
                 {
-                    Project_Mouse_Resource_Management.load_sub_sprite(_image_url_data[0], _image_url_data[1], (Sprite icon) => itemIcon.sprite = icon);
+                    GameAssets.LoadSubSprite(_image_url_data[0], _image_url_data[1], (Sprite icon) => itemIcon.sprite = icon);
                 }
             }
 

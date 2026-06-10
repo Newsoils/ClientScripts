@@ -5,8 +5,10 @@ using CLIP.Framework_Core.Serialization;
 using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
-using CLIP.Project_Mouse.Scene_View_Control;
 using CLIP.Project_Mouse.UI;
+using Cmd;
+using DG.Tweening;
+using Google.Protobuf;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,12 +30,16 @@ public class Placement_Panel : UIPanelBase
     public Button BtnCloseSearch;
     public GameObject searchPanel;
 
-    public Button btn_Close;
+    public Button btn_DrawUp;
+    public RectTransform invenArea;
+    public Sprite up;
+    public Sprite down;
+
     public Button ConfirmModification;
 
     public Button cancelModification;
-
     public Button clearAllPlacement;
+
 
     [Tooltip("测试用：循环切换 装修自由 / 俯视 / 平视 三个相机视角；平视时自动朝向视野中心墙。")]
     public Button btn_TestSwitchCamera;
@@ -60,6 +66,11 @@ public class Placement_Panel : UIPanelBase
     public float debounceTime = 0.25f;
     Coroutine currentCoroutine;
 
+    // 新增：控制展开/收起状态与 Tween
+    private bool _isInvenExpanded = false;
+    private Tween _invenTween = null;
+    public float invenToggleDuration = 0.25f;
+
     private void Start()
     {
         firstLabels = firstCategoryParent.GetComponentsInChildren<Placement_First_Label>();
@@ -67,7 +78,8 @@ public class Placement_Panel : UIPanelBase
         InitDropdown();
 
         btn_Search.onClick.AddListener(() => OpenSearchPanel());
-        btn_Close.onClick.AddListener(ClosePanel);
+        // 原来是 ClosePanel，这里改为切换 invenArea（展开/收起）
+        btn_DrawUp.onClick.AddListener(ToggleInvenArea);
         BtnCloseSearch.onClick.AddListener(CloseSearchPanel);
         ConfirmModification.onClick.AddListener(ConfirmModify);
 
@@ -101,14 +113,30 @@ public class Placement_Panel : UIPanelBase
 
         EvtDsp.AddEvt(EvtNames.ReloadPlacementData, RefreshUI);
         EvtDsp.AddEvt(EvtNames.RefreshUI, RefreshUI);
+
+        // 确保初始状态为收起（anchorMax = (1,0.5)，按钮图为 up）
+        _isInvenExpanded = false;
+        if (invenArea != null)
+        {
+            invenArea.anchorMax = new Vector2(1f, 0.5f);
+        }
+        if (btn_DrawUp != null && btn_DrawUp.image != null)
+        {
+            btn_DrawUp.image.sprite = up;
+        }
+
+
         ClosePanel();
     }
 
     public override void OnDestroy()
     {
         base.OnDestroy();
+        // 结束可能存在的 tween
+        _invenTween?.Kill();
+
         btn_Search.onClick.RemoveAllListeners();
-        btn_Close.onClick.RemoveAllListeners();
+        btn_DrawUp.onClick.RemoveAllListeners();
         ConfirmModification.onClick.RemoveAllListeners();
         cancelModification.onClick.RemoveAllListeners();
         clearAllPlacement.onClick.RemoveAllListeners();
@@ -135,18 +163,22 @@ public class Placement_Panel : UIPanelBase
 
     public void OpenSearchPanel()
     {
-        searchPanel.gameObject.SetActive(true);
-        dropdown_SortType.gameObject.SetActive(false);
-        btn_Search.gameObject.SetActive(false);
-        PanelSecondLevelMenuPanel.SetActive(false);
+        InventoryPanelUIHelper.SetSearchPanelVisible(
+            searchPanel,
+            dropdown_SortType,
+            btn_Search,
+            PanelSecondLevelMenuPanel,
+            true);
     }
 
     public void CloseSearchPanel()
     {
-        PanelSecondLevelMenuPanel.SetActive(true);
-        dropdown_SortType.gameObject.SetActive(true);
-        btn_Search.gameObject.SetActive(true);
-        searchPanel.gameObject.SetActive(false);
+        InventoryPanelUIHelper.SetSearchPanelVisible(
+            searchPanel,
+            dropdown_SortType,
+            btn_Search,
+            PanelSecondLevelMenuPanel,
+            false);
         filterString = "";
         RefreshPanel(_currentFirst, _currentSecond, filterString, _currentSort, _isAscending);
     }
@@ -170,6 +202,8 @@ public class Placement_Panel : UIPanelBase
         EvtDsp.TriggerEvt<bool>(EvtNames.SetMainCharacterState, false);
         _currentPlacementState = CameraState.Placement;
         CameraManager.Instance.ChangeState(_currentPlacementState);
+
+
     }
 
     /// <summary>
@@ -187,7 +221,7 @@ public class Placement_Panel : UIPanelBase
 
         if (_currentPlacementState == CameraState.PlacementFrontView)
         {
-            var wall = FindClosestFacingWall();
+            var wall = RoomSystem.currentRoom?.FindClosestFacingWall(Camera.main);
             if (wall != null && CameraManager.Instance.curCtrl != null)
             {
                 CameraManager.Instance.curCtrl.SetYawByForward(-wall._wall_front);
@@ -195,34 +229,19 @@ public class Placement_Panel : UIPanelBase
         }
     }
 
-    /// <summary>找当前房间里最被相机正对的那面墙：水平投影下 wall._wall_front 与 camDir 点积最小（最接近 -1）。</summary>
-    private static Hide_Wall FindClosestFacingWall()
+    // 新增：切换 invenArea 展开/收起（使用 DOTween 动画）
+    public void ToggleInvenArea()
     {
-        var room = RoomSystem.currentRoom;
-        if (room == null || Camera.main == null) return null;
-
-        Vector3 camDir = Camera.main.transform.forward;
-        camDir.y = 0f;
-        if (camDir.sqrMagnitude < 1e-6f) return null;
-        camDir.Normalize();
-
-        Hide_Wall best = null;
-        float minDot = float.PositiveInfinity;
-        foreach (var wall in room.wallsMap.Values)
-        {
-            if (wall == null) continue;
-            Vector3 front = wall._wall_front;
-            front.y = 0f;
-            if (front.sqrMagnitude < 1e-6f) continue;
-            front.Normalize();
-            float dot = Vector3.Dot(front, camDir);
-            if (dot < minDot)
-            {
-                minDot = dot;
-                best = wall;
-            }
-        }
-        return best;
+        _isInvenExpanded = InventoryPanelUIHelper.ToggleInventoryArea(
+            invenArea,
+            btn_DrawUp,
+            up,
+            down,
+            _isInvenExpanded,
+            ref _invenTween,
+            invenToggleDuration,
+            new Vector2(1f, 0.5f),
+            new Vector2(1f, 0.65f));
     }
 
     public override void ClosePanel()
@@ -237,6 +256,9 @@ public class Placement_Panel : UIPanelBase
         EvtDsp.TriggerEvt(EvtNames.Set_MainPanel_All_Active);
         EvtDsp.TriggerEvt(EvtNames.OnPlacementPanelClose);
         EvtDsp.TriggerEvt(EvtNames.ReSetMainCharacterRenderer);
+
+        ReadItemBagReq req = new ReadItemBagReq() { BagTag = 6 };
+        EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, req);
     }
 
     public void RefreshByFirstCategory(Placement_First_Category first, bool isFavorite = false)
@@ -252,23 +274,12 @@ public class Placement_Panel : UIPanelBase
     private void UpdateSecondCategoryUI()
     {
         var subsToOpen = Enum_Helper.GetSubCategories(_currentFirst);
-
-        foreach (var label in secondLabels)
-        {
-            if (subsToOpen.Contains(label.second_Category))
-            {
-                label.gameObject.SetActive(true);
-            }
-            else
-            {
-                label.gameObject.SetActive(false);
-            }
-
-            if (label.second_Category == Placement_Second_Category.None)
-            {
-                label.gameObject.SetActive(true);
-            }
-        }
+        InventoryPanelUIHelper.UpdateSecondCategoryLabels(
+            secondLabels,
+            subsToOpen,
+            Placement_Second_Category.None,
+            label => label.second_Category,
+            label => label.gameObject);
     }
 
     public void RefreshBySecondCategory(Placement_Second_Category second)
@@ -295,37 +306,18 @@ public class Placement_Panel : UIPanelBase
 
     public void Set_FirstLabel_SelectedState(Placement_First_Label selected)
     {
-        foreach (var label in firstLabels)
-        {
-            if (label != selected)
-            {
-                label.SetSelectFalse();
-            }
-        }
+        InventoryPanelUIHelper.ResetOtherLabels(firstLabels, selected, label => label.SetSelectFalse());
     }
 
     public void Set_AllSecondLabel_SelectState(Placement_Second_Label selected)
     {
-        foreach (var label in secondLabels)
-        {
-            if (label != selected)
-            {
-                label.SetSelectFalse();
-            }
-        }
+        InventoryPanelUIHelper.ResetOtherLabels(secondLabels, selected, label => label.SetSelectFalse());
     }
 
     public void ResetAllLabels()
     {
-        foreach (var label in firstLabels)
-        {
-            label.SetSelectFalse();
-        }
-
-        foreach (var label in secondLabels)
-        {
-            label.SetSelectFalse();
-        }
+        InventoryPanelUIHelper.ResetAllLabels(firstLabels, label => label.SetSelectFalse());
+        InventoryPanelUIHelper.ResetAllLabels(secondLabels, label => label.SetSelectFalse());
     }
 
     private void InitDropdown()

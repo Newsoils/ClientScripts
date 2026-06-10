@@ -3,7 +3,7 @@
 //using TMPro;
 //using UnityEngine;
 //using UnityEngine.UI;
-//using PM_RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+//using PM_RM = CLIP.Framework_Unity.Asset.GameAssets;
 
 //namespace CLIP
 //{
@@ -38,7 +38,7 @@
 //                    {
 //                        var _image_url_data = game_item_in_inventory.item_info.res_url.Split("#");
 //                        if (_image_url_data.Length != 2) return;
-//                        PM_RM.load_sub_sprite(_image_url_data[0], _image_url_data[1], _set_sprite);
+//                        PM_RM.LoadSubSprite(_image_url_data[0], _image_url_data[1], _set_sprite);
 //                    }
 
 //                    if (_parent_control != null )

@@ -40,7 +40,9 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
                 item.item_info.name,
                 item.item_info.item_id,
                 item._item_count,
-                item.item_info.rarity));
+                item.item_info.rarity,
+                item.uid,
+                Global_Inventory_Manager.IsNewObtainItem(item.uid)));
         }
 
         ReloadScroller();
@@ -55,7 +57,8 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
     /// <param name="isAscending"></param>
     public void RefreshPanel(Plant_First_Category first_category = Plant_First_Category.None,
         Plant_Second_Category second_category = Plant_Second_Category.None,
-        string filterStr = "", InventorySortType sortType = InventorySortType.Rarity, bool isAscending = false)
+        string filterStr = "", InventorySortType sortType = InventorySortType.Rarity, bool isFavorite = false, bool isAscending = false,
+        PlantType seedPlantTypeFilter = PlantType.None, ObtainSource seedObtainSourceFilter = ObtainSource.Unknown)
     {
         //清理UI数据
         ClearData();
@@ -137,18 +140,55 @@ public class ScrollerController_Plant : ScrollerController_GameItem<ScrollData_G
             }).ToList();
         }
 
-        // 6. 排序（此时 showData 已经是过滤后的结果）
+        bool hasSeedPlantTypeFilter = seedPlantTypeFilter != PlantType.None;
+        bool hasSeedObtainSourceFilter = seedObtainSourceFilter != ObtainSource.Unknown;
+        if (hasSeedPlantTypeFilter || hasSeedObtainSourceFilter)
+        {
+            var seedInfoDic = PlantManager.Instance.seedInfoDic;
+            showData = showData.Where(item =>
+            {
+                if (item?.item_info == null) return false;
+                if (!_plantNameDic.ContainsKey(item.item_info.name)) return false;
+
+                if (hasSeedObtainSourceFilter && item.item_info.obtain_source != seedObtainSourceFilter)
+                {
+                    return false;
+                }
+
+                if (hasSeedPlantTypeFilter)
+                {
+                    if (seedInfoDic == null || !seedInfoDic.TryGetValue(item.item_info.item_id, out var seedInfo) || seedInfo == null)
+                    {
+                        return false;
+                    }
+
+                    return seedInfo.plantType == seedPlantTypeFilter;
+                }
+
+                return true;
+            }).ToList();
+        }
+
+        // 6. 如果面板要求只显示收藏项，则过滤
+        if (isFavorite)
+        {
+            showData = showData.Where(item => item.is_favorite).ToList();
+        }
+
+        // 7. 排序（此时 showData 已经是过滤后的结果）
         showData.SortByType(sortType, isAscending);
 
 
-        // 7. 填充显示数据
+        // 8. 填充显示数据
         foreach (var item in showData)
         {
             dataList.Add(new ScrollData_GameItem(
                 item.item_info.name,
                 item.item_info.item_id,
                 item._item_count,
-                item.item_info.rarity));
+                item.item_info.rarity,
+                item.uid,
+                Global_Inventory_Manager.IsNewObtainItem(item.uid)));
         }
 
         ReloadScroller();

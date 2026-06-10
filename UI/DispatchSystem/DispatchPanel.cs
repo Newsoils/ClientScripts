@@ -160,7 +160,6 @@ public class DispatchPanel : UIPanelBase
         EvtDsp.TriggerEvt(EvtNames.OnDispatchPanelOpen);
         EvtDsp.AddEvt<int>(EvtNames.Dispatch_Package_Bag_Res, OnPackageBagRes);
         SwitchProcedure(Procedure_Dispatch.SelectBag, false);
-
     }
 
     public override void OnDestroy()

@@ -88,7 +88,7 @@ namespace CLIP
                         mail_record.item_list = new List<item_in_mail>();
                         foreach (var item in mail.ItemAwards)
                         {
-                            var itemInfo = Global_Inventory_Manager.Instance._itemDB_SO.GetItemInfo((int)item.ConfigID);
+                            var itemInfo = Global_Inventory_Manager.GetItemInfo((int)item.ConfigID);
                             if (itemInfo != null)
                             {
                                 item_in_mail item_in_mail = new item_in_mail();

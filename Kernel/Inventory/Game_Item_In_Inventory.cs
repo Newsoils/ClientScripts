@@ -33,7 +33,7 @@ namespace CLIP.Project_Mouse.Kernel
         /// </summary>
         public DateTime favorite_time;
 
-        public int IsNew = 0; //是否是新道具 0 不是 1 是
+        public bool IsNew = false; //是否是新道具 0 不是 1 是
 
         public long VaildTime = 0; //道具有效期时间戳(秒)
     }

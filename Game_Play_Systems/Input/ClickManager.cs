@@ -4,11 +4,13 @@ using CLIP.Framework_Core.Event;
 using CLIP.Framework_Unity;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace CLIP.Project_Mouse.Game_Play_System
 {
     public class ClickManager : SingletonMono<ClickManager>
     {
+        protected override bool PersistAcrossScenes => true;
         public LayerMask targetLayer;
         public float maxDistance = 100;
 
@@ -44,7 +46,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
             Ray ray = Camera.main.ScreenPointToRay(screenPosition);
             bool flag = true;
             RaycastHit[] hits = Physics.RaycastAll(ray, maxDistance, targetLayer);
-            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            Array.Sort(hits, CompareClickHits);
             foreach (var hit in hits)
             {
                 if (hit.collider.enabled)
@@ -66,14 +68,26 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
         }
 
+        private static int CompareClickHits(RaycastHit a, RaycastHit b)
+        {
+            int priorityA = GetClickPriority(a.collider);
+            int priorityB = GetClickPriority(b.collider);
+            int priorityComparison = priorityB.CompareTo(priorityA);
+            return priorityComparison != 0 ? priorityComparison : a.distance.CompareTo(b.distance);
+        }
+
+        private static int GetClickPriority(Collider targetCollider)
+        {
+            return targetCollider.GetComponentInParent<IPrioritizedClick>()?.ClickPriority ?? 0;
+        }
+
         private static bool IsScreenPositionOverRaycastableUi(Vector2 screenPosition)
         {
             if (EventSystem.current == null) return false;
             var data = new PointerEventData(EventSystem.current) { position = screenPosition };
             var results = new List<RaycastResult>();
             EventSystem.current.RaycastAll(data, results);
-            return results.Count > 0;
+            return results.Exists(result => result.module is GraphicRaycaster);
         }
     }
 }
-

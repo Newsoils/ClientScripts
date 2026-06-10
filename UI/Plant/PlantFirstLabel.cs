@@ -9,6 +9,9 @@ public class PlantFirstLabel : MonoBehaviour
     [Header("分类配置")]
     public Plant_First_Category firstCategory = Plant_First_Category.None;
 
+    // 新增：是否作为“收藏”筛选项
+    public bool isFavorite = false;
+
     public Image icon;
     public Sprite normal;
     public Sprite Selected;
@@ -37,7 +40,7 @@ public class PlantFirstLabel : MonoBehaviour
             isSelected = true;
             if (icon != null && Selected != null) icon.sprite = Selected;
             //icon.color = Color.blue;
-            plantPanel.RefreshByFirstCategory(firstCategory);
+            plantPanel.RefreshByFirstCategory(firstCategory, isFavorite);
             plantPanel.Set_FirstLabel_SelectedState(this);
         }
         else
@@ -46,7 +49,7 @@ public class PlantFirstLabel : MonoBehaviour
             //更新一下所有的一级标签（包括自己）
             isSelected = false;
             if (icon != null && Selected != null) icon.sprite = normal;
-            plantPanel.RefreshByFirstCategory(Plant_First_Category.None);
+            plantPanel.RefreshByFirstCategory(Plant_First_Category.None, isFavorite);
         }
     }
 

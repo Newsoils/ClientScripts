@@ -18,8 +18,19 @@ using UnityEngine.Networking;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Network;
 
+public enum AccountLoginServerTarget
+{
+    [InspectorName("提审")]
+    Review = 0,
+    [InspectorName("赵睿")]
+    ZhaoRui = 1,
+}
+
 public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
 {
+    private const string ReviewLoginUrl = "http://106.15.138.70:8000/login";
+    private const string ZhaoRuiLoginUrl = "http://192.168.31.49:8000/login";
+
     protected override bool PersistAcrossScenes => true;
     // Start is called before the first frame update
     private string unionId;
@@ -28,7 +39,8 @@ public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
     [SerializeField] private LoginPlatformType loginPlatform = LoginPlatformType.TapTap;
 
     [Header("Server Login (HTTP -> Gateway -> WS)")]
-    [SerializeField] public string accountLoginPostUrl = "http://192.168.31.49:8000/login";
+    [SerializeField] private AccountLoginServerTarget accountLoginServer = AccountLoginServerTarget.ZhaoRui;
+    [HideInInspector] public string accountLoginPostUrl = ZhaoRuiLoginUrl;
     [SerializeField] private int loginType = 2;
     [SerializeField] private string defaultPasswordForTryLogin = "123456";
 
@@ -70,11 +82,27 @@ public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
                 break;
         }
     }
+    private void OnValidate()
+    {
+        ApplyAccountLoginServerUrl();
+    }
+
     void Start()
     {
+        ApplyAccountLoginServerUrl();
         if (loginPlatform == LoginPlatformType.TapTap)
             InitTapTapSdk();
         EvtDsp.AddEvt(EvtNames.Resume_Silent_Relogin, SilentReloginAndTryLogin);
+    }
+
+    void ApplyAccountLoginServerUrl()
+    {
+        accountLoginPostUrl = accountLoginServer switch
+        {
+            AccountLoginServerTarget.Review => ReviewLoginUrl,
+            AccountLoginServerTarget.ZhaoRui => ZhaoRuiLoginUrl,
+            _ => ZhaoRuiLoginUrl
+        };
     }
 
     void InitTapTapSdk()
@@ -310,7 +338,7 @@ public class TapTapLoginManager : SingletonMono<TapTapLoginManager>
     {
         if (string.IsNullOrWhiteSpace(accountLoginPostUrl))
         {
-            Debug.LogError("账号登录 POST 地址未配置：请在 Inspector 里设置 TapTapLoginManager.accountLoginPostUrl");
+            Debug.LogError("账号登录 POST 地址未配置：请在 Inspector 里选择登录服务器（提审/赵睿）");
             return;
         }
 

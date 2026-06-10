@@ -15,7 +15,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.SceneManagement;
 using GF_SP = CLIP.Framework_Core.Serialization.Serialization_Provider;
-using PM_RM = CLIP.Framework_Unity.Asset.Project_Mouse_Resource_Management;
+using PM_RM = CLIP.Framework_Unity.Asset.GameAssets;
 
 
 namespace CLIP.Project_Mouse.Game_Play_System
@@ -40,6 +40,11 @@ namespace CLIP.Project_Mouse.Game_Play_System
         public List<avatar_icon_info> _avatar_icon_list;
         public List<avatar_icon_info> _avatar_icon_frame_list;
         public TextAsset _avatar_icon_json;
+
+        [Header("Inventory")]
+        public List<Game_Item_Info> _gameItem_db;
+        public Dictionary<int, Game_Item_Info> _gameItem_idDic = new Dictionary<int, Game_Item_Info>();
+        public Dictionary<string, Game_Item_Info> _gameItem_nameDic = new Dictionary<string, Game_Item_Info>();
 
         [Header("Debug")]
         [Tooltip("勾选后在 Console 输出小猫在家/外出判定与 MapPanel 头像显隐，便于排查；上线请关闭。")]
@@ -412,7 +417,7 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         public void load_default_character()
         {
-            PM_RM.load_main_character("Default", (go) =>
+            PM_RM.LoadMainCharacter("Default", (go) =>
             {
                 var go_in_local = Instantiate(go);
             });

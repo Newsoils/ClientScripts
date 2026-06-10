@@ -5,6 +5,8 @@ using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Game_Play_System;
 using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.UI;
+using Cmd;
+using Google.Protobuf;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -105,6 +107,9 @@ public class RecyclePanel : UIPanelBase
         mScroller.ClearData();
         obj.SetActive(false);
         EvtDsp.TriggerEvt(EvtNames.OnRecyclePanelClose);
+
+        ReadItemBagReq req = new ReadItemBagReq() { BagTag = 8 };
+        EvtDsp.TriggerEvt<IMessage>(EvtNames.Send_Req_To_Server, req);
     }
 
     public override void OpenPanel(params object[] data)
@@ -128,12 +133,12 @@ public class RecyclePanel : UIPanelBase
     private void UpdateSecondCategoryUI()
     {
         var subsToOpen = Enum_Helper.GetSubCategories(_currentFirst);
-        foreach (var label in secondLabels)
-        {
-            bool open = label.second_Category == Recycle_Second_Category.None
-                        || subsToOpen.Contains(label.second_Category);
-            label.gameObject.SetActive(open);
-        }
+        InventoryPanelUIHelper.UpdateSecondCategoryLabels(
+            secondLabels,
+            subsToOpen,
+            Recycle_Second_Category.None,
+            label => label.second_Category,
+            label => label.gameObject);
     }
 
     public void RefreshBySecondCategory(Recycle_Second_Category second)
@@ -157,24 +162,18 @@ public class RecyclePanel : UIPanelBase
 
     public void Set_FirstLabel_SelectedState(RecycleFirstLabel selected)
     {
-        foreach (var label in firstLabels)
-        {
-            if (label != selected) label.SetSelectFalse();
-        }
+        InventoryPanelUIHelper.ResetOtherLabels(firstLabels, selected, label => label.SetSelectFalse());
     }
 
     public void Set_AllSecondLabel_SelectState(RecycleSecondLabel selected)
     {
-        foreach (var label in secondLabels)
-        {
-            if (label != selected) label.SetSelectFalse();
-        }
+        InventoryPanelUIHelper.ResetOtherLabels(secondLabels, selected, label => label.SetSelectFalse());
     }
 
     public void ResetAllLabels()
     {
-        foreach (var label in firstLabels) label.SetSelectFalse();
-        foreach (var label in secondLabels) label.SetSelectFalse();
+        InventoryPanelUIHelper.ResetAllLabels(firstLabels, label => label.SetSelectFalse());
+        InventoryPanelUIHelper.ResetAllLabels(secondLabels, label => label.SetSelectFalse());
     }
 
     private void InitDropdown()
@@ -196,18 +195,22 @@ public class RecyclePanel : UIPanelBase
 
     public void OpenSearchPanel()
     {
-        searchPanel.SetActive(true);
-        dropdown_SortType.gameObject.SetActive(false);
-        btn_Search.gameObject.SetActive(false);
-        PanelSecondLevelMenuPanel.SetActive(false);
+        InventoryPanelUIHelper.SetSearchPanelVisible(
+            searchPanel,
+            dropdown_SortType,
+            btn_Search,
+            PanelSecondLevelMenuPanel,
+            true);
     }
 
     public void CloseSearchPanel()
     {
-        PanelSecondLevelMenuPanel.SetActive(true);
-        dropdown_SortType.gameObject.SetActive(true);
-        btn_Search.gameObject.SetActive(true);
-        searchPanel.SetActive(false);
+        InventoryPanelUIHelper.SetSearchPanelVisible(
+            searchPanel,
+            dropdown_SortType,
+            btn_Search,
+            PanelSecondLevelMenuPanel,
+            false);
         RefreshPanel(_currentFirst, _currentSecond, "", _currentSort, _isAscending);
     }
 

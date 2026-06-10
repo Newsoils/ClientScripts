@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using CLIP.Project_Mouse.ENUM;
 using CLIP.Project_Mouse.Kernel;
 using CLIP.Project_Mouse.Kernel.Dispatch;
 using Newtonsoft.Json;
@@ -31,7 +32,12 @@ namespace CLIP.Project_Mouse.Game_Play_System
 
         private static string tape_info_json_file_name = "project_mouse_tb_tape_info";
 
+        private static string item_group_fileName = "project_mouse_tb_item_group";
 
+        private static string item_info_fileName = "project_mouse_tb_game_item";
+
+
+        private static string seed_info_fileName = "project_mouse_tb_seedinfo";
 
         #region NPC 对话系统静态数据路径
 
@@ -223,7 +229,6 @@ namespace CLIP.Project_Mouse.Game_Play_System
             }
         }
 
-      
 
         public static void Load_FirstTimeLoginReward_Data(out List<(string, int)> rewardList)
         {
@@ -251,6 +256,17 @@ namespace CLIP.Project_Mouse.Game_Play_System
             return SP.SerializeObject(saveData);
         }
 
+        public static void GetSeedInfo(out Dictionary<int,SeedInfo> seedDic)
+        {
+             seedDic = new Dictionary<int, SeedInfo>();
+            var json = Load_Single_JsonData(seed_info_fileName);
+            var list = SP.DeserializeObject<List< SeedInfo>>(json);
+            foreach(var each in list)
+            {
+                seedDic[each.seedID] = each;        
+            }
+        }
+
         public class ItemNameCount
         {
             public string name;
@@ -258,6 +274,26 @@ namespace CLIP.Project_Mouse.Game_Play_System
         }
 
         #endregion  
+        public static void LoadItemGroupData(out Dictionary<int, ItemGroupInfo> itemGroupDic,out Dictionary<GroupType,List<ItemGroupInfo>> itemGroupDicByGroup )
+        {
+            itemGroupDic = new Dictionary<int, ItemGroupInfo>();
+            itemGroupDicByGroup = new Dictionary<GroupType, List<ItemGroupInfo>>();
+            var json = Load_Single_JsonData(item_group_fileName);
+            var groups = SP.DeserializeObject<List<ItemGroupInfo>>(json);
+            if (groups != null)
+            {
+                foreach (var group in groups)
+                {
+                    itemGroupDic[group.group_id] = group;
+                    if (!itemGroupDicByGroup.ContainsKey(group.groupType))
+                    {
+                        itemGroupDicByGroup[group.groupType] = new List<ItemGroupInfo>();
+                    }
+                    itemGroupDicByGroup[group.groupType].Add(group);
+                }
+            }
+        }
+
         public static string Load_Single_JsonData(string fileName)
         {
             TextAsset ta = Resources.Load<TextAsset>("Json/" + fileName);
@@ -271,5 +307,43 @@ namespace CLIP.Project_Mouse.Game_Play_System
                 return null;
             }
         }
+
+        #region 物品静态数据
+
+        /// <summary>
+        /// 加载物品静态配置数据，构建字典缓存。
+        /// </summary>
+        public static void LoadGameItemData(
+            out List<Game_Item_Info> gameItemDb,
+            out Dictionary<int, Game_Item_Info> idDic,
+            out Dictionary<string, Game_Item_Info> nameDic)
+        {
+            gameItemDb = new List<Game_Item_Info>();
+            idDic = new Dictionary<int, Game_Item_Info>();
+            nameDic = new Dictionary<string, Game_Item_Info>();
+
+            var json = Load_Single_JsonData(item_info_fileName);
+            if (string.IsNullOrEmpty(json))
+                return;
+
+            var list = SP.DeserializeObject<List<Game_Item_Info>>(json);
+            if (list == null)
+                return;
+
+            foreach (var item in list)
+            {
+                gameItemDb.Add(item);
+
+                if (!idDic.ContainsKey(item.item_id))
+                    idDic.Add(item.item_id, item);
+
+                if (!nameDic.ContainsKey(item.name))
+                    nameDic.Add(item.name, item);
+            }
+
+            Debug.Log($"[JsonDataManager] 物品数据加载完毕，共 {gameItemDb.Count} 条。");
+        }
+
+        #endregion
     }
 }

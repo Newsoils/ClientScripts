@@ -53,7 +53,9 @@ public class ScrollerController_CD : MonoBehaviour, IEnhancedScrollerDelegate
                 item.item_info.name,
                 item.item_info.item_id,
                 item._item_count,
-                item.item_info.rarity));
+                item.item_info.rarity,
+                item.uid,
+                Global_Inventory_Manager.IsNewObtainItem(item.uid)));
         }
 
         scroller.ReloadData();

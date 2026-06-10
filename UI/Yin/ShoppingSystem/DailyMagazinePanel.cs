@@ -204,13 +204,13 @@ namespace CLIP.Project_Mouse.UI
             {
                 var info = GridObjectSystem.GetPlacementInfo(itemName);
                 if (info != null)
-                    prefab = await GameAssets.LoadAsyncByPath<GameObject>(info.res_url);
+                    prefab = await GameAssets.LoadAsync<GameObject>(info.res_url);
             }
             else if (shoppingItemUnit.itemInShop.type == Item_Type.Pot)
             {
                 var data = GridObjectSystem.GetPotData(itemName);
                 if (data != null)
-                    prefab = await GameAssets.LoadAsyncByPath<GameObject>(data.resUrl);
+                    prefab = await GameAssets.LoadAsync<GameObject>(data.resUrl);
             }
 
             if (prefab == null)
@@ -296,16 +296,16 @@ namespace CLIP.Project_Mouse.UI
             {
                 case Item_Type.Food:
                     var food_Res_Name = Dispatch_Manager.GetFoodInfo(itemName)?.model_resource_name;
-                    if (!string.IsNullOrEmpty(food_Res_Name)) obj = await GameAssets.Instance.LoadAsycByKey<GameObject>(food_Res_Name);
+                    if (!string.IsNullOrEmpty(food_Res_Name)) obj = await GameAssets.Instance.LoadAsyncByKey<GameObject>(food_Res_Name);
                     break;
                 case Item_Type.Snack:
                     var snack_Res_Name = Dispatch_Manager.GetSnackInfo(itemName)?.model_resource_name;
-                    if (!string.IsNullOrEmpty(snack_Res_Name)) obj = await GameAssets.Instance.LoadAsycByKey<GameObject>(snack_Res_Name);
+                    if (!string.IsNullOrEmpty(snack_Res_Name)) obj = await GameAssets.Instance.LoadAsyncByKey<GameObject>(snack_Res_Name);
                     break;
                 case Item_Type.Tape:
-                    obj = await GameAssets.Instance.LoadAsycByKey<GameObject>(ResKeys.PREFAB_CD_MODEL);
+                    obj = await GameAssets.Instance.LoadAsyncByKey<GameObject>(ResKeys.PREFAB_CD_MODEL);
                     var cd_mat_name = Dispatch_Manager.GetCDInfo(itemName)?.mat_resource_name;
-                    if (!string.IsNullOrEmpty(cd_mat_name)) cd_mt = await GameAssets.Instance.LoadAsycByKey<Material>(cd_mat_name);
+                    if (!string.IsNullOrEmpty(cd_mat_name)) cd_mt = await GameAssets.Instance.LoadAsyncByKey<Material>(cd_mat_name);
                     break;
                 default:
                     rawImage.texture = null;
@@ -324,7 +324,7 @@ namespace CLIP.Project_Mouse.UI
             }
             if (cd_mt != null)
             {
-                var cd_obj = await GameAssets.Instance.LoadAsycByKey<GameObject>(ResKeys.PREFAB_CD_MODEL);
+                var cd_obj = await GameAssets.Instance.LoadAsyncByKey<GameObject>(ResKeys.PREFAB_CD_MODEL);
                 if (cd_obj != null)
                 {
                     rawImage.gameObject.SetActive(true);

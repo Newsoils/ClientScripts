@@ -33,11 +33,11 @@ namespace CLIP
                         var _image_url_data = item.res_url.Split("#");
                         if (_image_url_data.Length != 2)
                         {
-                            Project_Mouse_Resource_Management.Load_Sprite(_image_url_data[0], (Sprite sprite) => icon.sprite = sprite);
+                            GameAssets.LoadSprite(_image_url_data[0], (Sprite sprite) => icon.sprite = sprite);
                         }
                         else
                         {
-                            Project_Mouse_Resource_Management.load_sub_sprite(_image_url_data[0], _image_url_data[1], (Sprite sprite) => icon.sprite = sprite);
+                            GameAssets.LoadSubSprite(_image_url_data[0], _image_url_data[1], (Sprite sprite) => icon.sprite = sprite);
                         }
                     }
                     background.sprite = backgroundSprites[(int)item.rarity - 1];

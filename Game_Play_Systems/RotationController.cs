@@ -4,10 +4,12 @@ namespace CLIP.Project_Mouse.Game_Play_System
 {
     public class RotationController : MonoBehaviour
     {
-        // Update is called once per frame
-        void Update()
+        [SerializeField] private Vector3 rotationAxis = new Vector3(0, 0, 1);
+        [SerializeField] private float speed = 0.1f;
+
+        private void Update()
         {
-            transform.Rotate(new Vector3(0, 0, 1), 0.1f, Space.Self);
+            transform.Rotate(rotationAxis, speed, Space.Self);
         }
     }
 }
